@@ -1,0 +1,177 @@
+﻿@model ServiceApp.Web.Areas.Technician.Models.TechnicianProfileViewModel
+@{
+    ViewData["Title"] = "My profile";
+}
+
+<div class="page-header">
+    <h2>My profile</h2>
+</div>
+
+<div style="display:grid; grid-template-columns:280px 1fr;
+            gap:24px; align-items:start">
+
+    @* ── Left: Stats card ────────────────────────────────────── *@
+    <div class="form-card" style="text-align:center">
+
+        <div style="width:72px; height:72px; border-radius:50%;
+                    background:#7C3AED; color:#fff;
+                    display:flex; align-items:center;
+                    justify-content:center; font-size:28px;
+                    font-weight:700; margin:0 auto 16px">
+            @Model.FullName.Substring(0, 1).ToUpper()
+        </div>
+
+        <h3 style="font-size:17px; font-weight:700; margin-bottom:4px">
+            @Model.FullName
+        </h3>
+        <p style="color:var(--text-secondary); font-size:13px">
+            @Model.Email
+        </p>
+        <p style="color:var(--text-secondary); font-size:13px">
+            @Model.Phone
+        </p>
+
+        <div style="margin-top:16px; padding-top:16px;
+                    border-top:1px solid var(--border)">
+            <span class="role-badge role-tech"
+                  style="font-size:12px; padding:4px 12px">
+                @Model.Skill
+            </span>
+        </div>
+
+        @* Stats *@
+        <div style="margin-top:20px; display:grid;
+                    grid-template-columns:1fr 1fr; gap:12px">
+            <div style="background:var(--bg-page); border-radius:8px;
+                        padding:12px; text-align:center">
+                <div style="font-size:22px; font-weight:700;
+                            color:#D97706">
+                    @(Model.Rating > 0
+                                        ? Model.Rating.ToString("F1")
+                                        : "—")
+                </div>
+                <div style="font-size:11px; color:var(--text-muted)">
+                    ★ Rating
+                </div>
+            </div>
+            <div style="background:var(--bg-page); border-radius:8px;
+                        padding:12px; text-align:center">
+                <div style="font-size:22px; font-weight:700;
+                            color:var(--success)">
+                    @Model.TotalJobsCompleted
+                </div>
+                <div style="font-size:11px; color:var(--text-muted)">
+                    Jobs done
+                </div>
+            </div>
+        </div>
+
+        @* Profile completion *@
+        <div style="margin-top:16px; text-align:left">
+            <p style="font-size:12px; color:var(--text-muted);
+                      margin-bottom:6px">Profile completion</p>
+            <div style="background:var(--border); border-radius:4px;
+                        height:6px; overflow:hidden">
+                <div style="background:#7C3AED; height:100%;
+                            width:@(Model.IsExistingProfile ? "100%" : "40%");
+                            border-radius:4px">
+                </div>
+            </div>
+            <p style="font-size:12px; color:var(--text-secondary);
+                      margin-top:4px">
+                @(Model.IsExistingProfile
+                                ? "Complete ✓"
+                                : "Add your bio to complete")
+            </p>
+        </div>
+    </div>
+
+    @* ── Right: Editable form ─────────────────────────────────── *@
+    <div class="form-card">
+        <h3 style="font-size:16px; font-weight:600; margin-bottom:20px">
+            @(Model.IsExistingProfile ? "Edit profile" : "Complete your profile")
+        </h3>
+
+        <form asp-action="Index" method="post">
+            <div asp-validation-summary="ModelOnly"
+                 class="toast toast-error"
+                 style="margin-bottom:16px"></div>
+
+            @* Bio *@
+            <div class="form-group">
+                <label asp-for="Bio">About you</label>
+                <textarea asp-for="Bio"
+                          class="form-control"
+                          rows="3"
+                          placeholder="E.g. 8 years experience in residential electrical work, specializing in wiring and panel upgrades."></textarea>
+                <span asp-validation-for="Bio" class="field-error"></span>
+                <span class="form-hint">
+                    Customers see this before booking — be specific
+                </span>
+            </div>
+
+            @* Experience + Pin code side by side *@
+            <div style="display:grid;
+                        grid-template-columns:1fr 1fr; gap:16px">
+                <div class="form-group">
+                    <label asp-for="YearsOfExperience">
+                        Years of experience
+                    </label>
+                    <input asp-for="YearsOfExperience"
+                           class="form-control"
+                           type="number"
+                           min="0"
+                           max="50"
+                           placeholder="e.g. 5" />
+                    <span asp-validation-for="YearsOfExperience"
+                          class="field-error"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="ServiceAreaPinCode">
+                        Service area pin code
+                    </label>
+                    <input asp-for="ServiceAreaPinCode"
+                           class="form-control"
+                           placeholder="673001" />
+                    <span asp-validation-for="ServiceAreaPinCode"
+                          class="field-error"></span>
+                    <span class="form-hint">
+                        Jobs near this pin code are assigned to you
+                    </span>
+                </div>
+            </div>
+
+            @* Avatar URL *@
+            <div class="form-group">
+                <label asp-for="AvatarUrl">
+                    Profile photo URL
+                    <span style="color:var(--text-muted);
+                                 font-weight:400">(optional)</span>
+                </label>
+                <input asp-for="AvatarUrl"
+                       class="form-control"
+                       placeholder="https://..." />
+            </div>
+
+            <button type="submit" class="btn-primary">
+                @(Model.IsExistingProfile
+                                ? "Update profile"
+                                : "Save profile")
+            </button>
+
+            <a asp-area="Technician"
+               asp-controller="Home"
+               asp-action="Dashboard"
+               class="btn-outline"
+               style="margin-left:10px">
+                Cancel
+            </a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

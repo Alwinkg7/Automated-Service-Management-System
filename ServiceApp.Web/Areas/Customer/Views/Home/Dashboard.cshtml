@@ -1,0 +1,165 @@
+﻿@model ServiceApp.Web.Areas.Customer.Models.CustomerDashboardViewModel
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = "My dashboard";
+}
+
+@* ── Profile completion banner ───────────────────────────────── *@
+@if (!Model.IsProfileComplete)
+{
+    <div style="background:#EEF2FF; border:1px solid #C7D2FE;
+                    border-radius:10px; padding:14px 18px;
+                    margin-bottom:20px; display:flex;
+                    justify-content:space-between; align-items:center">
+        <div>
+            <strong style="color:#3730A3">
+                Complete your profile
+            </strong>
+            <p style="font-size:13px; color:#4338CA; margin:2px 0 0">
+                Add your address so technicians know where to go.
+            </p>
+        </div>
+        <a asp-area="Customer"
+           asp-controller="Profile"
+           asp-action="Index"
+           class="btn-primary btn-sm">
+            Complete now
+        </a>
+    </div>
+}
+
+<div class="page-header">
+    <h2>My dashboard</h2>
+    <a asp-area="Customer"
+       asp-controller="Requests"
+       asp-action="Create"
+       class="btn-primary">
+        + Book a service
+    </a>
+</div>
+
+@* ── Stat cards ───────────────────────────────────────────────── *@
+<div class="stat-grid" style="grid-template-columns: repeat(4, 1fr)">
+
+    <div class="stat-card">
+        <span class="stat-label">Total requests</span>
+        <span class="stat-value" style="color:var(--primary)">
+            @Model.TotalRequests
+        </span>
+    </div>
+
+    <div class="stat-card stat-pending">
+        <span class="stat-label">Pending</span>
+        <span class="stat-value">@Model.PendingCount</span>
+    </div>
+
+    <div class="stat-card stat-progress">
+        <span class="stat-label">In progress</span>
+        <span class="stat-value">@Model.InProgressCount</span>
+    </div>
+
+    <div class="stat-card stat-done">
+        <span class="stat-label">Completed</span>
+        <span class="stat-value">@Model.CompletedCount</span>
+    </div>
+
+</div>
+
+@* ── Recent requests ──────────────────────────────────────────── *@
+<div class="table-card">
+    <div class="table-card-header">
+        <h3>Recent requests</h3>
+        <a asp-area="Customer" asp-controller="Requests"
+           asp-action="Index" class="btn-link">View all →</a>
+    </div>
+
+    @if (!Model.RecentRequests.Any())
+    {
+        <div class="empty-state" style="border:none">
+            <span class="empty-icon">🔧</span>
+            <h3>No requests yet</h3>
+            <p>Book your first service and get help fast.</p>
+            <a asp-area="Customer"
+               asp-controller="Requests"
+               asp-action="Create"
+               class="btn-primary">
+                Book a service
+            </a>
+        </div>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Technician</th>
+                    <th>Date</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.RecentRequests)
+                {
+                    <tr>
+                        <td style="color:var(--text-muted)">
+                            #@r.RequestId
+                        </td>
+                        <td>
+                            <span class="category-badge">
+                                @r.Category
+                            </span>
+                        </td>
+                        <td class="cell-truncate" title="@r.Description">
+                            @r.Description
+                        </td>
+                        <td>
+                            @*
+                                CSS class = "status-" + status string.
+                                e.g. status-pending, status-inprogress
+                                Must be lowercase to match CSS rules.
+                            *@
+                            <span class="status-badge
+                                        status-@r.Status.ToString().ToLower()">
+                                @r.Status
+                            </span>
+                        </td>
+                        <td>
+                            @if (r.AssignedTechnician != null)
+                            {
+                                <span>@r.AssignedTechnician.User.FullName</span>
+                            }
+                            else
+                            {
+                                <span style="color:var(--text-muted)">
+                                    Not assigned
+                                </span>
+                            }
+                        </td>
+                        <td style="color:var(--text-secondary)">
+                            @r.CreatedAt.ToString("dd MMM yyyy")
+                        </td>
+                        <td>
+                            <a asp-area="Customer" asp-controller="Requests"
+                               asp-action="Index" class="btn-link">
+                                View
+                            </a>
+                            @* Pay now button — only if bill is ready *@
+                            @if (r.Status == RequestStatus.Billed)
+                            {
+                                <a href="#"
+                                   class="btn-primary btn-sm"
+                                   style="margin-left:6px">
+                                    Pay now
+                                </a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

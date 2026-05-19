@@ -1,0 +1,187 @@
+﻿@model ServiceApp.Web.Areas.Admin.Models.AdminRequestListViewModel
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = "All requests";
+}
+
+<div class="page-header">
+    <h2>All requests</h2>
+    <span style="font-size:13px; color:var(--text-secondary)">
+        @Model.AllCount total requests
+    </span>
+</div>
+
+@* ── Filter tabs ──────────────────────────────────────────────── *@
+<div style="display:flex; gap:6px; margin-bottom:20px;
+            flex-wrap:wrap; overflow-x:auto; padding-bottom:4px">
+    @{
+        var tabs = new[]
+        {
+        (label:"All",         value:(string?)null,   count:Model.AllCount),
+        (label:"Pending",     value:"Pending",       count:Model.PendingCount),
+        (label:"Assigned",    value:"Assigned",      count:Model.AssignedCount),
+        (label:"In progress", value:"InProgress",    count:Model.InProgressCount),
+        (label:"Billed",      value:"Billed",        count:Model.BilledCount),
+        (label:"Completed",   value:"Completed",     count:Model.CompletedCount),
+        (label:"Cancelled",   value:"Cancelled",     count:Model.CancelledCount),
+        };
+    }
+    @foreach (var tab in tabs)
+    {
+        var isActive = (tab.value == null && Model.CurrentFilter == null)
+        || tab.value == Model.CurrentFilter?.ToString();
+        <a asp-action="Index"
+           asp-route-filter="@tab.value"
+           style="padding:6px 14px; border-radius:20px; font-size:12.5px;
+                      font-weight:500; text-decoration:none; border:1px solid;
+                      white-space:nowrap;
+                      @(isActive
+                               ? "background:var(--primary);color:#fff;border-color:var(--primary)"
+                               : "background:var(--bg-white);color:var(--text-secondary);border-color:var(--border)")">
+            @tab.label
+            <span style="opacity:0.8">(@tab.count)</span>
+        </a>
+    }
+</div>
+
+@* ── Requests table ───────────────────────────────────────────── *@
+@if (!Model.Requests.Any())
+{
+    <div class="empty-state">
+        <span class="empty-icon">✓</span>
+        <h3>No requests found</h3>
+        <p>
+            @(Model.CurrentFilter != null
+                    ? $"No {Model.CurrentFilter} requests at the moment."
+                    : "No service requests have been created yet.")
+        </p>
+    </div>
+}
+else
+{
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Customer</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Address</th>
+                    <th>Preferred time</th>
+                    <th>Technician</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.Requests)
+                {
+                    <tr>
+                        <td style="color:var(--text-muted);
+                                           font-weight:500">
+                            #@r.RequestId
+                        </td>
+                        <td>
+                            <p style="font-weight:500; font-size:13px">
+                                @r.Customer.FullName
+                            </p>
+                            <p style="font-size:11px;
+                                              color:var(--text-muted)">
+                                @r.Customer.Phone
+                            </p>
+                        </td>
+                        <td>
+                            <span class="category-badge">
+                                @r.Category
+                            </span>
+                        </td>
+                        <td class="cell-truncate"
+                            style="max-width:180px"
+                            title="@r.Description">
+                            @r.Description
+                        </td>
+                        <td style="font-size:12px;
+                                           color:var(--text-secondary)">
+                            <span>@r.Address</span><br />
+                            <span style="color:var(--text-muted)">
+                                @r.PinCode
+                            </span>
+                        </td>
+                        <td style="font-size:12px;
+                                           color:var(--text-secondary);
+                                           white-space:nowrap">
+                            @r.PreferredDateTime.ToString("dd MMM")
+                            <br />
+                            <span style="color:var(--text-muted)">
+                                @r.PreferredDateTime.ToString("hh:mm tt")
+                            </span>
+                        </td>
+                        <td>
+                            @if (r.AssignedTechnician != null)
+                            {
+                                <p style="font-size:13px; font-weight:500">
+                                    @r.AssignedTechnician.User.FullName
+                                </p>
+                                <p style="font-size:11px;
+                                                      color:var(--text-muted)">
+                                    @r.AssignedTechnician.Skill
+                                </p>
+                            }
+                            else
+                            {
+                                <span style="font-size:12px;
+                                                        color:var(--text-muted)">
+                                    Not assigned
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            <span class="status-badge
+                                        status-@r.Status.ToString().ToLower()">
+                                @r.Status
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display:flex; gap:6px;
+                                                flex-wrap:wrap">
+                                <a asp-action="Details"
+                                   asp-route-id="@r.RequestId"
+                                   class="btn-outline btn-sm">
+                                    View
+                                </a>
+
+                                @* Assign button — only for Pending *@
+                                @if (r.Status == RequestStatus.Pending)
+                                {
+                                    <a asp-action="Assign"
+                                       asp-route-id="@r.RequestId"
+                                       class="btn-primary btn-sm">
+                                        Assign
+                                    </a>
+                                }
+
+                                @* Cancel — Pending or Assigned only *@
+                                @if (r.Status == RequestStatus.Pending ||
+                                                        r.Status == RequestStatus.Assigned)
+                                {
+                                    <form asp-action="Cancel"
+                                          asp-route-id="@r.RequestId"
+                                          method="post"
+                                          onsubmit="return confirm(
+                                                          'Cancel request #@r.RequestId?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit"
+                                                class="btn-danger btn-sm">
+                                            Cancel
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

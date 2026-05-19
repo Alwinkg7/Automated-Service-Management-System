@@ -1,0 +1,106 @@
+﻿@* =================================================================
+   TechnicianRegister.cshtml
+   Separate signup page for technicians.
+   Extra field: Skill dropdown (maps to ServiceCategory enum).
+   ================================================================= *@
+
+@model ServiceApp.Web.ViewModels.Auth.TechnicianRegisterViewModel
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = "Technician signup";
+    Layout = "~/Views/Shared/_AuthLayout.cshtml";
+}
+
+<div class="auth-card">
+
+    <div class="auth-brand">
+        <div class="auth-icon">👷</div>
+        <h1>Join as a professional</h1>
+        <p>Offer your skills and earn on your schedule</p>
+    </div>
+
+    <form asp-action="TechnicianRegister" method="post">
+        <div asp-validation-summary="ModelOnly" class="alert-error"></div>
+
+        <div class="form-group">
+            <label asp-for="FullName"></label>
+            <input asp-for="FullName"
+                   class="form-input"
+                   placeholder="John Doe"
+                   autofocus />
+            <span asp-validation-for="FullName" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Email"></label>
+            <input asp-for="Email"
+                   class="form-input"
+                   placeholder="you@example.com"
+                   autocomplete="email" />
+            <span asp-validation-for="Email" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Phone"></label>
+            <input asp-for="Phone"
+                   class="form-input"
+                   placeholder="98765 43210" />
+            <span asp-validation-for="Phone" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Skill"></label>
+            @*
+                Html.GetEnumSelectList<ServiceCategory>() generates
+                one <option> per enum value automatically:
+                <option value="0">Electrician</option>
+                <option value="1">Plumber</option> etc.
+            *@
+            <select asp-for="Skill"
+                    class="form-input"
+                    asp-items="Html.GetEnumSelectList<ServiceCategory>()">
+                <option value="">— Select your skill —</option>
+            </select>
+            <span asp-validation-for="Skill" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Password"></label>
+            <input asp-for="Password"
+                   class="form-input"
+                   placeholder="Min. 8 characters"
+                   autocomplete="new-password" />
+            <span asp-validation-for="Password" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="ConfirmPassword"></label>
+            <input asp-for="ConfirmPassword"
+                   class="form-input"
+                   placeholder="Repeat password"
+                   autocomplete="new-password" />
+            <span asp-validation-for="ConfirmPassword" class="field-error"></span>
+        </div>
+
+        <button type="submit" class="btn-submit">
+            Create technician account
+        </button>
+    </form>
+
+    <div class="auth-links">
+        <p>
+            Already have an account?
+            <a asp-action="Login">Sign in</a>
+        </p>
+        <p>
+            Looking for services?
+            <a asp-action="CustomerRegister">Sign up as customer</a>
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

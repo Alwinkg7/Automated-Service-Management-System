@@ -1,22 +1,659 @@
-html {
-  font-size: 14px;
+﻿/* ================================================================
+   site.css — Main app stylesheet for all logged-in pages
+   
+   Sections:
+   1. CSS variables (design tokens — change colors here)
+   2. Reset + base
+   3. App shell (sidebar + main content layout)
+   4. Sidebar navigation
+   5. Main content area
+   6. Stat cards (admin dashboard)
+   7. Data tables
+   8. Status + role badges
+   9. Request / Job cards
+   10. Buttons
+   11. Forms (inside content area)
+   12. Empty states
+   13. Toast notifications
+   ================================================================ */
+
+/* ── 1. Design tokens ─────────────────────────────────────────── */
+:root {
+    --primary: #4F46E5;
+    --primary-dark: #3730A3;
+    --primary-light: #EEF2FF;
+    --success: #059669;
+    --success-light: #D1FAE5;
+    --warning: #D97706;
+    --warning-light: #FEF3C7;
+    --danger: #DC2626;
+    --danger-light: #FEE2E2;
+    --info: #2563EB;
+    --info-light: #DBEAFE;
+    --text-primary: #111827;
+    --text-secondary: #6B7280;
+    --text-muted: #9CA3AF;
+    --border: #E5E7EB;
+    --border-dark: #D1D5DB;
+    --bg-page: #F3F4F6;
+    --bg-white: #FFFFFF;
+    --sidebar-width: 240px;
+    --radius: 8px;
+    --radius-lg: 12px;
 }
 
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+/* ── 2. Reset + base ──────────────────────────────────────────── */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-  margin-bottom: 60px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    color: var(--text-primary);
+    background: var(--bg-page);
+    line-height: 1.6;
+}
+
+a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+/* ── 3. App shell ─────────────────────────────────────────────── */
+/* Flex row: sidebar fixed on left, main content fills the rest */
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ── 4. Sidebar ───────────────────────────────────────────────── */
+.sidebar {
+    width: var(--sidebar-width);
+    background: #1E1B4B;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 100;
+    flex-shrink: 0;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-icon {
+    font-size: 22px;
+}
+
+.sidebar-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.3px;
+}
+
+/* Nav list */
+.sidebar-nav {
+    list-style: none;
+    padding: 12px 0;
+    flex: 1;
+}
+
+.nav-item a {
+    display: block;
+    padding: 10px 20px;
+    color: rgba(255, 255, 255, 0.70);
+    font-size: 13.5px;
+    transition: background 0.15s, color 0.15s;
+    text-decoration: none;
+}
+
+    .nav-item a:hover {
+        background: rgba(255, 255, 255, 0.10);
+        color: #ffffff;
+        text-decoration: none;
+    }
+
+/* User pill + logout at the very bottom of sidebar */
+.sidebar-footer {
+    padding: 14px 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.user-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.user-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.user-meta {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.user-name {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Role badge inside sidebar */
+.role-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.role-admin {
+    background: #FDE68A;
+    color: #78350F;
+}
+
+.role-tech {
+    background: #A7F3D0;
+    color: #064E3B;
+}
+
+.role-customer {
+    background: #BFDBFE;
+    color: #1E3A5F;
+}
+
+.btn-logout {
+    width: 100%;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius);
+    color: rgba(255, 255, 255, 0.70);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+    .btn-logout:hover {
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
+    }
+
+/* ── 5. Main content ──────────────────────────────────────────── */
+/* Push content past the fixed sidebar */
+.main-content {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    padding: 28px 32px;
+    min-height: 100vh;
+}
+
+/* Page header row: title left, CTA button right */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+    .page-header h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+.section-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+/* ── 6. Stat cards (dashboard) ────────────────────────────────── */
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.stat-card {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.stat-pending .stat-value {
+    color: var(--warning);
+}
+
+.stat-progress .stat-value {
+    color: var(--info);
+}
+
+.stat-done .stat-value {
+    color: var(--success);
+}
+
+.stat-tech .stat-value {
+    color: var(--primary);
+}
+
+/* ── 7. Data tables ───────────────────────────────────────────── */
+.table-card {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.table-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+    .table-card-header h3 {
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .data-table th {
+        padding: 11px 16px;
+        text-align: left;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-secondary);
+        background: var(--bg-page);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .data-table td {
+        padding: 13px 16px;
+        border-bottom: 1px solid var(--border);
+        font-size: 13.5px;
+        vertical-align: middle;
+    }
+
+    .data-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .data-table tr:hover td {
+        background: #FAFAFA;
+    }
+
+/* Truncate long text in table cells */
+.cell-truncate {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── 8. Status + category badges ──────────────────────────────── */
+.status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.status-pending {
+    background: var(--warning-light);
+    color: #92400E;
+}
+
+.status-assigned {
+    background: var(--info-light);
+    color: #1E40AF;
+}
+
+.status-inprogress {
+    background: #EDE9FE;
+    color: #4C1D95;
+}
+
+.status-billed {
+    background: #FEF9C3;
+    color: #713F12;
+}
+
+.status-completed {
+    background: var(--success-light);
+    color: #064E3B;
+}
+
+.status-cancelled {
+    background: var(--danger-light);
+    color: #7F1D1D;
+}
+
+.category-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+/* Technician availability badges */
+.tech-available {
+    background: var(--success-light);
+    color: #064E3B;
+}
+
+.tech-busy {
+    background: var(--danger-light);
+    color: #7F1D1D;
+}
+
+.tech-offline {
+    background: var(--border);
+    color: var(--text-secondary);
+}
+
+/* ── 9. Request / Job cards ───────────────────────────────────── */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.req-card {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Active jobs get left accent border */
+.req-card-active {
+    border-left: 3px solid var(--primary);
+}
+
+.req-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.req-category {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.req-id {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: 6px;
+}
+
+.req-desc {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.req-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.req-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+/* ── 10. Buttons ──────────────────────────────────────────────── */
+.btn-primary {
+    display: inline-block;
+    padding: 9px 18px;
+    background: var(--primary);
+    color: #fff !important;
+    border-radius: var(--radius);
+    font-size: 13.5px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+        text-decoration: none;
+    }
+
+.btn-outline {
+    display: inline-block;
+    padding: 8px 16px;
+    background: transparent;
+    color: var(--text-primary) !important;
+    border: 1.5px solid var(--border-dark);
+    border-radius: var(--radius);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+
+    .btn-outline:hover {
+        background: var(--bg-page);
+        text-decoration: none;
+    }
+
+.btn-danger {
+    display: inline-block;
+    padding: 8px 16px;
+    background: var(--danger);
+    color: #fff !important;
+    border-radius: var(--radius);
+    font-size: 13.5px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+
+    .btn-danger:hover {
+        background: #B91C1C;
+    }
+
+/* Small size modifier — combine with any btn-* class */
+.btn-sm {
+    padding: 5px 12px !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+}
+
+.btn-link {
+    font-size: 13px;
+    color: var(--primary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+/* ── 11. Forms inside content area ────────────────────────────── */
+.form-card {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    max-width: 600px;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: var(--text-primary);
+    }
+
+.form-control {
+    display: block;
+    width: 100%;
+    padding: 9px 13px;
+    border: 1.5px solid var(--border-dark);
+    border-radius: var(--radius);
+    font-size: 14px;
+    color: var(--text-primary);
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+}
+
+    .form-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+.field-error {
+    display: block;
+    font-size: 12px;
+    color: var(--danger);
+    margin-top: 4px;
+}
+
+.form-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* ── 12. Empty states ─────────────────────────────────────────── */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+}
+
+.empty-icon {
+    font-size: 42px;
+    display: block;
+    margin-bottom: 14px;
+}
+
+.empty-state h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.empty-state p {
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+}
+
+/* ── 13. Toast notifications ──────────────────────────────────── */
+/* Displayed from TempData["Success"] / TempData["Error"] */
+.toast {
+    padding: 12px 18px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    font-size: 13.5px;
+    font-weight: 500;
+}
+
+.toast-success {
+    background: var(--success-light);
+    color: #064E3B;
+    border: 1px solid #6EE7B7;
+}
+
+.toast-error {
+    background: var(--danger-light);
+    color: #7F1D1D;
+    border: 1px solid #FCA5A5;
 }

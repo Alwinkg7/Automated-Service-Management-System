@@ -1,0 +1,241 @@
+﻿@model ServiceApp.Web.Areas.Technician.Models.TechnicianDashboardViewModel
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = "My jobs";
+}
+
+@* ── Profile completion banner ───────────────────────────────── *@
+@if (!Model.IsProfileComplete)
+{
+    <div style="background:#F0FDF4; border:1px solid #BBF7D0;
+                    border-radius:10px; padding:14px 18px;
+                    margin-bottom:20px; display:flex;
+                    justify-content:space-between; align-items:center">
+        <div>
+            <strong style="color:#14532D">
+                Complete your profile
+            </strong>
+            <p style="font-size:13px; color:#166534; margin:2px 0 0">
+                Add your bio and experience so customers trust you.
+            </p>
+        </div>
+        <a asp-area="Technician"
+           asp-controller="Profile"
+           asp-action="Index"
+           class="btn-primary btn-sm">
+            Complete now
+        </a>
+    </div>
+}
+
+@* ── Page header with status badge ───────────────────────────── *@
+<div class="page-header">
+    <div style="display:flex; align-items:center; gap:12px">
+        <h2>My jobs</h2>
+        @{
+            // CSS class for status pill — available/busy/offline
+            var statusClass = Model.CurrentStatus switch
+            {
+                TechnicianStatus.Available => "tech-available",
+                TechnicianStatus.Busy => "tech-busy",
+                TechnicianStatus.Offline => "tech-offline",
+                _ => "tech-offline"
+            };
+        }
+        <span class="status-badge @statusClass">
+            @Model.CurrentStatus
+        </span>
+    </div>
+
+    @* Toggle online/offline — only when NOT on an active job *@
+    @if (Model.CurrentStatus != TechnicianStatus.Busy)
+    {
+        <form asp-area="Technician"
+              asp-controller="Profile"
+              asp-action="ToggleStatus"
+              method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-outline">
+                @(Model.CurrentStatus == TechnicianStatus.Available
+                            ? "Go offline"
+                            : "Go online")
+            </button>
+        </form>
+    }
+</div>
+
+@* ── Stat cards ───────────────────────────────────────────────── *@
+<div class="stat-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:28px">
+
+    <div class="stat-card">
+        <span class="stat-label">Skill</span>
+        <span style="font-size:18px; font-weight:700; color:var(--primary)">
+            @Model.Skill
+        </span>
+    </div>
+
+    <div class="stat-card">
+        <span class="stat-label">Rating</span>
+        <span class="stat-value" style="color:#D97706">
+            @(Model.Rating > 0 ? Model.Rating.ToString("F1") : "—")
+        </span>
+        <span style="font-size:12px; color:var(--text-muted)">
+            ★ out of 5.0
+        </span>
+    </div>
+
+    <div class="stat-card stat-done">
+        <span class="stat-label">Completed</span>
+        <span class="stat-value">@Model.CompletedCount</span>
+        <span style="font-size:12px; color:var(--text-muted)">Jobs done</span>
+    </div>
+
+    <div class="stat-card stat-progress">
+        <span class="stat-label">Active</span>
+        <span class="stat-value">@Model.ActiveJobs.Count</span>
+        <span style="font-size:12px; color:var(--text-muted)">
+            Need action
+        </span>
+    </div>
+
+</div>
+
+@* ── Active jobs ──────────────────────────────────────────────── *@
+@if (Model.ActiveJobs.Any())
+{
+    <p class="section-label">Active jobs — need your action</p>
+    <div class="card-grid" style="margin-bottom:28px">
+
+        @foreach (var job in Model.ActiveJobs)
+        {
+            <div class="req-card req-card-active">
+
+                <div class="req-card-header">
+                    <div>
+                        <span class="req-category">@job.Category</span>
+                        <span class="req-id">#@job.RequestId</span>
+                    </div>
+                    <span class="status-badge
+                                status-@job.Status.ToString().ToLower()">
+                        @job.Status
+                    </span>
+                </div>
+
+                <p class="req-desc">@job.Description</p>
+
+                <div class="req-meta">
+                    @* Customer info — loaded via Include in repository *@
+                    <span>👤 @job.Customer.FullName</span>
+                    <span>📞 @job.Customer.Phone</span>
+                    @if (!string.IsNullOrEmpty(job.Address))
+                    {
+                        <span>📍 @job.Address</span>
+                    }
+                    <span>🗓 @job.PreferredDateTime.ToString("dd MMM, hh:mm tt")</span>
+                </div>
+
+                <div class="req-actions">
+                    @*
+                        ASSIGNED → technician must Accept to start work.
+                        Built in Phase 2 (Jobs controller).
+                    *@
+                    @if (job.Status == RequestStatus.Assigned)
+                    {
+                        <form asp-area="Technician"
+                              asp-controller="Jobs"
+                              asp-action="Accept"
+                              asp-route-id="@job.RequestId"
+                              method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn-sm btn-primary">
+                                Accept job
+                            </button>
+                        </form>
+                    }
+
+                    @*
+                        IN PROGRESS → technician creates the bill.
+                        Built in Phase 2.
+                    *@
+                    @if (job.Status == RequestStatus.InProgress)
+                    {
+                        <a href="#" class="btn-primary btn-sm">
+                            Create bill
+                        </a>
+                    }
+
+                    <a asp-area="Technician"
+                       asp-controller="Jobs"
+                       asp-action="Details"
+                       asp-route-id="@job.RequestId"
+                       class="btn-outline btn-sm">
+                        View details
+                    </a>
+                </div>
+
+            </div>
+        }
+
+    </div>
+}
+else if (Model.CurrentStatus == TechnicianStatus.Available)
+{
+    <div class="empty-state" style="margin-bottom:28px">
+        <span class="empty-icon">✓</span>
+        <h3>No active jobs</h3>
+        <p>
+            You're available — jobs will appear here
+            when the admin assigns one to you.
+        </p>
+    </div>
+}
+
+@* ── Recent past jobs ─────────────────────────────────────────── *@
+@if (Model.RecentPastJobs.Any())
+{
+    <p class="section-label">Recent completed jobs</p>
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Customer</th>
+                    <th>Category</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var job in Model.RecentPastJobs)
+                {
+                    <tr>
+                        <td style="color:var(--text-muted)">
+                            #@job.RequestId
+                        </td>
+                        <td>@job.Customer.FullName</td>
+                        <td>
+                            <span class="category-badge">
+                                @job.Category
+                            </span>
+                        </td>
+                        <td style="color:var(--text-secondary)">
+                            @job.CreatedAt.ToString("dd MMM yyyy")
+                        </td>
+                        <td>
+                            <span class="status-badge
+                                        status-@job.Status.ToString().ToLower()">
+                                @job.Status
+                            </span>
+                        </td>
+                        <td>
+                            <a href="#" class="btn-outline btn-sm">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

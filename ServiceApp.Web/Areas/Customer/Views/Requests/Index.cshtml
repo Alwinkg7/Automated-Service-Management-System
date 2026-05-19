@@ -1,0 +1,205 @@
+﻿@model ServiceApp.Web.Areas.Customer.Models.RequestListViewModel
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = "My requests";
+}
+
+<div class="page-header">
+    <h2>My requests</h2>
+    <a asp-action="Create" class="btn-primary">
+        + Book a service
+    </a>
+</div>
+
+@* ── Filter tabs ──────────────────────────────────────────────── *@
+<div style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap">
+    @{
+        var filters = new[]
+        {
+        (label: "All",        value: (string?)null,        count: Model.AllRequests.Count),
+        (label: "Pending",    value: "Pending",            count: Model.PendingCount),
+        (label: "In progress",value: "InProgress",         count: Model.InProgressCount),
+        (label: "Completed",  value: "Completed",          count: Model.CompletedCount),
+        };
+    }
+    @foreach (var f in filters)
+    {
+        var isActive = (f.value == null && Model.CurrentFilter == null)
+        || f.value == Model.CurrentFilter?.ToString();
+        <a asp-action="Index"
+           asp-route-filter="@f.value"
+           style="padding:7px 14px; border-radius:20px; font-size:13px;
+                      font-weight:500; text-decoration:none; border:1px solid;
+                      @(isActive
+                                 ? "background:var(--primary); color:#fff; border-color:var(--primary)"
+                                 : "background:var(--bg-white); color:var(--text-secondary); border-color:var(--border)")">
+            @f.label
+            <span style="font-size:11px; opacity:0.8">
+                (@f.count)
+            </span>
+        </a>
+    }
+</div>
+
+@* ── Active requests ──────────────────────────────────────────── *@
+@if (Model.ActiveRequests.Any())
+{
+    <p class="section-label" style="margin-bottom:12px">
+        Active requests
+    </p>
+    <div style="display:flex; flex-direction:column;
+                    gap:12px; margin-bottom:28px">
+        @foreach (var r in Model.ActiveRequests)
+        {
+            <div class="req-card req-card-active">
+                <div class="req-card-header">
+                    <div style="display:flex;
+                                        align-items:center; gap:8px">
+                        <span class="req-category">@r.Category</span>
+                        <span class="req-id">#@r.RequestId</span>
+                    </div>
+                    <span class="status-badge
+                                status-@r.Status.ToString().ToLower()">
+                        @r.Status
+                    </span>
+                </div>
+
+                <p class="req-desc">@r.Description</p>
+
+                <div class="req-meta">
+                    <span>📅 @r.PreferredDateTime.ToString("dd MMM yyyy, hh:mm tt")</span>
+                    <span>📍 @r.Address</span>
+                    @if (r.AssignedTechnician != null)
+                    {
+                        <span>
+                            👷 @r.AssignedTechnician.User.FullName
+                        </span>
+                    }
+                </div>
+
+                <div class="req-actions">
+                    <a asp-action="Details"
+                       asp-route-id="@r.RequestId"
+                       class="btn-outline btn-sm">
+                        View details
+                    </a>
+
+                    @* Pay now — only when technician has created bill *@
+                    @if (r.Status == RequestStatus.Billed)
+                    {
+                        <a asp-area="Customer"
+                           asp-controller="Bills"
+                           asp-action="Pay"
+                           asp-route-requestId="@r.RequestId"
+                           class="btn-primary btn-sm">
+                            Pay now
+                        </a>
+                    }
+
+                    @* Cancel — only when Pending or Assigned *@
+                    @if (r.Status == RequestStatus.Pending ||
+                                r.Status == RequestStatus.Assigned)
+                    {
+                        <form asp-action="Cancel"
+                              asp-route-id="@r.RequestId"
+                              method="post"
+                              onsubmit="return confirm(
+                                            'Cancel this request?')">
+                            @Html.AntiForgeryToken()
+                            <button type="submit"
+                                    class="btn-danger btn-sm">
+                                Cancel
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@* ── Past requests ────────────────────────────────────────────── *@
+@if (Model.PastRequests.Any())
+{
+    <p class="section-label" style="margin-bottom:12px">
+        Past requests
+    </p>
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Technician</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.PastRequests)
+                {
+                    <tr>
+                        <td style="color:var(--text-muted)">
+                            #@r.RequestId
+                        </td>
+                        <td>
+                            <span class="category-badge">
+                                @r.Category
+                            </span>
+                        </td>
+                        <td class="cell-truncate"
+                            title="@r.Description">
+                            @r.Description
+                        </td>
+                        <td>
+                            @(r.AssignedTechnician?.User.FullName
+                                                ?? "—")
+                        </td>
+                        <td style="color:var(--text-secondary)">
+                            @r.CreatedAt.ToString("dd MMM yyyy")
+                        </td>
+                        <td>
+                            <span class="status-badge
+                                        status-@r.Status.ToString().ToLower()">
+                                @r.Status
+                            </span>
+                        </td>
+                        <td>
+                            <a asp-action="Details"
+                               asp-route-id="@r.RequestId"
+                               class="btn-outline btn-sm">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@* ── Empty state ──────────────────────────────────────────────── *@
+@if (!Model.ActiveRequests.Any() && !Model.PastRequests.Any())
+{
+    <div class="empty-state">
+        <span class="empty-icon">🔧</span>
+        <h3>No requests yet</h3>
+        <p>
+            @if (Model.CurrentFilter != null)
+            {
+                <span>No @Model.CurrentFilter requests found.</span>
+            }
+            else
+            {
+                <span>
+                    Book your first service and get help fast.
+                </span>
+            }
+        </p>
+        <a asp-action="Create" class="btn-primary">
+            + Book a service
+        </a>
+    </div>
+}

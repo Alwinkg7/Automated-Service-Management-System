@@ -1,0 +1,77 @@
+﻿@* =================================================================
+   Login.cshtml — Single login page for all three roles.
+   After successful login, AccountController reads the Role
+   from ApplicationUser and redirects to the correct dashboard.
+   ================================================================= *@
+
+@model ServiceApp.Web.ViewModels.Auth.LoginViewModel
+@{
+    ViewData["Title"] = "Sign in";
+    Layout = "~/Views/Shared/_AuthLayout.cshtml";
+}
+
+<div class="auth-card">
+
+    <div class="auth-brand">
+        <div class="auth-icon">⚙️</div>
+        <h1>ServiceApp</h1>
+        <p>Sign in to your account</p>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert-success">@TempData["Success"]</div>
+    }
+
+    <form asp-action="Login"
+          asp-route-returnUrl="@ViewData["ReturnUrl"]"
+          method="post">
+
+        <div asp-validation-summary="ModelOnly" class="alert-error"></div>
+
+        <div class="form-group">
+            <label asp-for="Email">Email address</label>
+            <input asp-for="Email"
+                   class="form-input"
+                   placeholder="you@example.com"
+                   autofocus
+                   autocomplete="email" />
+            <span asp-validation-for="Email" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Password">Password</label>
+            <input asp-for="Password"
+                   class="form-input"
+                   placeholder="••••••••"
+                   autocomplete="current-password" />
+            <span asp-validation-for="Password" class="field-error"></span>
+        </div>
+
+        <div class="remember-row">
+            <label class="check-label">
+                <input asp-for="RememberMe" type="checkbox" />
+                Remember me for 7 days
+            </label>
+        </div>
+
+        <button type="submit" class="btn-submit">Sign in</button>
+    </form>
+
+    <div class="auth-links">
+        <p>
+            New customer?
+            <a asp-action="CustomerRegister">Create customer account</a>
+        </p>
+        <p>
+            New professional?
+            <a asp-action="TechnicianRegister">Create technician account</a>
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

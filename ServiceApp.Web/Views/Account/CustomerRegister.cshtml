@@ -1,0 +1,90 @@
+﻿@* =================================================================
+   CustomerRegister.cshtml
+   Separate signup page for customers.
+   Layout = "_AuthLayout" — no sidebar, centered card on gradient.
+   ================================================================= *@
+
+@model ServiceApp.Web.ViewModels.Auth.CustomerRegisterViewModel
+@{
+    ViewData["Title"] = "Customer signup";
+    Layout = "~/Views/Shared/_AuthLayout.cshtml";
+}
+
+<div class="auth-card">
+
+    <div class="auth-brand">
+        <div class="auth-icon">🔧</div>
+        <h1>Create customer account</h1>
+        <p>Book trusted professionals for home services</p>
+    </div>
+
+    <form asp-action="CustomerRegister" method="post">
+        @* CSRF token auto-injected by asp-action tag helper *@
+        <div asp-validation-summary="ModelOnly" class="alert-error"></div>
+
+        <div class="form-group">
+            <label asp-for="FullName"></label>
+            <input asp-for="FullName"
+                   class="form-input"
+                   placeholder="John Doe"
+                   autofocus />
+            <span asp-validation-for="FullName" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Email"></label>
+            <input asp-for="Email"
+                   class="form-input"
+                   placeholder="you@example.com"
+                   autocomplete="email" />
+            <span asp-validation-for="Email" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Phone"></label>
+            <input asp-for="Phone"
+                   class="form-input"
+                   placeholder="98765 43210" />
+            <span asp-validation-for="Phone" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Password"></label>
+            <input asp-for="Password"
+                   class="form-input"
+                   placeholder="Min. 8 characters"
+                   autocomplete="new-password" />
+            <span asp-validation-for="Password" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="ConfirmPassword"></label>
+            <input asp-for="ConfirmPassword"
+                   class="form-input"
+                   placeholder="Repeat password"
+                   autocomplete="new-password" />
+            <span asp-validation-for="ConfirmPassword" class="field-error"></span>
+        </div>
+
+        <button type="submit" class="btn-submit">
+            Create customer account
+        </button>
+    </form>
+
+    <div class="auth-links">
+        <p>
+            Already have an account?
+            <a asp-action="Login">Sign in</a>
+        </p>
+        <p>
+            Are you a professional?
+            <a asp-action="TechnicianRegister">Sign up as technician</a>
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

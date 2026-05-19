@@ -1,0 +1,34 @@
+﻿@* =================================================================
+   _AuthLayout.cshtml
+   
+   Minimal layout for Login, CustomerRegister, TechnicianRegister.
+   No sidebar. Just a centered card on a dark gradient background.
+   
+   Used by setting in the view:
+       Layout = "~/Views/Shared/_AuthLayout.cshtml";
+   ================================================================= *@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ServiceApp</title>
+
+    <link rel="stylesheet" href="~/css/auth.css" asp-append-version="true" />
+</head>
+<body class="auth-body">
+
+    <main class="auth-main">
+        @* Login / Register card renders here *@
+        @RenderBody()
+    </main>
+
+    @* jQuery + validation scripts needed for client-side form validation *@
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,227 @@
+﻿@model ServiceApp.Web.Areas.Customer.Models.CreateRequestViewModel
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = "Book a service";
+}
+
+<div class="page-header">
+    <h2>Book a service</h2>
+    <a asp-action="Index" class="btn-outline">
+        ← My requests
+    </a>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 380px;
+            gap:24px; align-items:start">
+
+    @* ── Left: booking form ───────────────────────────────────── *@
+    <div class="form-card">
+
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly"
+                 class="toast toast-error"
+                 style="margin-bottom:16px"></div>
+
+            @* Service category *@
+            <div class="form-group">
+                <label asp-for="Category">What do you need?</label>
+                <select asp-for="Category"
+                        class="form-control"
+                        asp-items="Html.GetEnumSelectList<ServiceCategory>()">
+                </select>
+                <span asp-validation-for="Category"
+                      class="field-error"></span>
+                <span class="form-hint">
+                    We match you with a verified expert in this trade
+                </span>
+            </div>
+
+            @* Description *@
+            <div class="form-group">
+                <label asp-for="Description">
+                    Describe the problem
+                </label>
+                <textarea asp-for="Description"
+                          class="form-control"
+                          rows="4"
+                          placeholder="E.g. My kitchen tap is leaking — water drips constantly even when fully closed. The tap is about 5 years old."></textarea>
+                <span asp-validation-for="Description"
+                      class="field-error"></span>
+                <span class="form-hint">
+                    More detail helps the technician arrive prepared
+                </span>
+            </div>
+
+            @* Address *@
+            <div class="form-group">
+                <label asp-for="Address">Service address</label>
+
+                @* Show hint if profile address is saved *@
+                @if (!string.IsNullOrEmpty(Model.SavedAddress))
+                {
+                    <div style="font-size:12px; color:var(--text-secondary);
+                                    margin-bottom:6px; padding:6px 10px;
+                                    background:var(--bg-page);
+                                    border-radius:6px; border:0.5px solid var(--border)">
+                        📍 Saved address: @Model.SavedAddress
+                        — <a href="#"
+                             onclick="useSaved(); return false;"
+                             style="color:var(--primary)">
+                            Use this
+                        </a>
+                    </div>
+                }
+
+                <input asp-for="Address"
+                       class="form-control"
+                       placeholder="House no, street, area" />
+                <span asp-validation-for="Address"
+                      class="field-error"></span>
+            </div>
+
+            @* Pin code *@
+            <div class="form-group">
+                <label asp-for="PinCode">Pin code</label>
+                <input asp-for="PinCode"
+                       class="form-control"
+                       placeholder="e.g. 673001"
+                       style="max-width:200px" />
+                <span asp-validation-for="PinCode"
+                      class="field-error"></span>
+            </div>
+
+            @* Preferred date/time *@
+            <div class="form-group">
+                <label asp-for="PreferredDateTime">
+                    Preferred date &amp; time
+                </label>
+                <input asp-for="PreferredDateTime"
+                       class="form-control"
+                       type="datetime-local"
+                       style="max-width:280px" />
+                <span asp-validation-for="PreferredDateTime"
+                      class="field-error"></span>
+                <span class="form-hint">
+                    Must be at least 1 hour from now
+                </span>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:8px">
+                <button type="submit" class="btn-primary">
+                    Submit request
+                </button>
+                <a asp-action="Index" class="btn-outline">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+    @* ── Right: info panel ────────────────────────────────────── *@
+    <div style="display:flex; flex-direction:column; gap:14px">
+
+        @* What happens next *@
+        <div class="form-card" style="padding:18px">
+            <h4 style="font-size:14px; font-weight:600;
+                       margin-bottom:14px">
+                What happens after you submit?
+            </h4>
+
+            <div style="display:flex; flex-direction:column; gap:12px">
+                @{
+                    var steps = new[]
+                    {
+                                ("1", "Request received",
+                                "Your request is in our queue as Pending."),
+                                ("2", "Technician assigned",
+                                "Admin matches a verified expert to your job."),
+                                ("3", "Expert on the way",
+                                "Technician accepts and heads to your address."),
+                                ("4", "Job complete & pay",
+                                "Pay securely once you're satisfied.")
+                                };
+                }
+                @foreach (var (num, title, desc) in steps)
+                {
+                    <div style="display:flex; gap:10px;
+                                    align-items:flex-start">
+                        <div style="width:24px; height:24px;
+                                        border-radius:50%;
+                                        background:var(--primary-light);
+                                        color:var(--primary);
+                                        display:flex; align-items:center;
+                                        justify-content:center;
+                                        font-size:11px; font-weight:600;
+                                        flex-shrink:0">
+                            @num
+                        </div>
+                        <div>
+                            <p style="font-size:13px; font-weight:500;
+                                          margin-bottom:1px">
+                                @title
+                            </p>
+                            <p style="font-size:12px;
+                                          color:var(--text-secondary)">
+                                @desc
+                            </p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* Tips card *@
+        <div class="form-card" style="padding:18px">
+            <h4 style="font-size:14px; font-weight:600;
+                       margin-bottom:10px">
+                Tips for a faster service
+            </h4>
+            <ul style="padding-left:16px; display:flex;
+                       flex-direction:column; gap:6px">
+                <li style="font-size:12px; color:var(--text-secondary)">
+                    Be specific — mention brand, age of equipment
+                </li>
+                <li style="font-size:12px; color:var(--text-secondary)">
+                    Add photos if possible (Phase 2+)
+                </li>
+                <li style="font-size:12px; color:var(--text-secondary)">
+                    Choose a time slot with some buffer
+                </li>
+                <li style="font-size:12px; color:var(--text-secondary)">
+                    Make sure someone is home at the address
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        // "Use this" link fills address from saved profile
+        function useSaved() {
+            document.getElementById('Address').value =
+                '@Html.Raw(Model.SavedAddress ?? "")';
+            document.getElementById('PinCode').value =
+                '@Html.Raw(Model.SavedPinCode ?? "")';
+        }
+
+        // Set the min value of datetime-local to 1 hour from now
+        (function () {
+            var input = document.getElementById('PreferredDateTime');
+            if (!input) return;
+            var now = new Date();
+            now.setHours(now.getHours() + 1);
+            // Format: YYYY-MM-DDThh:mm (what datetime-local expects)
+            var pad = n => String(n).padStart(2, '0');
+            var min = now.getFullYear() + '-' +
+                      pad(now.getMonth() + 1) + '-' +
+                      pad(now.getDate()) + 'T' +
+                      pad(now.getHours()) + ':' +
+                      pad(now.getMinutes());
+            input.setAttribute('min', min);
+        })();
+    </script>
+}

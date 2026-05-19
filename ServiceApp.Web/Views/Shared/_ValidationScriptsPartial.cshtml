@@ -1,2 +1,15 @@
-﻿<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+﻿@* =================================================================
+   _ValidationScriptsPartial.cshtml
+   
+   Include on any page with a form that needs validation.
+   These scripts enable CLIENT-SIDE validation — errors show
+   instantly without a server round-trip.
+   
+   How it works:
+   ASP.NET Tag Helpers render data-val-* attributes on inputs.
+   jquery.validate reads those attributes and shows errors.
+   Server-side validation still runs as a backup.
+   ================================================================= *@
+
+<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
 <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>

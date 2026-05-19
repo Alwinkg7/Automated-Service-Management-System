@@ -1,0 +1,251 @@
+﻿@model IEnumerable<ServiceApp.Core.Entities.ServiceRequest>
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = "My jobs";
+    var tech = ViewBag.TechProfile as ServiceApp.Core.Entities.TechnicianProfile;
+    var currentFilter = ViewBag.CurrentFilter as RequestStatus?;
+}
+
+<div class="page-header">
+    <h2>My jobs</h2>
+    <div style="display:flex; align-items:center; gap:10px">
+        @{
+            var statusClass = tech?.Status switch
+            {
+                TechnicianStatus.Available => "tech-available",
+                TechnicianStatus.Busy => "tech-busy",
+                TechnicianStatus.Offline => "tech-offline",
+                _ => "tech-offline"
+            };
+        }
+        <span class="status-badge @statusClass">
+            @tech?.Status
+        </span>
+    </div>
+</div>
+
+@* ── Filter tabs ──────────────────────────────────────────────── *@
+<div style="display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap">
+    @{
+        var tabs = new[]
+        {
+        (label:"All",         value:(string?)null,  count:(int)ViewBag.AssignedCount + (int)ViewBag.InProgressCount + (int)ViewBag.CompletedCount),
+        (label:"Assigned",    value:"Assigned",     count:(int)ViewBag.AssignedCount),
+        (label:"In progress", value:"InProgress",   count:(int)ViewBag.InProgressCount),
+        (label:"Completed",   value:"Completed",    count:(int)ViewBag.CompletedCount),
+        };
+    }
+    @foreach (var tab in tabs)
+    {
+        var isActive = (tab.value == null && currentFilter == null)
+        || tab.value == currentFilter?.ToString();
+        <a asp-action="Index"
+           asp-route-filter="@tab.value"
+           style="padding:6px 14px; border-radius:20px; font-size:12.5px;
+                      font-weight:500; text-decoration:none; border:1px solid;
+                      @(isActive
+                               ? "background:var(--primary);color:#fff;border-color:var(--primary)"
+                               : "background:var(--bg-white);color:var(--text-secondary);border-color:var(--border)")">
+            @tab.label
+            <span style="opacity:.8">(@tab.count)</span>
+        </a>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <span class="empty-icon">✓</span>
+        <h3>No jobs found</h3>
+        <p>
+            @if (currentFilter != null)
+            {
+                <span>No @currentFilter jobs at the moment.</span>
+            }
+            else
+            {
+                <span>
+                    You have no jobs yet. Make sure your
+                    status is Available to receive assignments.
+                </span>
+            }
+        </p>
+    </div>
+}
+else
+{
+    @* ── Active jobs (Assigned / InProgress) first ─────────────── *@
+    var activeJobs = Model.Where(j =>
+        j.Status == RequestStatus.Assigned ||
+        j.Status == RequestStatus.InProgress)
+        .OrderBy(j => j.CreatedAt)
+        .ToList();
+
+    var pastJobs = Model.Where(j =>
+        j.Status != RequestStatus.Assigned &&
+        j.Status != RequestStatus.InProgress)
+        .OrderByDescending(j => j.UpdatedAt)
+        .ToList();
+
+    @if (activeJobs.Any())
+    {
+        <p class="section-label" style="margin-bottom:12px">
+            Active — need your action
+        </p>
+
+        <div style="display:flex; flex-direction:column;
+                            gap:12px; margin-bottom:28px">
+            @foreach (var job in activeJobs)
+            {
+                <div class="req-card req-card-active">
+                    <div class="req-card-header">
+                        <div style="display:flex;
+                                                align-items:center; gap:8px">
+                            <span class="req-category">
+                                @job.Category
+                            </span>
+                            <span class="req-id">#@job.RequestId</span>
+                        </div>
+                        <span class="status-badge
+                                        status-@job.Status.ToString().ToLower()">
+                            @job.Status
+                        </span>
+                    </div>
+
+                    <p class="req-desc">@job.Description</p>
+
+                    <div class="req-meta">
+                        <span>
+                            👤 @job.Customer.FullName
+                        </span>
+                        <span>
+                            📞 @job.Customer.Phone
+                        </span>
+                        <span>
+                            📍 @job.Address
+                        </span>
+                        <span>
+                            🗓 @job.PreferredDateTime
+                            .ToString("dd MMM, hh:mm tt")
+                        </span>
+                    </div>
+
+                    <div class="req-actions">
+                        <a asp-action="Details"
+                           asp-route-id="@job.RequestId"
+                           class="btn-outline btn-sm">
+                            View details
+                        </a>
+
+                        @* Accept — only for Assigned jobs *@
+                        @if (job.Status == RequestStatus.Assigned)
+                        {
+                            <form asp-action="Accept"
+                                  asp-route-id="@job.RequestId"
+                                  method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit"
+                                        class="btn-primary btn-sm">
+                                    ✓ Accept job
+                                </button>
+                            </form>
+
+                            <form asp-action="Reject"
+                                  asp-route-id="@job.RequestId"
+                                  method="post"
+                                  onsubmit="return confirm(
+                                                      'Reject this job? It will go back to the queue.')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit"
+                                        class="btn-danger btn-sm">
+                                    ✗ Reject
+                                </button>
+                            </form>
+                        }
+
+                        @* Create bill — only for InProgress *@
+                        @if (job.Status == RequestStatus.InProgress)
+                        {
+                            <a asp-area="Technician"
+                               asp-controller="Bills"
+                               asp-action="Create"
+                               asp-route-requestId="@job.RequestId"
+                               class="btn-primary btn-sm">
+                                Create bill
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @* ── Past jobs table ──────────────────────────────────────── *@
+    @if (pastJobs.Any())
+    {
+        <p class="section-label" style="margin-bottom:12px">
+            Past jobs
+        </p>
+        <div class="table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Customer</th>
+                        <th>Category</th>
+                        <th>Address</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var job in pastJobs)
+                    {
+                        <tr>
+                            <td style="color:var(--text-muted)">
+                                #@job.RequestId
+                            </td>
+                            <td>
+                                <p style="font-weight:500;
+                                                      font-size:13px">
+                                    @job.Customer.FullName
+                                </p>
+                                <p style="font-size:11px;
+                                                      color:var(--text-muted)">
+                                    @job.Customer.Phone
+                                </p>
+                            </td>
+                            <td>
+                                <span class="category-badge">
+                                    @job.Category
+                                </span>
+                            </td>
+                            <td style="font-size:12px;
+                                                   color:var(--text-secondary)">
+                                @job.Address
+                            </td>
+                            <td style="font-size:12px;
+                                                   color:var(--text-secondary)">
+                                @job.CreatedAt.ToString("dd MMM yyyy")
+                            </td>
+                            <td>
+                                <span class="status-badge
+                                                status-@job.Status.ToString().ToLower()">
+                                    @job.Status
+                                </span>
+                            </td>
+                            <td>
+                                <a asp-action="Details"
+                                   asp-route-id="@job.RequestId"
+                                   class="btn-outline btn-sm">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}

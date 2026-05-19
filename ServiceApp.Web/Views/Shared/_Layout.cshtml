@@ -1,49 +1,213 @@
-﻿<!DOCTYPE html>
+﻿@* =================================================================
+   _Layout.cshtml
+   
+   Main layout for ALL logged-in pages.
+   
+   Visual structure:
+   ┌─────────────┬──────────────────────────────────┐
+   │             │                                  │
+   │   SIDEBAR   │      MAIN CONTENT AREA           │
+   │   240px     │      (@RenderBody)               │
+   │             │                                  │
+   │  Brand      │  TempData toasts                 │
+   │  Nav links  │  Page content                    │
+   │  User info  │                                  │
+   │  Logout     │                                  │
+   └─────────────┴──────────────────────────────────┘
+   
+   Nav links shown depend on logged-in user's role.
+   User.IsInRole() reads auth cookie — zero DB calls.
+   ================================================================= *@
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - ServiceApp.Web</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <title>@ViewData["Title"] — ServiceApp</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/ServiceApp.Web.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">ServiceApp.Web</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
+
+    <div class="app-shell">
+
+        @* ── Sidebar ──────────────────────────────────────────── *@
+        <nav class="sidebar">
+
+            <div class="sidebar-brand">
+                <span class="sidebar-icon">⚙</span>
+                <span class="sidebar-name">ServiceApp</span>
             </div>
+
+            <ul class="sidebar-nav">
+
+                @* Each role sees only their own nav items *@
+
+                @if (User.IsInRole("Admin"))
+                {
+                    <li class="nav-item">
+                        <a asp-area="Admin"
+                           asp-controller="Home"
+                           asp-action="Dashboard">
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Admin"
+                           asp-controller="Requests"
+                           asp-action="Index">
+                            All requests
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Admin" 
+                        asp-controller="Users"
+                           asp-action="Index">
+                           All users
+                       </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Admin"
+                           asp-controller="Users"
+                           asp-action="Create">
+                            Create admin
+                        </a>
+                    </li>
+                }
+
+                @if (User.IsInRole("Customer"))
+                {
+                    <li class="nav-item">
+                        <a asp-area="Customer"
+                           asp-controller="Home"
+                           asp-action="Dashboard">
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Customer"
+                           asp-controller="Requests"
+                           asp-action="Create">
+                            + Book a service
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Customer"
+                           asp-controller="Requests"
+                           asp-action="Index">
+                            My requests
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Customer"
+                           asp-controller="Profile"
+                           asp-action="Index">
+                            My profile
+                        </a>
+                    </li>
+                }
+
+                @if (User.IsInRole("Technician"))
+                {
+                    <li class="nav-item">
+                        <a asp-area="Technician"
+                           asp-controller="Home"
+                           asp-action="Dashboard">
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Technician"
+                           asp-controller="Jobs"
+                           asp-action="Index">
+                            My jobs
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Technician"
+                           asp-controller="Profile"
+                           asp-action="Index">
+                            My profile
+                        </a>
+                    </li>
+                }
+
+            </ul>
+
+            @* ── User info + logout at bottom of sidebar ─────── *@
+            <div class="sidebar-footer">
+                <div class="user-pill">
+                    @* First letter of name as avatar *@
+                    <div class="user-avatar">
+                        @User.Identity?.Name?.Substring(0, 1).ToUpper()
+                    </div>
+                    <div class="user-meta">
+                        <span class="user-name">@User.Identity?.Name</span>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <span class="role-badge role-admin">Admin</span>
+                        }
+                        @if (User.IsInRole("Technician"))
+                        {
+                            <span class="role-badge role-tech">Technician</span>
+                        }
+                        @if (User.IsInRole("Customer"))
+                        {
+                            <span class="role-badge role-customer">Customer</span>
+                        }
+                    </div>
+                </div>
+
+                @*
+                Logout is POST — not a link.
+                A GET /logout would let any page log you out
+                via <img src="/logout"> — classic CSRF attack.
+                AntiForgeryToken prevents this.
+            *@
+                <form asp-controller="Account"
+                      asp-action="Logout"
+                      asp-area=""
+                      method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-logout">
+                        Sign out
+                    </button>
+                </form>
+            </div>
+
         </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+
+        @* ── Main content ──────────────────────────────────────── *@
+        <main class="main-content">
+
+            @*
+            TempData persists for ONE redirect cycle.
+            Set in controller: TempData["Success"] = "Done!"
+            Shows here on the very next page load, then gone.
+        *@
+            @if (TempData["Success"] != null)
+            {
+                <div class="toast toast-success">
+                    @TempData["Success"]
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="toast toast-error">
+                    @TempData["Error"]
+                </div>
+            }
+
             @RenderBody()
+
         </main>
+
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - ServiceApp.Web - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
+
 </body>
 </html>

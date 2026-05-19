@@ -1,0 +1,174 @@
+﻿@model ServiceApp.Core.Entities.Bill
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = $"Bill #{Model.BillId}";
+}
+
+<div class="page-header">
+    <div>
+        <h2>Bill #@Model.BillId</h2>
+        <span style="font-size:13px; color:var(--text-secondary)">
+            Request #@Model.RequestId ·
+            Created @Model.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")
+        </span>
+    </div>
+    <a asp-area="Technician"
+       asp-controller="Jobs"
+       asp-action="Details"
+       asp-route-id="@Model.RequestId"
+       class="btn-outline">
+        ← Back to job
+    </a>
+</div>
+
+<div style="max-width:680px">
+    <div class="form-card">
+
+        @* Bill header *@
+        <div style="display:flex; justify-content:space-between;
+                    align-items:flex-start; margin-bottom:20px;
+                    padding-bottom:16px;
+                    border-bottom:1px solid var(--border)">
+            <div>
+                <h3 style="font-size:18px; font-weight:700;
+                           margin-bottom:4px">
+                    ServiceApp Invoice
+                </h3>
+                <p style="font-size:13px; color:var(--text-secondary)">
+                    Bill #@Model.BillId · Request #@Model.RequestId
+                </p>
+                <p style="font-size:12px; color:var(--text-muted)">
+                    Issued: @Model.CreatedAt.ToString("dd MMM yyyy")
+                </p>
+            </div>
+            <span class="status-badge
+                @(Model.PaymentStatus == PaymentStatus.Paid
+                                      ? "status-completed" : "status-billed")">
+                @Model.PaymentStatus
+            </span>
+        </div>
+
+        @* Technician info *@
+        @if (Model.Technician != null)
+        {
+            <div style="margin-bottom:16px">
+                <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:.5px; margin-bottom:4px">
+                    From
+                </p>
+                <p style="font-size:14px; font-weight:600">
+                    @Model.Technician.User.FullName
+                </p>
+                <p style="font-size:13px;
+                              color:var(--text-secondary)">
+                    @Model.Technician.Skill ·
+                    @Model.Technician.User.Phone
+                </p>
+            </div>
+        }
+
+        @* Line items *@
+        <table style="width:100%; border-collapse:collapse;
+                      margin-bottom:16px">
+            <thead>
+                <tr style="border-bottom:1.5px solid var(--border)">
+                    <th style="text-align:left; padding:8px 0;
+                               font-size:11px; font-weight:600;
+                               color:var(--text-secondary);
+                               text-transform:uppercase;
+                               letter-spacing:.5px">
+                        Description
+                    </th>
+                    <th style="text-align:center; padding:8px 0;
+                               font-size:11px; font-weight:600;
+                               color:var(--text-secondary);
+                               text-transform:uppercase;
+                               letter-spacing:.5px; width:60px">
+                        Qty
+                    </th>
+                    <th style="text-align:right; padding:8px 0;
+                               font-size:11px; font-weight:600;
+                               color:var(--text-secondary);
+                               text-transform:uppercase;
+                               letter-spacing:.5px; width:110px">
+                        Unit price
+                    </th>
+                    <th style="text-align:right; padding:8px 0;
+                               font-size:11px; font-weight:600;
+                               color:var(--text-secondary);
+                               text-transform:uppercase;
+                               letter-spacing:.5px; width:110px">
+                        Amount
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.BillItems)
+                {
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:10px 0; font-size:14px">
+                            @item.Description
+                        </td>
+                        <td style="padding:10px 0; font-size:14px;
+                                       text-align:center;
+                                       color:var(--text-secondary)">
+                            @item.Quantity
+                        </td>
+                        <td style="padding:10px 0; font-size:14px;
+                                       text-align:right;
+                                       color:var(--text-secondary)">
+                            ₹@item.UnitPrice.ToString("N2")
+                        </td>
+                        <td style="padding:10px 0; font-size:14px;
+                                       text-align:right; font-weight:500">
+                            ₹@item.Amount.ToString("N2")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3"
+                        style="padding:12px 0; font-size:15px;
+                               font-weight:600; text-align:right">
+                        Total
+                    </td>
+                    <td style="padding:12px 0; font-size:20px;
+                               font-weight:700; text-align:right;
+                               color:var(--primary)">
+                        ₹@Model.TotalAmount.ToString("N2")
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+
+        @* Payment status *@
+        @if (Model.PaymentStatus == PaymentStatus.Paid
+                && Model.Payment != null)
+        {
+            <div style="background:#D1FAE5; border:1px solid #6EE7B7;
+                            border-radius:8px; padding:12px 16px">
+                <p style="font-size:14px; font-weight:600;
+                              color:#065F46; margin-bottom:4px">
+                    ✓ Payment received
+                </p>
+                <p style="font-size:12px; color:#047857">
+                    ₹@Model.Payment.Amount.ToString("N2") via
+                    @Model.Payment.PaymentMethod ·
+                    @Model.Payment.PaidAt.ToString("dd MMM yyyy, hh:mm tt")
+                </p>
+            </div>
+        }
+        else
+        {
+            <div style="background:#FEF3C7; border:1px solid #FDE68A;
+                            border-radius:8px; padding:12px 16px">
+                <p style="font-size:13px; color:#92400E">
+                    ⏳ Waiting for customer payment
+                </p>
+            </div>
+        }
+    </div>
+</div>

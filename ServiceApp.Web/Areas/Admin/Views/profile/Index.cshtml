@@ -1,0 +1,122 @@
+﻿@model ServiceApp.Web.Areas.Admin.Models.AdminProfileViewModel
+@{
+    ViewData["Title"] = "My profile";
+}
+
+<div class="page-header">
+    <h2>My profile</h2>
+</div>
+
+<div style="display:grid; grid-template-columns:280px 1fr;
+            gap:24px; align-items:start">
+
+    @* ── Left: Account info ───────────────────────────────────── *@
+    <div class="form-card" style="text-align:center">
+
+        <div style="width:72px; height:72px; border-radius:50%;
+                    background:#DC2626; color:#fff;
+                    display:flex; align-items:center;
+                    justify-content:center; font-size:28px;
+                    font-weight:700; margin:0 auto 16px">
+            @Model.FullName.Substring(0, 1).ToUpper()
+        </div>
+
+        <h3 style="font-size:17px; font-weight:700; margin-bottom:4px">
+            @Model.FullName
+        </h3>
+        <p style="color:var(--text-secondary); font-size:13px">
+            @Model.Email
+        </p>
+        <p style="color:var(--text-secondary); font-size:13px">
+            @Model.Phone
+        </p>
+
+        <div style="margin-top:16px; padding-top:16px;
+                    border-top:1px solid var(--border)">
+            <span class="role-badge role-admin"
+                  style="font-size:12px; padding:4px 12px">
+                Admin
+            </span>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Designation))
+        {
+            <p style="margin-top:12px; font-size:13px;
+                          color:var(--text-secondary)">
+                @Model.Designation
+                @if (!string.IsNullOrEmpty(Model.Department))
+                {
+                    <br />
+                    <span>@Model.Department</span>
+                }
+            </p>
+        }
+    </div>
+
+    @* ── Right: Editable form ─────────────────────────────────── *@
+    <div class="form-card">
+        <h3 style="font-size:16px; font-weight:600; margin-bottom:20px">
+            @(Model.IsExistingProfile ? "Edit profile" : "Set up profile")
+        </h3>
+
+        <form asp-action="Index" method="post">
+            <div asp-validation-summary="ModelOnly"
+                 class="toast toast-error"
+                 style="margin-bottom:16px"></div>
+
+            <div style="display:grid;
+                        grid-template-columns:1fr 1fr; gap:16px">
+                <div class="form-group">
+                    <label asp-for="Department">Department</label>
+                    <input asp-for="Department"
+                           class="form-control"
+                           placeholder="e.g. Operations" />
+                </div>
+                <div class="form-group">
+                    <label asp-for="Designation">Designation</label>
+                    <input asp-for="Designation"
+                           class="form-control"
+                           placeholder="e.g. Operations Manager" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="EmployeeId">Employee ID</label>
+                <input asp-for="EmployeeId"
+                       class="form-control"
+                       placeholder="e.g. EMP001" />
+            </div>
+
+            <div class="form-group">
+                <label asp-for="AvatarUrl">
+                    Profile photo URL
+                    <span style="color:var(--text-muted);
+                                 font-weight:400">(optional)</span>
+                </label>
+                <input asp-for="AvatarUrl"
+                       class="form-control"
+                       placeholder="https://..." />
+            </div>
+
+            <button type="submit" class="btn-primary">
+                @(Model.IsExistingProfile
+                                ? "Update profile"
+                                : "Save profile")
+            </button>
+
+            <a asp-area="Admin"
+               asp-controller="Home"
+               asp-action="Dashboard"
+               class="btn-outline"
+               style="margin-left:10px">
+                Cancel
+            </a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

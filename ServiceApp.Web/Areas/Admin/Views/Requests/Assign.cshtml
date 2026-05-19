@@ -1,0 +1,365 @@
+﻿@model ServiceApp.Web.Areas.Admin.Models.AssignTechnicianViewModel
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = $"Assign technician — Request #{Model.Request.RequestId}";
+}
+
+<div class="page-header">
+    <div>
+        <h2>Assign technician</h2>
+        <span style="font-size:13px; color:var(--text-secondary)">
+            Request #@Model.Request.RequestId ·
+            @Model.Request.Category
+        </span>
+    </div>
+    <a asp-action="Index" class="btn-outline">← All requests</a>
+</div>
+
+<form asp-action="Assign"
+      asp-route-id="@Model.Request.RequestId"
+      method="post">
+    @Html.AntiForgeryToken()
+
+    <div style="display:grid; grid-template-columns:1fr 1fr;
+                gap:20px; align-items:start">
+
+        @* ── Left: Request details ────────────────────────────── *@
+        <div style="display:flex; flex-direction:column; gap:14px">
+
+            <div class="form-card">
+                <h3 style="font-size:15px; font-weight:600;
+                           margin-bottom:14px">
+                    Request details
+                </h3>
+
+                <div style="display:flex; flex-direction:column; gap:12px">
+
+                    <div style="display:flex; justify-content:space-between;
+                                align-items:center">
+                        <span class="category-badge" style="font-size:13px;
+                              padding:4px 12px">
+                            @Model.Request.Category
+                        </span>
+                        <span class="status-badge status-pending">
+                            Pending
+                        </span>
+                    </div>
+
+                    <div>
+                        <p style="font-size:11px; font-weight:600;
+                                  color:var(--text-secondary);
+                                  text-transform:uppercase;
+                                  letter-spacing:0.5px;
+                                  margin-bottom:3px">
+                            Customer
+                        </p>
+                        <p style="font-size:14px; font-weight:500">
+                            @Model.Request.Customer.FullName
+                        </p>
+                        <p style="font-size:12px;
+                                  color:var(--text-secondary)">
+                            @Model.Request.Customer.Phone ·
+                            @Model.Request.Customer.Email
+                        </p>
+                    </div>
+
+                    <div>
+                        <p style="font-size:11px; font-weight:600;
+                                  color:var(--text-secondary);
+                                  text-transform:uppercase;
+                                  letter-spacing:0.5px;
+                                  margin-bottom:3px">
+                            Problem description
+                        </p>
+                        <p style="font-size:13px; line-height:1.6;
+                                  color:var(--text-primary)">
+                            @Model.Request.Description
+                        </p>
+                    </div>
+
+                    <div style="display:grid;
+                                grid-template-columns:1fr 1fr;
+                                gap:10px">
+                        <div>
+                            <p style="font-size:11px; font-weight:600;
+                                      color:var(--text-secondary);
+                                      text-transform:uppercase;
+                                      letter-spacing:0.5px;
+                                      margin-bottom:3px">
+                                Address
+                            </p>
+                            <p style="font-size:13px">
+                                @Model.Request.Address
+                            </p>
+                            <p style="font-size:12px;
+                                      color:var(--text-muted)">
+                                Pin: @Model.Request.PinCode
+                            </p>
+                        </div>
+                        <div>
+                            <p style="font-size:11px; font-weight:600;
+                                      color:var(--text-secondary);
+                                      text-transform:uppercase;
+                                      letter-spacing:0.5px;
+                                      margin-bottom:3px">
+                                Preferred time
+                            </p>
+                            <p style="font-size:13px">
+                                @Model.Request.PreferredDateTime
+                                .ToString("dd MMM yyyy")
+                            </p>
+                            <p style="font-size:12px;
+                                      color:var(--text-muted)">
+                                @Model.Request.PreferredDateTime
+                                .ToString("hh:mm tt")
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p style="font-size:11px; font-weight:600;
+                                  color:var(--text-secondary);
+                                  text-transform:uppercase;
+                                  letter-spacing:0.5px;
+                                  margin-bottom:3px">
+                            Submitted
+                        </p>
+                        <p style="font-size:13px;
+                                  color:var(--text-secondary)">
+                            @Model.Request.CreatedAt
+                            .ToString("dd MMM yyyy, hh:mm tt")
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            @* Assign button at the bottom of left panel *@
+            <div class="form-card" style="padding:16px">
+                <input type="hidden"
+                       name="SelectedTechnicianProfileId"
+                       id="selectedTechId"
+                       value="0" />
+
+                <div id="selected-summary"
+                     style="display:none; margin-bottom:12px;
+                            padding:10px 12px; background:var(--primary-light);
+                            border-radius:8px; border:1px solid;
+                            border-color:var(--primary)">
+                    <p style="font-size:13px; font-weight:500;
+                              color:var(--primary)">
+                        Selected:
+                        <span id="selected-name">—</span>
+                    </p>
+                    <p style="font-size:12px;
+                              color:var(--text-secondary)">
+                        <span id="selected-skill">—</span> ·
+                        <span id="selected-rating">—</span>
+                    </p>
+                </div>
+
+                <button type="submit"
+                        class="btn-primary"
+                        style="width:100%; font-size:15px; padding:12px"
+                        id="assignBtn"
+                        disabled>
+                    Confirm assignment
+                </button>
+                <p style="font-size:12px; color:var(--text-muted);
+                          margin-top:8px; text-align:center">
+                    Select a technician from the list →
+                </p>
+            </div>
+        </div>
+
+        @* ── Right: Available technicians ─────────────────────── *@
+        <div>
+            <div style="margin-bottom:14px; display:flex;
+                        justify-content:space-between; align-items:center">
+                <h3 style="font-size:15px; font-weight:600">
+                    Available @Model.Request.Category technicians
+                </h3>
+                <span style="font-size:13px; color:var(--text-secondary)">
+                    @Model.AvailableTechnicians.Count available
+                </span>
+            </div>
+
+            @if (!Model.AvailableTechnicians.Any())
+            {
+                <div class="empty-state">
+                    <span class="empty-icon">😔</span>
+                    <h3>No technicians available</h3>
+                    <p>
+                        No @Model.Request.Category technicians
+                        are currently available.
+                        Check back shortly or try reassigning
+                        a technician who is offline.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div style="display:flex; flex-direction:column; gap:10px">
+                    @foreach (var tech in Model.AvailableTechnicians)
+                    {
+                        <div class="tech-card"
+                             data-id="@tech.TechnicianProfileId"
+                             data-name="@tech.User.FullName"
+                             data-skill="@tech.Skill"
+                             data-rating="@(tech.Rating > 0 ? tech.Rating.ToString("F1") + " stars" : "No ratings yet")"
+                             onclick="selectTech(this)"
+                             style="background:var(--bg-white);
+                                            border:1.5px solid var(--border);
+                                            border-radius:var(--radius-lg);
+                                            padding:16px; cursor:pointer;
+                                            transition:all .15s">
+
+                            <div style="display:flex; gap:14px;
+                                                align-items:center">
+
+                                @* Avatar *@
+                                <div style="width:44px; height:44px;
+                                    border-radius:50%;
+                                    background:#7C3AED22;
+                                    color:#7C3AED;
+                                    display:flex;
+                                    align-items:center;
+                                    justify-content:center;
+                                    font-size:18px;
+                                    font-weight:700;
+                                    flex-shrink:0">
+                                    @(tech.User.FullName.Substring(0, 1).ToUpper())
+                                </div>
+
+                                <div style="flex:1">
+                                    <div style="display:flex;
+                                                        justify-content:space-between;
+                                                        align-items:flex-start">
+                                        <div>
+                                            <p style="font-size:14px;
+                                                              font-weight:600;
+                                                              margin-bottom:2px">
+                                                @tech.User.FullName
+                                            </p>
+                                            <p style="font-size:12px;
+                                                              color:var(--text-secondary)">
+                                                @tech.Skill
+                                                @if (tech.YearsOfExperience.HasValue)
+                                                {
+                                                    <span>
+                                                        ·
+                                                        @tech.YearsOfExperience
+                                                        yrs exp
+                                                    </span>
+                                                }
+                                            </p>
+                                        </div>
+
+                                        @* Rating *@
+                                        <div style="text-align:right">
+                                            @if (tech.Rating > 0)
+                                            {
+                                                <p style="font-size:14px;
+                                                                      font-weight:600;
+                                                                      color:#D97706">
+                                                    ★ @tech.Rating.ToString("F1")
+                                                </p>
+                                                <p style="font-size:11px;
+                                                                      color:var(--text-muted)">
+                                                    @tech.TotalJobsCompleted jobs
+                                                </p>
+                                            }
+                                            else
+                                            {
+                                                <p style="font-size:12px;
+                                                                      color:var(--text-muted)">
+                                                    New tech
+                                                </p>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    @* Bio snippet *@
+                                    @if (!string.IsNullOrEmpty(tech.Bio))
+                                    {
+                                        <p style="font-size:12px;
+                                                              color:var(--text-secondary);
+                                                              margin-top:6px;
+                                                              line-height:1.5">
+                                            @(tech.Bio.Length > 80
+                                                                            ? tech.Bio.Substring(0, 80) + "…"
+                                                                            : tech.Bio)
+                                        </p>
+                                    }
+
+                                    @* Service area *@
+                                    @if (!string.IsNullOrEmpty(
+                                                                tech.ServiceAreaPinCode))
+                                    {
+                                        <p style="font-size:11px;
+                                                              color:var(--text-muted);
+                                                              margin-top:4px">
+                                            📍 Service area: @tech.ServiceAreaPinCode
+                                        </p>
+                                    }
+                                </div>
+                            </div>
+
+                            @* Selected indicator *@
+                            <div class="selected-check"
+                                 style="display:none; margin-top:10px;
+                                                padding:6px 10px;
+                                                background:var(--primary-light);
+                                                border-radius:6px; text-align:center;
+                                                font-size:12px; font-weight:600;
+                                                color:var(--primary)">
+                                ✓ Selected for assignment
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        // Track currently selected card
+        var selectedCard = null;
+
+        function selectTech(card) {
+            // Deselect previous
+            if (selectedCard) {
+                selectedCard.style.borderColor = 'var(--border)';
+                selectedCard.style.background  = 'var(--bg-white)';
+                selectedCard.querySelector('.selected-check')
+                    .style.display = 'none';
+            }
+
+            // Select new card
+            card.style.borderColor = 'var(--primary)';
+            card.style.background  = 'var(--primary-light)';
+            card.querySelector('.selected-check').style.display = 'block';
+            selectedCard = card;
+
+            // Update hidden input
+            var id     = card.dataset.id;
+            var name   = card.dataset.name;
+            var skill  = card.dataset.skill;
+            var rating = card.dataset.rating;
+
+            document.getElementById('selectedTechId').value = id;
+
+            // Show selected summary
+            document.getElementById('selected-name').textContent   = name;
+            document.getElementById('selected-skill').textContent  = skill;
+            document.getElementById('selected-rating').textContent = rating;
+            document.getElementById('selected-summary').style.display = 'block';
+
+            // Enable submit button
+            var btn = document.getElementById('assignBtn');
+            btn.disabled = false;
+            btn.textContent = 'Assign ' + name;
+        }
+    </script>
+}

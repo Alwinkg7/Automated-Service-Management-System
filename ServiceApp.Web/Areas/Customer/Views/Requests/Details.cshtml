@@ -1,0 +1,388 @@
+﻿@model ServiceApp.Core.Entities.ServiceRequest
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = $"Request #{Model.RequestId}";
+}
+
+<div class="page-header">
+    <div>
+        <h2>Request #@Model.RequestId</h2>
+        <span style="font-size:13px; color:var(--text-secondary)">
+            @Model.Category · Created @Model.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")
+        </span>
+    </div>
+    <a asp-action="Index" class="btn-outline">
+        ← My requests
+    </a>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 320px;
+            gap:20px; align-items:start">
+
+    @* ── Left: main detail ───────────────────────────────────── *@
+    <div style="display:flex; flex-direction:column; gap:16px">
+
+        @* Request info card *@
+        <div class="form-card">
+            <div style="display:flex; justify-content:space-between;
+                        align-items:center; margin-bottom:16px">
+                <h3 style="font-size:15px; font-weight:600">
+                    Request details
+                </h3>
+                <span class="status-badge
+                    status-@Model.Status.ToString().ToLower()">
+                    @Model.Status
+                </span>
+            </div>
+
+            <div style="display:grid; gap:12px">
+                <div>
+                    <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:0.5px; margin-bottom:3px">
+                        Service type
+                    </p>
+                    <span class="category-badge">@Model.Category</span>
+                </div>
+                <div>
+                    <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:0.5px; margin-bottom:3px">
+                        Description
+                    </p>
+                    <p style="font-size:14px; line-height:1.6">
+                        @Model.Description
+                    </p>
+                </div>
+                <div style="display:grid;
+                            grid-template-columns:1fr 1fr; gap:12px">
+                    <div>
+                        <p style="font-size:11px; font-weight:600;
+                                  color:var(--text-secondary);
+                                  text-transform:uppercase;
+                                  letter-spacing:0.5px; margin-bottom:3px">
+                            Address
+                        </p>
+                        <p style="font-size:13px">@Model.Address</p>
+                        <p style="font-size:12px;
+                                  color:var(--text-secondary)">
+                            Pin: @Model.PinCode
+                        </p>
+                    </div>
+                    <div>
+                        <p style="font-size:11px; font-weight:600;
+                                  color:var(--text-secondary);
+                                  text-transform:uppercase;
+                                  letter-spacing:0.5px; margin-bottom:3px">
+                            Preferred time
+                        </p>
+                        <p style="font-size:13px">
+                            @Model.PreferredDateTime.ToString("dd MMM yyyy")
+                        </p>
+                        <p style="font-size:12px;
+                                  color:var(--text-secondary)">
+                            @Model.PreferredDateTime.ToString("hh:mm tt")
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Assigned technician card *@
+        @if (Model.AssignedTechnician != null)
+        {
+            <div class="form-card">
+                <h3 style="font-size:15px; font-weight:600;
+                               margin-bottom:14px">
+                    Your technician
+                </h3>
+                <div style="display:flex; gap:14px; align-items:center">
+                    <div style="width:48px; height:48px; border-radius:50%;
+                                    background:#7C3AED22; color:#7C3AED;
+                                    display:flex; align-items:center;
+                                    justify-content:center; font-size:20px;
+                                    font-weight:700; flex-shrink:0">
+                        @(Model.AssignedTechnician.User.FullName.Substring(0, 1).ToUpper())
+                    </div>
+                    <div style="flex:1">
+                        <p style="font-size:15px; font-weight:600;
+                                      margin-bottom:2px">
+                            @Model.AssignedTechnician.User.FullName
+                        </p>
+                        <p style="font-size:13px;
+                                      color:var(--text-secondary)">
+                            @Model.AssignedTechnician.Skill
+                            @if (Model.AssignedTechnician.Rating > 0)
+                            {
+                                <span style="color:#D97706; margin-left:8px">
+                                    ★ @Model.AssignedTechnician.Rating.ToString("F1")
+                                </span>
+                            }
+                        </p>
+                        @if (!string.IsNullOrEmpty(Model.AssignedTechnician.Bio))
+                        {
+                            <p style="font-size:12px;
+                                              color:var(--text-secondary);
+                                              margin-top:4px">
+                                @Model.AssignedTechnician.Bio
+                            </p>
+                        }
+                    </div>
+                    <div>
+                        <p style="font-size:13px;
+                                      color:var(--text-secondary)">
+                            📞 @Model.AssignedTechnician.User.Phone
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* Status timeline *@
+        @if (Model.History != null && Model.History.Any())
+        {
+            <div class="form-card">
+                <h3 style="font-size:15px; font-weight:600;
+                               margin-bottom:16px">
+                    Request timeline
+                </h3>
+                <div style="display:flex; flex-direction:column; gap:0">
+                    @foreach (var h in Model.History.OrderBy(x => x.ChangedAt))
+                    {
+                        <div style="display:flex; gap:12px;
+                                            align-items:flex-start;
+                                            padding-bottom:16px; position:relative">
+
+                            @* Vertical connecting line *@
+                            @if (h != Model.History
+                                                .OrderBy(x => x.ChangedAt).Last())
+                            {
+                                <div style="position:absolute; left:11px;
+                                                        top:24px; bottom:0; width:1px;
+                                                        background:var(--border)">
+                                </div>
+                            }
+
+                            @* Status dot *@
+                            <div style="width:22px; height:22px;
+                                                border-radius:50%; flex-shrink:0;
+                                                display:flex; align-items:center;
+                                                justify-content:center; z-index:1;
+                                                @GetStatusDotStyle(h.Status)">
+                                ✓
+                            </div>
+
+                            <div style="flex:1; padding-top:2px">
+                                <p style="font-size:13px; font-weight:500;
+                                                  margin-bottom:2px">
+                                    @h.Status
+                                </p>
+                                <p style="font-size:12px;
+                                                  color:var(--text-secondary);
+                                                  margin-bottom:2px">
+                                    @h.Note
+                                </p>
+                                <p style="font-size:11px;
+                                                  color:var(--text-muted)">
+                                    @h.ChangedAt.ToString("dd MMM yyyy, hh:mm tt")
+                        </p>
+                    </div>
+                </div>
+                                }
+                </div>
+            </div>
+        }
+
+        @* Rating card — shown only after completion *@
+        @if (Model.Status == RequestStatus.Completed
+                && !Model.CustomerRating.HasValue)
+        {
+            <div class="form-card"
+                 style="border:1px solid var(--primary);
+                            background:var(--primary-light)">
+                <h3 style="font-size:15px; font-weight:600;
+                               margin-bottom:8px">
+                    Rate your experience
+                </h3>
+                <p style="font-size:13px; color:var(--text-secondary);
+                               margin-bottom:14px">
+                    How was the service by
+                    @Model.AssignedTechnician?.User.FullName?
+                </p>
+                <form asp-area="Customer"
+                      asp-controller="Requests"
+                      asp-action="SubmitRating"
+                      asp-route-id="@Model.RequestId"
+                      method="post">
+                    @Html.AntiForgeryToken()
+                    <div style="display:flex; gap:8px;
+                                    margin-bottom:12px">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <label style="cursor:pointer; font-size:28px">
+                                <input type="radio" name="rating"
+                                       value="@i"
+                                       style="display:none"
+                                       required />
+                                ☆
+                            </label>
+                        }
+                    </div>
+                    <textarea name="feedback"
+                          class="form-control"
+                          rows="2"
+                          placeholder="Tell us about your experience (optional)"
+                          style="margin-bottom:10px"></textarea>
+                    <button type="submit" class="btn-primary btn-sm">
+                        Submit rating
+                    </button>
+                </form>
+            </div>
+        }
+
+        @* Show submitted rating *@
+        @if (Model.CustomerRating.HasValue)
+        {
+            <div class="form-card">
+                <h3 style="font-size:14px; font-weight:600;
+                               margin-bottom:8px">
+                    Your rating
+                </h3>
+                <div style="font-size:24px; color:#D97706;
+                                margin-bottom:6px">
+                    @string.Concat(Enumerable.Repeat("★", Model.CustomerRating.Value))
+                @string.Concat(Enumerable.Repeat("☆", 5 - Model.CustomerRating.Value))
+            </div>
+            @if (!string.IsNullOrEmpty(Model.CustomerFeedback))
+                {
+                    <p style="font-size:13px;
+                                      color:var(--text-secondary)">
+                        "@Model.CustomerFeedback"
+                    </p>
+                }
+            </div>
+        }
+    </div>
+
+    @* ── Right: actions panel ─────────────────────────────────── *@
+    <div style="display:flex; flex-direction:column; gap:12px">
+        <div class="form-card" style="padding:16px">
+            <h4 style="font-size:13px; font-weight:600;
+                       margin-bottom:12px">
+                Actions
+            </h4>
+
+            @if (Model.Status == RequestStatus.Billed)
+            {
+                <a asp-area="Customer"
+                   asp-controller="Bills"
+                   asp-action="Pay"
+                   asp-route-requestId="@Model.RequestId"
+                   class="btn-primary"
+                   style="display:block; text-align:center;
+                              margin-bottom:8px">
+                    Pay now
+                </a>
+            }
+
+            @if (Model.Status == RequestStatus.Pending ||
+                        Model.Status == RequestStatus.Assigned)
+            {
+                <form asp-action="Cancel"
+                      asp-route-id="@Model.RequestId"
+                      method="post"
+                      onsubmit="return confirm(
+                              'Are you sure you want to cancel?')">
+                    @Html.AntiForgeryToken()
+                    <button type="submit"
+                            class="btn-danger"
+                            style="width:100%">
+                        Cancel request
+                    </button>
+                </form>
+            }
+
+            @if (Model.Status == RequestStatus.Completed ||
+                        Model.Status == RequestStatus.Cancelled)
+            {
+                <a asp-action="Create" class="btn-primary"
+                   style="display:block; text-align:center">
+                    Book again
+                </a>
+            }
+        </div>
+
+        @* Quick status info *@
+        <div class="form-card" style="padding:16px">
+            <h4 style="font-size:13px; font-weight:600;
+                       margin-bottom:10px">
+                Status info
+            </h4>
+            <p style="font-size:12px; color:var(--text-secondary);
+                      line-height:1.6">
+                @switch (Model.Status)
+                {
+                    case RequestStatus.Pending:
+                        <span>
+                            Your request is in the queue.
+                            Admin will assign a technician shortly.
+                        </span>
+                        break;
+                    case RequestStatus.Assigned:
+                        <span>
+                            A technician has been assigned.
+                            Waiting for them to accept the job.
+                        </span>
+                        break;
+                    case RequestStatus.InProgress:
+                        <span>
+                            Your technician is on the job.
+                            They will create a bill once done.
+                        </span>
+                        break;
+                    case RequestStatus.Billed:
+                        <span>
+                            Job complete! Please review the bill
+                            and make payment to close this request.
+                        </span>
+                        break;
+                    case RequestStatus.Completed:
+                        <span>
+                            This request is fully complete.
+                            Thank you for using ServiceApp!
+                        </span>
+                        break;
+                    case RequestStatus.Cancelled:
+                        <span>This request was cancelled.</span>
+                        break;
+                }
+            </p>
+        </div>
+    </div>
+</div>
+
+@* ── SubmitRating action (in same controller, POST) *@
+
+@functions {
+    string GetStatusDotStyle(ServiceApp.Core.Enums.RequestStatus status)
+    {
+        return status switch
+        {
+            RequestStatus.Pending =>
+                "background:#FEF3C7; color:#D97706; font-size:10px;",
+            RequestStatus.Assigned =>
+                "background:#DBEAFE; color:#2563EB; font-size:10px;",
+            RequestStatus.InProgress =>
+                "background:#EDE9FE; color:#7C3AED; font-size:10px;",
+            RequestStatus.Billed =>
+                "background:#FEF9C3; color:#92400E; font-size:10px;",
+            RequestStatus.Completed =>
+                "background:#D1FAE5; color:#059669; font-size:10px;",
+            RequestStatus.Cancelled =>
+                "background:#FEE2E2; color:#DC2626; font-size:10px;",
+            _ => "background:var(--border); color:var(--text-secondary);"
+        };
+    }
+}

@@ -1,0 +1,399 @@
+﻿@model ServiceApp.Web.Areas.Technician.Models.CreateBillViewModel
+@{
+    ViewData["Title"] = $"Create bill — Job #{Model.Request.RequestId}";
+}
+
+<div class="page-header">
+    <div>
+        <h2>Create bill</h2>
+        <span style="font-size:13px; color:var(--text-secondary)">
+            Job #@Model.Request.RequestId ·
+            @Model.Request.Category ·
+            @Model.Request.Customer.FullName
+        </span>
+    </div>
+    <a asp-area="Technician"
+       asp-controller="Jobs"
+       asp-action="Details"
+       asp-route-id="@Model.Request.RequestId"
+       class="btn-outline">
+        ← Back to job
+    </a>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 300px;
+            gap:20px; align-items:start">
+
+    @* ── Left: bill form ─────────────────────────────────────── *@
+    <div>
+
+        @* Job summary strip *@
+        <div style="background:var(--primary-light);
+                    border:1px solid var(--primary);
+                    border-radius:var(--radius-lg);
+                    padding:14px 18px; margin-bottom:16px;
+                    display:flex; gap:24px; flex-wrap:wrap">
+            <div>
+                <p style="font-size:11px; font-weight:600;
+                          color:var(--primary); text-transform:uppercase;
+                          letter-spacing:.5px; margin-bottom:2px">
+                    Customer
+                </p>
+                <p style="font-size:14px; font-weight:500">
+                    @Model.Request.Customer.FullName
+                </p>
+                <p style="font-size:12px; color:var(--primary-dark)">
+                    @Model.Request.Customer.Phone
+                </p>
+            </div>
+            <div>
+                <p style="font-size:11px; font-weight:600;
+                          color:var(--primary); text-transform:uppercase;
+                          letter-spacing:.5px; margin-bottom:2px">
+                    Service
+                </p>
+                <p style="font-size:14px; font-weight:500">
+                    @Model.Request.Category
+                </p>
+            </div>
+            <div>
+                <p style="font-size:11px; font-weight:600;
+                          color:var(--primary); text-transform:uppercase;
+                          letter-spacing:.5px; margin-bottom:2px">
+                    Address
+                </p>
+                <p style="font-size:13px">@Model.Request.Address</p>
+            </div>
+        </div>
+
+        @* Bill items form *@
+        <div class="form-card">
+            <h3 style="font-size:15px; font-weight:600;
+                       margin-bottom:16px">
+                Bill items
+            </h3>
+
+            <form asp-action="Create"
+                  asp-route-requestId="@Model.Request.RequestId"
+                  method="post"
+                  id="billForm">
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly"
+                     class="toast toast-error"
+                     style="margin-bottom:16px"></div>
+
+                @* Table header *@
+                <div style="display:grid;
+                            grid-template-columns:1fr 80px 120px 100px 36px;
+                            gap:8px; margin-bottom:8px;
+                            padding:0 4px">
+                    <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:.5px">
+                        Description
+                    </p>
+                    <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:.5px; text-align:center">
+                        Qty
+                    </p>
+                    <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:.5px; text-align:right">
+                        Unit price (₹)
+                    </p>
+                    <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:.5px; text-align:right">
+                        Amount (₹)
+                    </p>
+                    <span></span>
+                </div>
+
+                @* Item rows container *@
+                <div id="itemsContainer"
+                     style="display:flex;
+                            flex-direction:column; gap:8px">
+                    @for (int i = 0; i < Model.Items.Count; i++)
+                    {
+                        <div class="item-row"
+                             style="display:grid;
+                                        grid-template-columns:1fr 80px 120px 100px 36px;
+                                        gap:8px; align-items:center">
+                            <input name="Items[@i].Description"
+                                   class="form-control"
+                                   placeholder="e.g. Labour charges"
+                                   value="@Model.Items[i].Description" />
+                            <input name="Items[@i].Quantity"
+                                   class="form-control qty-input"
+                                   type="number" min="1" value="@Model.Items[i].Quantity"
+                                   style="text-align:center"
+                                   oninput="recalc(this)" />
+                            <input name="Items[@i].UnitPrice"
+                                   class="form-control price-input"
+                                   type="number" min="0" step="0.01"
+                                   value="@Model.Items[i].UnitPrice"
+                                   placeholder="0.00"
+                                   style="text-align:right"
+                                   oninput="recalc(this)" />
+                            <div class="amount-display"
+                                 style="font-size:14px; font-weight:500;
+                                            text-align:right;
+                                            color:var(--text-primary);
+                                            padding:0 4px">
+                                ₹0
+                            </div>
+                            <button type="button"
+                                    onclick="removeRow(this)"
+                                    style="width:32px; height:32px;
+                                               border:1px solid var(--danger);
+                                               border-radius:6px;
+                                               background:transparent;
+                                               color:var(--danger);
+                                               cursor:pointer;
+                                               font-size:16px; line-height:1">
+                                ×
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                @* Add item button *@
+                <button type="button"
+                        onclick="addRow()"
+                        style="margin-top:10px; padding:7px 14px;
+                               border:1.5px dashed var(--border-dark);
+                               border-radius:var(--radius);
+                               background:transparent;
+                               color:var(--text-secondary);
+                               font-size:13px; cursor:pointer;
+                               width:100%; transition:all .15s">
+                    + Add another item
+                </button>
+
+                @* Total row *@
+                <div style="margin-top:16px; padding-top:16px;
+                            border-top:1.5px solid var(--border);
+                            display:flex; justify-content:space-between;
+                            align-items:center">
+                    <span style="font-size:15px; font-weight:600">
+                        Total amount
+                    </span>
+                    <span id="grandTotal"
+                          style="font-size:22px; font-weight:700;
+                                 color:var(--primary)">
+                        ₹0.00
+                    </span>
+                </div>
+
+                <div style="margin-top:20px; display:flex; gap:10px">
+                    <button type="submit"
+                            class="btn-primary"
+                            style="font-size:15px; padding:11px 24px">
+                        Submit bill
+                    </button>
+                    <a asp-area="Technician"
+                       asp-controller="Jobs"
+                       asp-action="Details"
+                       asp-route-id="@Model.Request.RequestId"
+                       class="btn-outline">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* ── Right: guidance card ─────────────────────────────────── *@
+    <div style="display:flex; flex-direction:column; gap:12px">
+
+        <div class="form-card" style="padding:16px">
+            <h4 style="font-size:13px; font-weight:600;
+                       margin-bottom:10px">
+                What to include
+            </h4>
+            <ul style="padding-left:16px;
+                       display:flex; flex-direction:column; gap:6px">
+                <li style="font-size:12px;
+                           color:var(--text-secondary)">
+                    Labour charges (your service fee)
+                </li>
+                <li style="font-size:12px;
+                           color:var(--text-secondary)">
+                    Parts or materials used
+                </li>
+                <li style="font-size:12px;
+                           color:var(--text-secondary)">
+                    Visit/inspection fee if applicable
+                </li>
+                <li style="font-size:12px;
+                           color:var(--text-secondary)">
+                    Any additional service charges
+                </li>
+            </ul>
+        </div>
+
+        <div class="form-card" style="padding:16px">
+            <h4 style="font-size:13px; font-weight:600;
+                       margin-bottom:10px">
+                Billing tips
+            </h4>
+            <ul style="padding-left:16px;
+                       display:flex; flex-direction:column; gap:6px">
+                <li style="font-size:12px;
+                           color:var(--text-secondary)">
+                    Be specific — "Copper wire 2m" not just "wire"
+                </li>
+                <li style="font-size:12px;
+                           color:var(--text-secondary)">
+                    Once submitted the customer receives the bill
+                </li>
+                <li style="font-size:12px;
+                           color:var(--text-secondary)">
+                    You cannot edit a bill after submission
+                </li>
+                <li style="font-size:12px;
+                           color:var(--text-secondary)">
+                    Payment goes to your wallet within 24hrs
+                </li>
+            </ul>
+        </div>
+
+        @* Live total summary *@
+        <div class="form-card" style="padding:16px;
+                                       background:var(--primary-light);
+                                       border-color:var(--primary)">
+            <h4 style="font-size:13px; font-weight:600;
+                       margin-bottom:10px; color:var(--primary)">
+                Bill summary
+            </h4>
+            <div id="summaryItems"
+                 style="font-size:12px;
+                        color:var(--text-secondary);
+                        margin-bottom:10px">
+                No items added yet
+            </div>
+            <div style="display:flex; justify-content:space-between;
+                        align-items:center; border-top:1px solid;
+                        border-color:var(--primary); padding-top:10px">
+                <span style="font-size:13px; font-weight:600;
+                             color:var(--primary)">
+                    Total
+                </span>
+                <span id="summaryTotal"
+                      style="font-size:18px; font-weight:700;
+                             color:var(--primary)">
+                    ₹0.00
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var rowIndex = @Model.Items.Count;
+
+        // Add a new empty item row
+        function addRow() {
+            var container = document.getElementById('itemsContainer');
+            var row = document.createElement('div');
+            row.className = 'item-row';
+            row.style.cssText =
+                'display:grid; grid-template-columns:1fr 80px 120px 100px 36px;' +
+                'gap:8px; align-items:center';
+            row.innerHTML =
+                '<input name="Items[' + rowIndex + '].Description"' +
+                '       class="form-control" placeholder="e.g. Materials"/>' +
+                '<input name="Items[' + rowIndex + '].Quantity"' +
+                '       class="form-control qty-input" type="number"' +
+                '       min="1" value="1" style="text-align:center"' +
+                '       oninput="recalc(this)"/>' +
+                '<input name="Items[' + rowIndex + '].UnitPrice"' +
+                '       class="form-control price-input" type="number"' +
+                '       min="0" step="0.01" placeholder="0.00"' +
+                '       style="text-align:right" oninput="recalc(this)"/>' +
+                '<div class="amount-display"' +
+                '     style="font-size:14px;font-weight:500;' +
+                '            text-align:right;color:var(--text-primary);' +
+                '            padding:0 4px">₹0</div>' +
+                '<button type="button" onclick="removeRow(this)"' +
+                '        style="width:32px;height:32px;' +
+                '               border:1px solid var(--danger);' +
+                '               border-radius:6px;background:transparent;' +
+                '               color:var(--danger);cursor:pointer;' +
+                '               font-size:16px;line-height:1">×</button>';
+            container.appendChild(row);
+            rowIndex++;
+            updateTotals();
+        }
+
+        // Remove a row
+        function removeRow(btn) {
+            var rows = document.querySelectorAll('.item-row');
+            if (rows.length <= 1) {
+                alert('Bill must have at least one item.');
+                return;
+            }
+            btn.closest('.item-row').remove();
+            updateTotals();
+        }
+
+        // Recalculate the amount display for one row
+        function recalc(input) {
+            var row    = input.closest('.item-row');
+            var qty    = parseFloat(row.querySelector('.qty-input').value)   || 0;
+            var price  = parseFloat(row.querySelector('.price-input').value) || 0;
+            var amount = qty * price;
+            row.querySelector('.amount-display').textContent =
+                '₹' + amount.toFixed(2);
+            updateTotals();
+        }
+
+        // Update grand total and sidebar summary
+        function updateTotals() {
+            var rows    = document.querySelectorAll('.item-row');
+            var total   = 0;
+            var summary = '';
+
+            rows.forEach(function(row) {
+                var desc   = row.querySelector('input[name*="Description"]');
+                var qty    = parseFloat(row.querySelector('.qty-input').value)   || 0;
+                var price  = parseFloat(row.querySelector('.price-input').value) || 0;
+                var amount = qty * price;
+                total += amount;
+
+                if (desc && desc.value.trim() && amount > 0) {
+                    summary +=
+                        '<div style="display:flex;justify-content:space-between;' +
+                        'margin-bottom:4px">' +
+                        '<span>' + desc.value.trim() + '</span>' +
+                        '<span>₹' + amount.toFixed(2) + '</span></div>';
+                }
+            });
+
+            document.getElementById('grandTotal').textContent =
+                '₹' + total.toFixed(2);
+            document.getElementById('summaryTotal').textContent =
+                '₹' + total.toFixed(2);
+            document.getElementById('summaryItems').innerHTML =
+                summary || 'No items added yet';
+        }
+
+        // Run on page load to initialise any pre-filled rows
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.item-row').forEach(function(row) {
+                var qty   = parseFloat(row.querySelector('.qty-input').value)   || 0;
+                var price = parseFloat(row.querySelector('.price-input').value) || 0;
+                row.querySelector('.amount-display').textContent =
+                    '₹' + (qty * price).toFixed(2);
+            });
+            updateTotals();
+        });
+    </script>
+}

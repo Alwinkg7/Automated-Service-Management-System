@@ -1,0 +1,15 @@
+﻿@{
+    ViewData["Title"] = "Access denied";
+    Layout = "~/Views/Shared/_AuthLayout.cshtml";
+}
+
+<div class="auth-card">
+    <div class="auth-brand">
+        <div class="auth-icon">🚫</div>
+        <h1>Access denied</h1>
+        <p>You don't have permission to view that page.</p>
+    </div>
+    <div class="auth-links">
+        <a asp-action="Login">← Back to login</a>
+    </div>
+</div>

@@ -1,0 +1,403 @@
+﻿@model ServiceApp.Web.Areas.Technician.Models.JobDetailViewModel
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = $"Job #{Model.Request.RequestId}";
+}
+
+<div class="page-header">
+    <div>
+        <h2>Job #@Model.Request.RequestId</h2>
+        <span style="font-size:13px; color:var(--text-secondary)">
+            @Model.Request.Category ·
+            @Model.Request.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")
+        </span>
+    </div>
+    <a asp-action="Index" class="btn-outline">← My jobs</a>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 300px;
+            gap:20px; align-items:start">
+
+    @* ── Left: job detail + timeline ─────────────────────────── *@
+    <div style="display:flex; flex-direction:column; gap:16px">
+
+        @* Job info card *@
+        <div class="form-card">
+            <div style="display:flex; justify-content:space-between;
+                        align-items:center; margin-bottom:16px">
+                <h3 style="font-size:15px; font-weight:600">
+                    Job details
+                </h3>
+                <span class="status-badge
+                    status-@Model.Request.Status.ToString().ToLower()">
+                    @Model.Request.Status
+                </span>
+            </div>
+
+            <div style="display:grid; gap:14px">
+
+                <div>
+                    <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:.5px; margin-bottom:3px">
+                        Service type
+                    </p>
+                    <span class="category-badge"
+                          style="font-size:13px; padding:4px 12px">
+                        @Model.Request.Category
+                    </span>
+                </div>
+
+                <div>
+                    <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:.5px; margin-bottom:3px">
+                        Problem description
+                    </p>
+                    <p style="font-size:14px; line-height:1.7;
+                              color:var(--text-primary)">
+                        @Model.Request.Description
+                    </p>
+                </div>
+
+                @* Customer contact — shown once accepted *@
+                <div style="background:var(--bg-page);
+                            border-radius:var(--radius);
+                            padding:14px 16px">
+                    <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:.5px; margin-bottom:8px">
+                        Customer
+                    </p>
+                    <div style="display:flex; gap:12px;
+                                align-items:center">
+                        <div style="width:38px; height:38px;
+                                    border-radius:50%;
+                                    background:var(--primary-light);
+                                    color:var(--primary);
+                                    display:flex; align-items:center;
+                                    justify-content:center;
+                                    font-size:16px; font-weight:700;
+                                    flex-shrink:0">
+                            @Model.Request.Customer.FullName.Substring(0, 1).ToUpper()
+                        </div>
+                        <div>
+                            <p style="font-weight:600; font-size:14px;
+                                      margin-bottom:2px">
+                                @Model.Request.Customer.FullName
+                            </p>
+                            <p style="font-size:13px;
+                                      color:var(--text-secondary)">
+                                📞 @Model.Request.Customer.Phone
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:grid;
+                            grid-template-columns:1fr 1fr; gap:12px">
+                    <div>
+                        <p style="font-size:11px; font-weight:600;
+                                  color:var(--text-secondary);
+                                  text-transform:uppercase;
+                                  letter-spacing:.5px; margin-bottom:3px">
+                            Service address
+                        </p>
+                        <p style="font-size:13px; line-height:1.5">
+                            @Model.Request.Address
+                        </p>
+                        <p style="font-size:12px;
+                                  color:var(--text-muted)">
+                            Pin: @Model.Request.PinCode
+                        </p>
+                    </div>
+                    <div>
+                        <p style="font-size:11px; font-weight:600;
+                                  color:var(--text-secondary);
+                                  text-transform:uppercase;
+                                  letter-spacing:.5px; margin-bottom:3px">
+                            Preferred time
+                        </p>
+                        <p style="font-size:13px">
+                            @Model.Request.PreferredDateTime.ToString("dd MMM yyyy")
+                        </p>
+                        <p style="font-size:12px;
+                                  color:var(--text-muted)">
+                            @Model.Request.PreferredDateTime.ToString("hh:mm tt")
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Bill info — shown if bill exists *@
+        @if (Model.Request.Bill != null)
+        {
+            <div class="form-card">
+                <h3 style="font-size:15px; font-weight:600;
+                               margin-bottom:14px">
+                    Bill summary
+                </h3>
+                <div style="display:flex; flex-direction:column; gap:8px">
+                    @foreach (var item in Model.Request.Bill.BillItems)
+                    {
+                        <div style="display:flex;
+                                            justify-content:space-between;
+                                            font-size:13px">
+                            <span style="color:var(--text-secondary)">
+                                @item.Description
+                                @if (item.Quantity > 1)
+                                {
+                                    <span style="font-size:11px;
+                                                             color:var(--text-muted)">
+                                        × @item.Quantity
+                                    </span>
+                                }
+                            </span>
+                            <span style="font-weight:500">
+                                ₹@item.Amount.ToString("N0")
+                            </span>
+                        </div>
+                    }
+                <div style="border-top:1px solid var(--border);
+                                padding-top:8px; margin-top:4px;
+                                display:flex; justify-content:space-between">
+                    <span style="font-weight:600">Total</span>
+                    <span style="font-weight:700;
+                                     font-size:16px; color:var(--primary)">
+                        ₹@Model.Request.Bill.TotalAmount.ToString("N0")
+                    </span>
+                </div>
+                <div style="display:flex; justify-content:flex-end">
+                    <span class="status-badge
+                            @(Model.Request.Bill.PaymentStatus
+                                                          == PaymentStatus.Paid
+                                                          ? "status-completed" : "status-billed")">
+                            @Model.Request.Bill.PaymentStatus
+                        </span>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* Status timeline *@
+        @if (Model.Request.History != null && Model.Request.History.Any())
+        {
+            <div class="form-card">
+                <h3 style="font-size:15px; font-weight:600;
+                               margin-bottom:16px">
+                    Job timeline
+                </h3>
+                <div style="display:flex; flex-direction:column">
+                    @foreach (var h in Model.Request.History
+                                    .OrderBy(x => x.ChangedAt))
+                    {
+                        <div style="display:flex; gap:12px;
+                                            align-items:flex-start;
+                                            padding-bottom:16px;
+                                            position:relative">
+                            @if (h != Model.Request.History
+                                                .OrderBy(x => x.ChangedAt).Last())
+                            {
+                                <div style="position:absolute; left:11px;
+                                                        top:22px; bottom:0; width:1px;
+                                                        background:var(--border)"></div>
+                            }
+                            <div style="width:22px; height:22px;
+                                                border-radius:50%; flex-shrink:0;
+                                                background:var(--primary-light);
+                                                color:var(--primary);
+                                                display:flex; align-items:center;
+                                                justify-content:center;
+                                                font-size:9px; font-weight:700;
+                                                z-index:1">
+                                ✓
+                            </div>
+                            <div>
+                                <p style="font-size:13px; font-weight:500;
+                                                  margin-bottom:1px">
+                                    @h.Status
+                                </p>
+                                <p style="font-size:12px;
+                                                  color:var(--text-secondary)">
+                                    @h.Note
+                                </p>
+                                <p style="font-size:11px;
+                                                  color:var(--text-muted)">
+                                    @h.ChangedAt.ToString(
+                                    "dd MMM yyyy, hh:mm tt")
+                        </p>
+                    </div>
+                </div>
+                                }
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Right: action panel ──────────────────────────────────── *@
+    <div style="display:flex; flex-direction:column; gap:12px">
+
+        @* Action card *@
+        <div class="form-card" style="padding:16px">
+            <h4 style="font-size:13px; font-weight:600;
+                       margin-bottom:12px">
+                Job actions
+            </h4>
+
+            @* ACCEPT + REJECT — for Assigned jobs *@
+            @if (Model.CanAccept)
+            {
+                <div style="background:#F0FDF4; border:1px solid #BBF7D0;
+                                border-radius:8px; padding:12px;
+                                margin-bottom:12px">
+                    <p style="font-size:12px; color:#166534;
+                                  margin-bottom:8px; font-weight:500">
+                        This job has been assigned to you.
+                        Accept to start working.
+                    </p>
+                    <form asp-action="Accept"
+                          asp-route-id="@Model.Request.RequestId"
+                          method="post"
+                          style="margin-bottom:8px">
+                        @Html.AntiForgeryToken()
+                        <button type="submit"
+                                class="btn-primary"
+                                style="width:100%; font-size:14px;
+                                           padding:10px">
+                            ✓ Accept this job
+                        </button>
+                    </form>
+                    <form asp-action="Reject"
+                          asp-route-id="@Model.Request.RequestId"
+                          method="post"
+                          onsubmit="return confirm(
+                                  'Reject this job? It returns to the queue.')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit"
+                                class="btn-danger"
+                                style="width:100%">
+                            ✗ Reject job
+                        </button>
+                    </form>
+                </div>
+            }
+
+            @* CREATE BILL — for InProgress jobs *@
+            @if (Model.CanCreateBill)
+            {
+                <div style="background:#EEF2FF; border:1px solid #C7D2FE;
+                                border-radius:8px; padding:12px;
+                                margin-bottom:12px">
+                    <p style="font-size:12px; color:#3730A3;
+                                  margin-bottom:8px; font-weight:500">
+                        Work complete? Create the bill
+                        for the customer to pay.
+                    </p>
+                    <a asp-area="Technician"
+                       asp-controller="Bills"
+                       asp-action="Create"
+                       asp-route-requestId="@Model.Request.RequestId"
+                       class="btn-primary"
+                       style="display:block; text-align:center">
+                        Create bill
+                    </a>
+                </div>
+            }
+
+            @* Completed state *@
+            @if (Model.Request.Status == RequestStatus.Completed)
+            {
+                <div style="background:#F0FDF4; border:1px solid #BBF7D0;
+                                border-radius:8px; padding:12px;
+                                text-align:center">
+                    <p style="font-size:22px; margin-bottom:4px">✓</p>
+                    <p style="font-size:13px; font-weight:600;
+                                  color:#166534">
+                        Job completed!
+                    </p>
+                    @if (Model.Request.CustomerRating.HasValue)
+                    {
+                        <p style="font-size:12px; color:#166534;
+                                          margin-top:4px">
+                            Customer rated:
+                            @string.Concat(Enumerable.Repeat("★",
+                            Model.Request.CustomerRating.Value))
+                </p>
+                                }
+                </div>
+            }
+
+            @* Billed — waiting for payment *@
+            @if (Model.Request.Status == RequestStatus.Billed)
+            {
+                <div style="background:#FEF9C3; border:1px solid #FDE68A;
+                                border-radius:8px; padding:12px;
+                                text-align:center">
+                    <p style="font-size:13px; font-weight:600;
+                                  color:#713F12">
+                        Waiting for customer payment
+                    </p>
+                    <p style="font-size:12px; color:#92400E;
+                                  margin-top:4px">
+                        Bill total:
+                        ₹@Model.Request.Bill?.TotalAmount.ToString("N0")
+                    </p>
+                </div>
+            }
+        </div>
+
+        @* Job quick info *@
+        <div class="form-card" style="padding:16px">
+            <h4 style="font-size:13px; font-weight:600;
+                       margin-bottom:10px">
+                Quick info
+            </h4>
+            <div style="display:flex; flex-direction:column; gap:8px">
+                <div style="display:flex; justify-content:space-between">
+                    <span style="font-size:12px;
+                                 color:var(--text-secondary)">
+                        Job ID
+                    </span>
+                    <span style="font-size:12px; font-weight:500">
+                        #@Model.Request.RequestId
+                    </span>
+                </div>
+                <div style="display:flex; justify-content:space-between">
+                    <span style="font-size:12px;
+                                 color:var(--text-secondary)">
+                        Category
+                    </span>
+                    <span class="category-badge" style="font-size:11px">
+                        @Model.Request.Category
+                    </span>
+                </div>
+                <div style="display:flex; justify-content:space-between">
+                    <span style="font-size:12px;
+                                 color:var(--text-secondary)">
+                        Your status
+                    </span>
+                    <span class="status-badge
+                        @(Model.TechnicianProfile.Status
+                                                      == TechnicianStatus.Busy
+                                                      ? "tech-busy" : "tech-available")"
+                          style="font-size:11px">
+                        @Model.TechnicianProfile.Status
+                    </span>
+                </div>
+                <div style="display:flex; justify-content:space-between">
+                    <span style="font-size:12px;
+                                 color:var(--text-secondary)">
+                        Submitted
+                    </span>
+                    <span style="font-size:12px">
+                        @Model.Request.CreatedAt.ToString("dd MMM")
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,3 +1,18 @@
-﻿@using ServiceApp.Web
-@using ServiceApp.Web.Models
+﻿@* =================================================================
+   _ViewImports.cshtml
+   
+   Runs before EVERY Razor view in the app.
+   Anything declared here is available in all views without
+   importing per-file.
+   
+   @using       = makes namespaces available (no full class paths)
+   @addTagHelper = enables asp-* HTML attributes like:
+                   asp-for, asp-action, asp-controller,
+                   asp-validation-for, asp-route-id etc.
+   ================================================================= *@
+
+@using ServiceApp.Web
+@using ServiceApp.Web.ViewModels.Auth
+@using ServiceApp.Core.Entities
+@using ServiceApp.Core.Enums
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers

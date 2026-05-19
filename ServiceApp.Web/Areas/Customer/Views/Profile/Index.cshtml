@@ -1,0 +1,156 @@
+﻿@model ServiceApp.Web.Areas.Customer.Models.CustomerProfileViewModel
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = "My profile";
+}
+
+<div class="page-header">
+    <h2>My profile</h2>
+</div>
+
+<div style="display:grid; grid-template-columns:280px 1fr; gap:24px; align-items:start">
+
+    @* ── Left: Account info card (read-only) ─────────────────── *@
+    <div class="form-card" style="text-align:center">
+
+        @* Avatar circle with first letter *@
+        <div style="width:72px; height:72px; border-radius:50%;
+                    background:var(--primary); color:#fff;
+                    display:flex; align-items:center;
+                    justify-content:center; font-size:28px;
+                    font-weight:700; margin:0 auto 16px">
+            @Model.FullName.Substring(0, 1).ToUpper()
+        </div>
+
+        <h3 style="font-size:17px; font-weight:700; margin-bottom:4px">
+            @Model.FullName
+        </h3>
+        <p style="color:var(--text-secondary); font-size:13px">
+            @Model.Email
+        </p>
+        <p style="color:var(--text-secondary); font-size:13px">
+            @Model.Phone
+        </p>
+
+        <div style="margin-top:16px; padding-top:16px;
+                    border-top:1px solid var(--border)">
+            <span class="role-badge role-customer"
+                  style="font-size:12px; padding:4px 12px">
+                Customer
+            </span>
+        </div>
+
+        @* Profile completion indicator *@
+        <div style="margin-top:16px; text-align:left">
+            <p style="font-size:12px; color:var(--text-muted);
+                      margin-bottom:6px">
+                Profile completion
+            </p>
+            <div style="background:var(--border); border-radius:4px;
+                        height:6px; overflow:hidden">
+                <div style="background:var(--primary);
+                            height:100%;
+                            width:@(Model.IsExistingProfile ? "100%" : "30%");
+                            border-radius:4px;
+                            transition:width 0.3s">
+                </div>
+            </div>
+            <p style="font-size:12px; color:var(--text-secondary);
+                      margin-top:4px">
+                @(Model.IsExistingProfile ? "Complete ✓" : "Add your address to complete")
+            </p>
+        </div>
+    </div>
+
+    @* ── Right: Editable profile form ────────────────────────── *@
+    <div class="form-card">
+        <h3 style="font-size:16px; font-weight:600; margin-bottom:20px">
+            @(Model.IsExistingProfile ? "Edit profile" : "Complete your profile")
+        </h3>
+
+        <form asp-action="Index" method="post">
+            <div asp-validation-summary="ModelOnly"
+                 class="toast toast-error"
+                 style="margin-bottom:16px"></div>
+
+            @* Address *@
+            <div class="form-group">
+                <label asp-for="Address">Full address</label>
+                <input asp-for="Address"
+                       class="form-control"
+                       placeholder="House no, Street, Area" />
+                <span asp-validation-for="Address"
+                      class="field-error"></span>
+            </div>
+
+            @* City + PinCode side by side *@
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+                <div class="form-group">
+                    <label asp-for="City">City</label>
+                    <input asp-for="City"
+                           class="form-control"
+                           placeholder="Kozhikode" />
+                    <span asp-validation-for="City"
+                          class="field-error"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="PinCode">Pin code</label>
+                    <input asp-for="PinCode"
+                           class="form-control"
+                           placeholder="673001" />
+                    <span asp-validation-for="PinCode"
+                          class="field-error"></span>
+                </div>
+            </div>
+
+            @* Preferred service category *@
+            <div class="form-group">
+                <label asp-for="PreferredCategory">
+                    Preferred service
+                    <span style="color:var(--text-muted);
+                                 font-weight:400">(optional)</span>
+                </label>
+                <select asp-for="PreferredCategory"
+                        class="form-control"
+                        asp-items="Html.GetEnumSelectList<ServiceCategory>()">
+                    <option value="">— Select a preference —</option>
+                </select>
+                <span class="form-hint">
+                    Pre-fills the category when you book a service
+                </span>
+            </div>
+
+            @* Avatar URL *@
+            <div class="form-group">
+                <label asp-for="AvatarUrl">
+                    Profile photo URL
+                    <span style="color:var(--text-muted);
+                                 font-weight:400">(optional)</span>
+                </label>
+                <input asp-for="AvatarUrl"
+                       class="form-control"
+                       placeholder="https://..." />
+            </div>
+
+            <button type="submit" class="btn-primary">
+                @(Model.IsExistingProfile
+                                ? "Update profile"
+                                : "Save profile")
+            </button>
+
+            <a asp-area="Customer"
+               asp-controller="Home"
+               asp-action="Dashboard"
+               class="btn-outline"
+               style="margin-left:10px">
+                Cancel
+            </a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
