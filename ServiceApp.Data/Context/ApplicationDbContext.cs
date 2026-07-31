@@ -28,7 +28,7 @@
 
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using ServiceApp.Core.Entities;
+using ServiceApp.Core.Entities; 
 
 namespace ServiceApp.Data.Context
 {
@@ -231,38 +231,23 @@ namespace ServiceApp.Data.Context
                 e.Property(r => r.PinCode).HasMaxLength(10);
                 e.Property(r => r.CustomerFeedback).HasMaxLength(500);
 
-                // Many requests → one customer
-                // Restrict: can't delete a user who has requests
+                // Customer → many requests
                 e.HasOne(r => r.Customer)
                     .WithMany(u => u.ServiceRequests)
                     .HasForeignKey(r => r.CustomerId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // Many requests → one technician profile (nullable until assigned)
-                // SetNull: if technician profile deleted, remove the assignment
-                // but keep the request
+                // Technician → many requests
+                // ── FIX: SetNull causes cycle — use NoAction ──────────
                 e.HasOne(r => r.AssignedTechnician)
                     .WithMany(t => t.AssignedRequests)
                     .HasForeignKey(r => r.AssignedTechnicianProfileId)
-                    .OnDelete(DeleteBehavior.SetNull);
+                    .OnDelete(DeleteBehavior.NoAction);  // ← was SetNull
 
-                // ── PERFORMANCE INDEXES ────────────────────────────
-                // Every common WHERE clause should have an index.
-
-                // Admin "All Pending requests" view
                 e.HasIndex(r => r.Status);
-
-                // Customer "My requests" view
                 e.HasIndex(r => r.CustomerId);
-
-                // Technician "My jobs" view
                 e.HasIndex(r => r.AssignedTechnicianProfileId);
-
-                // Auto-assignment: oldest pending request first
                 e.HasIndex(r => r.CreatedAt);
-
-                // Composite: status + created — used by auto-assignment
-                // "Give me Pending requests ordered by date"
                 e.HasIndex(r => new { r.Status, r.CreatedAt });
             });
         }
@@ -284,63 +269,69 @@ namespace ServiceApp.Data.Context
 
                 e.Property(h => h.Note).HasMaxLength(500);
 
-                // ChangedByUserId can be "SYSTEM" or a user's GUID
                 e.Property(h => h.ChangedByUserId)
                     .HasMaxLength(450)
                     .IsRequired();
 
-                // When the request is deleted, its history goes too (cascade)
+                // ── Map ChangedById explicitly ─────────────────────────────
+                e.Property(h => h.ChangedById)
+                    .HasMaxLength(450)
+                    .IsRequired(false);
+
+                // ── Map RequestId explicitly ───────────────────────────────
+                e.Property(h => h.RequestId)
+                    .IsRequired();
+
+                // ── Relationship — uses RequestId as FK ───────────────────
                 e.HasOne(h => h.Request)
                     .WithMany(r => r.History)
                     .HasForeignKey(h => h.RequestId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.NoAction);
 
-                // Loading history for a request = WHERE RequestId = X
                 e.HasIndex(h => h.RequestId);
             });
-        }
-
-        // =============================================================
-        //  Bill
+        }        //  Bill
         //  Invoice header — one bill per request
         // =============================================================
         private static void ConfigureBill(ModelBuilder builder)
         {
             builder.Entity<Bill>(e =>
             {
-                e.HasKey(b => b.BillId);
+                e.HasKey(b => b.Id);
 
-                // decimal(10,2) handles up to ₹99,999,999.99
+                // ── ADD: ignore computed property ─────────────────────
+                e.Ignore(b => b.IsPaid);
+
                 e.Property(b => b.TotalAmount)
                     .HasColumnType("decimal(10,2)")
                     .IsRequired();
+
+                // ── ADD: missing decimal columns ──────────────────────
+                e.Property(b => b.LaborCost)
+                    .HasColumnType("decimal(10,2)");
+
+                e.Property(b => b.MaterialCost)
+                    .HasColumnType("decimal(10,2)");
 
                 e.Property(b => b.PaymentStatus)
                     .HasConversion<string>()
                     .HasMaxLength(20)
                     .IsRequired();
 
-                // One-to-one: one request → one bill
-                // Restrict: don't delete a request that has a bill
-                e.HasOne(b => b.Request)
+                e.HasOne(b => b.ServiceRequest)
                     .WithOne(r => r.Bill)
-                    .HasForeignKey<Bill>(b => b.RequestId)
+                    .HasForeignKey<Bill>(b => b.ServiceRequestId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // Bill linked to the technician who created it
                 e.HasOne(b => b.Technician)
                     .WithMany(t => t.Bills)
                     .HasForeignKey(b => b.TechnicianProfileId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // Enforce one bill per request at the DB level
-                e.HasIndex(b => b.RequestId).IsUnique();
-
-                // Admin "Unpaid bills" report
+                e.HasIndex(b => b.ServiceRequestId).IsUnique();
                 e.HasIndex(b => b.PaymentStatus);
             });
         }
-
         // =============================================================
         //  BillItem
         //  Line items inside a bill

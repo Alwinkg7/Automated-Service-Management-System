@@ -74,7 +74,7 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction("Dashboard", "Home");
             }
 
@@ -123,7 +123,7 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
             var result = await _requestService.GetRequestDetailsAsync(id);
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction(nameof(Index));
             }
 
@@ -167,7 +167,7 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction(nameof(Details), new { id });
             }
 
@@ -199,7 +199,7 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction(nameof(Details), new { id });
             }
 

@@ -23,22 +23,14 @@ namespace ServiceApp.Core.Entities
     public class ServiceHistory
     {
         public int HistoryId { get; set; }
-
-        // Which request this entry belongs to
         public int RequestId { get; set; }
-        public virtual ServiceRequest Request { get; set; } = null!;
-
-        // The NEW status that was set
         public RequestStatus Status { get; set; }
-
-        // Human-readable explanation of why this change happened
-        public string? Note { get; set; }
-
-        // UserId of who triggered this change
-        // Could be: customer id, admin id, technician id, or "SYSTEM"
+        public string? Note { get; set; } = string.Empty;
         public string ChangedByUserId { get; set; } = string.Empty;
-
-        // Exact timestamp — displayed on the timeline
+        public string? ChangedById { get; set; }  // ← ADD — exists in DB
         public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation — must be named 'Request' NOT 'ServiceRequest'
+        public ServiceRequest Request { get; set; } = null!;
     }
 }

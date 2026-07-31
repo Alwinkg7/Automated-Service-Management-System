@@ -2,21 +2,21 @@
 @using ServiceApp.Core.Enums
 @{
     ViewData["Title"] = "Pay bill";
+    // Pass KeyId to JS — KeyId is public, safe to expose in frontend
+    var razorpayKeyId = ViewBag.RazorpayKeyId as string ?? "";
 }
 
 <div class="page-header">
     <div>
         <h2>Pay bill</h2>
         <span style="font-size:13px; color:var(--text-secondary)">
-            Bill #@Model.BillId · Request #@Model.RequestId
+            Bill #@Model.Id · Request #@Model.ServiceRequestId
         </span>
     </div>
     <a asp-area="Customer"
        asp-controller="Requests"
        asp-action="Index"
-       class="btn-outline">
-        ← My requests
-    </a>
+       class="btn-outline">← My requests</a>
 </div>
 
 <div style="display:grid; grid-template-columns:1fr 340px;
@@ -35,8 +35,7 @@
             {
                 <div style="display:flex; gap:12px; align-items:center;
                                 padding:12px; background:var(--bg-page);
-                                border-radius:var(--radius);
-                                margin-bottom:16px">
+                                border-radius:var(--radius); margin-bottom:16px">
                     <div style="width:40px; height:40px; border-radius:50%;
                                     background:#7C3AED22; color:#7C3AED;
                                     display:flex; align-items:center;
@@ -49,13 +48,11 @@
                                       margin-bottom:1px">
                             @Model.Technician.User.FullName
                         </p>
-                        <p style="font-size:12px;
-                                      color:var(--text-secondary)">
+                        <p style="font-size:12px; color:var(--text-secondary)">
                             @Model.Technician.Skill
                             @if (Model.Technician.Rating > 0)
                             {
-                                <span style="color:#D97706;
-                                                     margin-left:6px">
+                                <span style="color:#D97706; margin-left:6px">
                                     ★ @(Model.Technician.Rating.ToString("F1"))
                                 </span>
                             }
@@ -64,7 +61,7 @@
                 </div>
             }
 
-            @* Line items table *@
+            @* Line items *@
             <table style="width:100%; border-collapse:collapse;
                           margin-bottom:16px">
                 <thead>
@@ -139,7 +136,6 @@
                 </tfoot>
             </table>
 
-            @* Bill created date *@
             <p style="font-size:12px; color:var(--text-muted)">
                 Bill created:
                 @(Model.CreatedAt.ToString("dd MMM yyyy, hh:mm tt"))
@@ -151,8 +147,7 @@
     <div style="display:flex; flex-direction:column; gap:12px">
 
         @* Total to pay *@
-        <div style="background:var(--primary);
-                    border-radius:var(--radius-lg);
+        <div style="background:var(--primary); border-radius:var(--radius-lg);
                     padding:20px; text-align:center; color:#fff">
             <p style="font-size:13px; opacity:0.85; margin-bottom:6px">
                 Total to pay
@@ -162,24 +157,68 @@
             </p>
         </div>
 
-        @* Cash payment *@
+        @* ── Online payment via Razorpay ──── *@
         <div class="form-card" style="padding:16px">
             <h4 style="font-size:14px; font-weight:600;
                        margin-bottom:6px">
-                💵 Pay with Cash
+                💳 Pay online
             </h4>
             <p style="font-size:12px; color:var(--text-secondary);
                       margin-bottom:14px">
-                Pay the technician directly in cash.
-                The system will mark your request as complete.
+                UPI, Debit/Credit card, Net Banking.
+                Powered by Razorpay — 100% secure.
+            </p>
+
+            @* Loading spinner shown while creating order *@
+            <div id="rzp-loading"
+                 style="display:none; text-align:center;
+                        padding:10px; font-size:13px;
+                        color:var(--text-secondary)">
+                Initiating payment...
+            </div>
+
+            <button id="rzp-pay-btn"
+                    onclick="initiateRazorpay()"
+                    class="btn-primary"
+                    style="width:100%; font-size:15px; padding:12px">
+                Pay ₹@(Model.TotalAmount.ToString("N2")) online
+            </button>
+
+            @* Hidden form — submitted after successful Razorpay payment *@
+            <form id="rzp-form"
+                  asp-action="ProcessRazorpay"
+                  method="post"
+                  style="display:none">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="billId"
+                       value="@Model.Id" />
+                <input type="hidden" name="razorpayOrderId"
+                       id="rzp_order_id" />
+                <input type="hidden" name="razorpayPaymentId"
+                       id="rzp_payment_id" />
+                <input type="hidden" name="razorpaySignature"
+                       id="rzp_signature" />
+            </form>
+        </div>
+
+        @* ── Cash payment ──── *@
+        <div class="form-card" style="padding:16px">
+            <h4 style="font-size:14px; font-weight:600;
+                       margin-bottom:6px">
+                💵 Pay with cash
+            </h4>
+            <p style="font-size:12px; color:var(--text-secondary);
+                      margin-bottom:14px">
+                Already paid the technician in cash?
+                Confirm to close this request.
             </p>
             <form asp-action="PayCash" method="post">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="billId"
-                       value="@Model.BillId" />
+                       value="@Model.Id" />
                 <button type="submit"
-                        class="btn-primary"
-                        style="width:100%; font-size:15px; padding:12px"
+                        class="btn-outline"
+                        style="width:100%"
                         onclick="return confirm(
                             'Confirm cash payment of ₹@(Model.TotalAmount.ToString("N2"))?')">
                     Confirm cash payment
@@ -187,30 +226,121 @@
             </form>
         </div>
 
-        @* Online payment — coming Phase 3 *@
-        <div class="form-card"
-             style="padding:16px; opacity:0.6">
-            <h4 style="font-size:14px; font-weight:600;
-                       margin-bottom:6px">
-                💳 Pay online
-            </h4>
-            <p style="font-size:12px; color:var(--text-secondary);
-                      margin-bottom:14px">
-                UPI, Debit/Credit card, Net Banking via Razorpay.
-            </p>
-            <button class="btn-outline"
-                    style="width:100%" disabled>
-                Coming soon
-            </button>
-        </div>
-
         @* Security note *@
-        <div style="text-align:center; padding:8px">
+        <div style="text-align:center; padding:4px">
             <p style="font-size:11px; color:var(--text-muted)">
-                🔒 Your payment is secure and protected.
+                🔒 Payments secured by Razorpay.
                 <br />
-                Receipt will be generated on confirmation.
+                We never store your card details.
             </p>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    @*
+    Razorpay checkout.js — loads the payment modal.
+    Must be loaded from Razorpay's CDN directly.
+    Do not self-host this script.
+*@
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <script>
+        // Razorpay KeyId — public, safe to expose in JS
+        var RAZORPAY_KEY_ID = '@razorpayKeyId';
+        var BILL_ID         = @Model.Id;
+        var BILL_AMOUNT     = @Model.TotalAmount;
+
+        async function initiateRazorpay() {
+            var btn     = document.getElementById('rzp-pay-btn');
+            var loading = document.getElementById('rzp-loading');
+
+            // Show loading, disable button
+            btn.disabled    = true;
+            loading.style.display = 'block';
+            btn.style.display     = 'none';
+
+            try {
+                // Step 1: Create Razorpay order on our server
+                var response = await fetch(
+                    '/Customer/Bills/InitiateRazorpay?billId=' + BILL_ID,
+                    { headers: { 'X-Requested-With': 'XMLHttpRequest' } }
+                );
+                var data = await response.json();
+
+                if (!data.success) {
+                    alert('Error: ' + data.error);
+                    resetButton();
+                    return;
+                }
+
+                // Step 2: Open Razorpay checkout modal
+                var options = {
+                    key:      RAZORPAY_KEY_ID,
+                    amount:   data.amount,       // in paise
+                    currency: data.currency,
+                    name:     'ServiceApp',
+                    description: 'Service payment — Bill #' + BILL_ID,
+                    order_id: data.orderId,
+
+                    // Step 3: Called after SUCCESSFUL payment
+                    handler: function(response) {
+                        // Populate hidden form fields
+                        document.getElementById('rzp_order_id').value =
+                            response.razorpay_order_id;
+                        document.getElementById('rzp_payment_id').value =
+                            response.razorpay_payment_id;
+                        document.getElementById('rzp_signature').value =
+                            response.razorpay_signature;
+
+                        // Submit to our server for verification
+                        document.getElementById('rzp-form').submit();
+                    },
+
+                    // Called when customer closes the modal
+                    modal: {
+                        ondismiss: function() {
+                            resetButton();
+                        }
+                    },
+
+                    // Pre-fill customer details if available
+                    prefill: {
+                        name:  document.title,
+                        email: '',
+                        contact: ''
+                    },
+
+                    theme: { color: '#4F46E5' }
+                };
+
+                var rzp = new Razorpay(options);
+
+                // Handle payment failure from Razorpay
+                rzp.on('payment.failed', function(response) {
+                    alert(
+                        'Payment failed: ' +
+                        response.error.description +
+                        '\nCode: ' + response.error.code
+                    );
+                    resetButton();
+                });
+
+                rzp.open();
+
+            } catch (err) {
+                console.error('Razorpay error:', err);
+                alert('Payment initiation failed. Please try again.');
+                resetButton();
+            }
+        }
+
+        function resetButton() {
+            var btn     = document.getElementById('rzp-pay-btn');
+            var loading = document.getElementById('rzp-loading');
+            btn.disabled          = false;
+            btn.style.display     = 'block';
+            loading.style.display = 'none';
+        }
+    </script>
+}

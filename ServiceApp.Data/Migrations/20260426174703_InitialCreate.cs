@@ -324,7 +324,7 @@ namespace ServiceApp.Data.Migrations
                         column: x => x.RequestId,
                         principalTable: "ServiceRequests",
                         principalColumn: "RequestId",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.NoAction);
                 });
 
             migrationBuilder.CreateTable(

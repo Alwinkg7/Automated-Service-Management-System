@@ -1,21 +1,21 @@
 ﻿@model ServiceApp.Core.Entities.Bill
 @using ServiceApp.Core.Enums
 @{
-    ViewData["Title"] = $"Bill #{Model.BillId}";
+    ViewData["Title"] = $"Bill #{Model.Id}";
 }
 
 <div class="page-header">
     <div>
-        <h2>Bill #@Model.BillId</h2>
+        <h2>Bill #@Model.Id</h2>
         <span style="font-size:13px; color:var(--text-secondary)">
-            Request #@Model.RequestId ·
+            Request #@Model.ServiceRequestId ·
             Created @Model.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")
         </span>
     </div>
     <a asp-area="Technician"
        asp-controller="Jobs"
        asp-action="Details"
-       asp-route-id="@Model.RequestId"
+       asp-route-id="@Model.ServiceRequestId"
        class="btn-outline">
         ← Back to job
     </a>
@@ -35,7 +35,7 @@
                     ServiceApp Invoice
                 </h3>
                 <p style="font-size:13px; color:var(--text-secondary)">
-                    Bill #@Model.BillId · Request #@Model.RequestId
+                    Bill #@Model.Id · Request #@Model.ServiceRequestId
                 </p>
                 <p style="font-size:12px; color:var(--text-muted)">
                     Issued: @Model.CreatedAt.ToString("dd MMM yyyy")

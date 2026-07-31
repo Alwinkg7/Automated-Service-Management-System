@@ -32,11 +32,13 @@ namespace ServiceApp.Services.Implementations
     {
         private readonly IUnitOfWork _uow;
         private readonly ILogger<PaymentService> _logger;
+        private readonly IRazorpayService _razorpay;
 
-        public PaymentService(IUnitOfWork uow, ILogger<PaymentService> logger)
+        public PaymentService(IUnitOfWork uow, ILogger<PaymentService> logger, IRazorpayService razorpay)
         {
             _uow = uow;
             _logger = logger;
+            _razorpay = razorpay;
         }
 
         // =============================================================
@@ -107,7 +109,7 @@ namespace ServiceApp.Services.Implementations
 
             // Load the request
             var request = await _uow.ServiceRequests
-                .GetByIdAsync(bill.RequestId);
+                .GetByIdAsync(bill.ServiceRequestId);
             if (request == null)
                 return Result<Payment>.Failure("Request not found.");
 
@@ -174,7 +176,7 @@ namespace ServiceApp.Services.Implementations
                 // ── Step 5: Log ServiceHistory ──────────────────────
                 var history = new ServiceHistory
                 {
-                    RequestId = bill.RequestId,
+                    RequestId = bill.ServiceRequestId,
                     Status = RequestStatus.Completed,
                     ChangedByUserId = customerUserId,
                     Note = $"Payment of ₹{bill.TotalAmount:N2} " +
@@ -191,7 +193,7 @@ namespace ServiceApp.Services.Implementations
                     "Payment processed for bill #{BillId}. " +
                     "Request #{RequestId} completed. " +
                     "Amount: ₹{Amount}",
-                    billId, bill.RequestId, bill.TotalAmount);
+                    billId, bill.ServiceRequestId, bill.TotalAmount);
 
                 return Result<Payment>.Success(payment);
             }
@@ -208,6 +210,201 @@ namespace ServiceApp.Services.Implementations
         {
             var payment = await _uow.Payments.GetByIdAsync(paymentId);
             return payment;
+        }
+
+        // =============================================================
+        //  CREATE RAZORPAY ORDER
+        //  Server-side order creation — required before showing
+        //  Razorpay checkout JS to the customer.
+        // =============================================================
+        public async Task<Result<RazorpayOrderResult>> CreateRazorpayOrderAsync(
+            int billId,
+            string customerUserId)
+        {
+            // Load and validate the bill
+            var bill = await _uow.Bills.GetWithItemsAndPaymentAsync(billId);
+            if (bill == null)
+                return Result<RazorpayOrderResult>.Failure("Bill not found.");
+
+            var request = await _uow.ServiceRequests
+                .GetByIdAsync(bill.ServiceRequestId);
+            if (request == null)
+                return Result<RazorpayOrderResult>.Failure("Request not found.");
+
+            if (request.CustomerId != customerUserId)
+                return Result<RazorpayOrderResult>.Failure(
+                    "You can only pay your own bills.");
+
+            if (request.Status != RequestStatus.Billed)
+                return Result<RazorpayOrderResult>.Failure(
+                    "This request is not ready for payment.");
+
+            if (bill.PaymentStatus == PaymentStatus.Paid)
+                return Result<RazorpayOrderResult>.Failure(
+                    "This bill has already been paid.");
+
+            try
+            {
+                // Create order on Razorpay — get an order ID
+                var receiptId = $"bill_{billId}_{DateTime.UtcNow:yyyyMMdd}";
+
+                var order = await _razorpay.CreateOrderAsync(
+                    amount: bill.TotalAmount,
+                    currency: "INR",
+                    receiptId: receiptId);
+
+                _logger.LogInformation(
+                    "Razorpay order {OrderId} created for bill #{BillId}",
+                    order.OrderId, billId);
+
+                return Result<RazorpayOrderResult>.Success(order);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to create Razorpay order for bill #{BillId}", billId);
+                return Result<RazorpayOrderResult>.Failure(
+                    "Could not initiate payment. Please try again.");
+            }
+        }
+
+        // =============================================================
+        //  PROCESS RAZORPAY PAYMENT
+        //  Called after customer completes Razorpay checkout.
+        //  Razorpay JS sends: orderId, paymentId, signature.
+        //
+        //  FLOW:
+        //  1. Verify signature (reject if invalid)
+        //  2. Idempotency check (skip if already processed)
+        //  3. Run the same 5-step completion transaction as cash
+        // =============================================================
+        public async Task<Result<Payment>> ProcessRazorpayPaymentAsync(
+            int billId,
+            string customerUserId,
+            string razorpayOrderId,
+            string razorpayPaymentId,
+            string razorpaySignature)
+        {
+            // ── Step 1: Verify signature ───────────────────────────────
+            // This is the CRITICAL security check.
+            // If signature is wrong → someone tampered with the payment.
+            var isValid = _razorpay.VerifyPaymentSignature(
+                razorpayOrderId,
+                razorpayPaymentId,
+                razorpaySignature);
+
+            if (!isValid)
+            {
+                _logger.LogWarning(
+                    "Invalid Razorpay signature for bill #{BillId}. " +
+                    "Possible fraud attempt. OrderId: {OrderId}",
+                    billId, razorpayOrderId);
+                return Result<Payment>.Failure(
+                    "Payment verification failed. " +
+                    "Please contact support if money was deducted.");
+            }
+
+            // ── Step 2: Idempotency check ──────────────────────────────
+            var existingPayment = await _uow.Payments
+                .GetByGatewayTransactionIdAsync(razorpayPaymentId);
+            if (existingPayment != null)
+            {
+                _logger.LogInformation(
+                    "Duplicate payment attempt for {PaymentId} — skipped",
+                    razorpayPaymentId);
+                return Result<Payment>.Success(existingPayment);
+            }
+
+            // ── Step 3: Load bill and validate ────────────────────────
+            var bill = await _uow.Bills.GetWithItemsAndPaymentAsync(billId);
+            if (bill == null)
+                return Result<Payment>.Failure("Bill not found.");
+
+            var request = await _uow.ServiceRequests
+                .GetByIdAsync(bill.ServiceRequestId);
+            if (request == null)
+                return Result<Payment>.Failure("Request not found.");
+
+            if (request.CustomerId != customerUserId)
+                return Result<Payment>.Failure(
+                    "You can only pay your own bills.");
+
+            // ── Step 4: Run the completion transaction ─────────────────
+            await _uow.BeginTransactionAsync();
+            try
+            {
+                var now = DateTime.UtcNow;
+
+                // Insert Payment row
+                var payment = new Payment
+                {
+                    BillId = billId,
+                    Amount = bill.TotalAmount,
+                    PaymentMethod = "Razorpay",
+                    GatewayTransactionId = razorpayPaymentId,
+                    GatewayOrderId = razorpayOrderId,
+                    PaidAt = now
+                };
+                await _uow.Payments.AddAsync(payment);
+                await _uow.SaveChangesAsync();
+
+                // Bill → Paid
+                bill.PaymentStatus = PaymentStatus.Paid;
+                bill.PaidAt = now;
+                _uow.Bills.Update(bill);
+
+                // Request → Completed
+                request.Status = RequestStatus.Completed;
+                request.UpdatedAt = now;
+                _uow.ServiceRequests.Update(request);
+
+                // Technician → Available + increment job count
+                if (request.AssignedTechnicianProfileId.HasValue)
+                {
+                    var tech = await _uow.TechnicianProfiles
+                        .GetByIdAsync(
+                            request.AssignedTechnicianProfileId.Value);
+                    if (tech != null)
+                    {
+                        tech.Status = TechnicianStatus.Available;
+                        tech.TotalJobsCompleted += 1;
+                        _uow.TechnicianProfiles.Update(tech);
+                    }
+                }
+
+                // Log ServiceHistory
+                var history = new ServiceHistory
+                {
+                    RequestId = bill.ServiceRequestId,
+                    Status = RequestStatus.Completed,
+                    ChangedByUserId = customerUserId,
+                    Note = $"Payment of ₹{bill.TotalAmount:N2} " +
+                                      $"received via Razorpay. " +
+                                      $"Transaction: {razorpayPaymentId}.",
+                    ChangedAt = now
+                };
+                await _uow.ServiceHistories.AddAsync(history);
+
+                await _uow.CommitTransactionAsync();
+
+                _logger.LogInformation(
+                    "Razorpay payment {PaymentId} processed. " +
+                    "Bill #{BillId} paid. Request #{RequestId} completed.",
+                    razorpayPaymentId, billId, bill.ServiceRequestId);
+
+                return Result<Payment>.Success(payment);
+            }
+            catch (Exception ex)
+            {
+                await _uow.RollbackTransactionAsync();
+                _logger.LogError(ex,
+                    "Failed to process Razorpay payment for bill #{BillId}",
+                    billId);
+                return Result<Payment>.Failure(
+                    "Payment was received but processing failed. " +
+                    "Please contact support with transaction ID: " +
+                    razorpayPaymentId);
+            }
         }
     }
 }

@@ -51,7 +51,7 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
 
             if (!requestResult.IsSuccess)
             {
-                TempData["Error"] = requestResult.Error;
+                TempData["Error"] = requestResult.ErrorMessage;
                 return RedirectToAction("Index", "Jobs");
             }
 
@@ -112,7 +112,7 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
 
             if (!requestResult.IsSuccess)
             {
-                TempData["Error"] = requestResult.Error;
+                TempData["Error"] = requestResult.ErrorMessage;
                 return RedirectToAction("Index", "Jobs");
             }
 
@@ -149,7 +149,7 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
 
             if (!result.IsSuccess)
             {
-                ModelState.AddModelError(string.Empty, result.Error!);
+                ModelState.AddModelError(string.Empty, result.ErrorMessage!);
                 return View(vm);
             }
 
@@ -174,7 +174,7 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction("Index", "Jobs");
             }
 

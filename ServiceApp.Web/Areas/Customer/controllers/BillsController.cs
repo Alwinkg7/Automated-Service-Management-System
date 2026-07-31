@@ -22,17 +22,20 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
         private readonly IBillService _billService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<BillsController> _logger;
+        private readonly IConfiguration _configuration;
 
         public BillsController(
             IPaymentService paymentService,
             IBillService billService,
             UserManager<ApplicationUser> userManager,
-            ILogger<BillsController> logger)
+            ILogger<BillsController> logger,
+            IConfiguration configuration)
         {
             _paymentService = paymentService;
             _billService = billService;
             _userManager = userManager;
             _logger = logger;
+            _configuration = configuration;
         }
 
         // =============================================================
@@ -49,9 +52,12 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction("Index", "Requests");
             }
+
+            // Pass public KeyId to view — safe to expose in HTML
+            ViewBag.RazorpayKeyId = _configuration["Razorpay:KeyId"];
 
             return View(result.Data!);
         }
@@ -71,7 +77,7 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction("Index", "Requests");
             }
 

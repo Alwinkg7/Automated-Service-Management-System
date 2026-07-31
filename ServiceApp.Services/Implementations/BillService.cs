@@ -113,7 +113,7 @@ namespace ServiceApp.Services.Implementations
                 // Create the Bill header
                 var bill = new Bill
                 {
-                    RequestId = requestId,
+                    ServiceRequestId = requestId,
                     TechnicianProfileId = tech.TechnicianProfileId,
                     TotalAmount = Math.Round(totalAmount, 2),
                     PaymentStatus = PaymentStatus.Unpaid,
@@ -130,7 +130,7 @@ namespace ServiceApp.Services.Implementations
                 {
                     var billItem = new BillItem
                     {
-                        BillId = bill.BillId,
+                        BillId = bill.Id,
                         Description = item.Description.Trim(),
                         Quantity = item.Quantity,
                         UnitPrice = Math.Round(item.UnitPrice, 2)
@@ -162,11 +162,11 @@ namespace ServiceApp.Services.Implementations
                 _logger.LogInformation(
                     "Bill #{BillId} created for request #{RequestId}. " +
                     "Total: {Total}. Items: {Count}",
-                    bill.BillId, requestId, totalAmount, validItems.Count);
+                    bill.Id, requestId, totalAmount, validItems.Count);
 
                 // Return bill with items loaded
                 var createdBill = await _uow.Bills
-                    .GetWithItemsAndPaymentAsync(bill.BillId);
+                    .GetWithItemsAndPaymentAsync(bill.Id);
 
                 return Result<Bill>.Success(createdBill!);
             }
@@ -209,6 +209,90 @@ namespace ServiceApp.Services.Implementations
                 return Result<Bill>.Failure("Bill not found.");
 
             return Result<Bill>.Success(bill);
+        }
+
+        // =============================================================
+        //  PAY BILL (Customer action)
+        //  Marks bill as paid → Request → Completed → Tech → Available
+        // =============================================================
+        public async Task<Result<bool>> PayBillAsync(int billId, string customerId)
+        {
+            // Load bill
+            var bill = await _uow.Bills.GetWithItemsAndPaymentAsync(billId);
+            if (bill == null)
+                return Result<bool>.Failure("Bill not found.");
+
+            if (bill.PaymentStatus == PaymentStatus.Paid)
+                return Result<bool>.Failure("This bill is already paid.");
+
+            // Load the linked service request to verify ownership
+            var request = await _uow.ServiceRequests
+                .GetWithDetailsAsync(bill.ServiceRequestId);
+            if (request == null)
+                return Result<bool>.Failure("Service request not found.");
+
+            if (request.CustomerId != customerId)
+                return Result<bool>.Failure("You cannot pay this bill.");
+
+            if (request.Status != RequestStatus.Billed)
+                return Result<bool>.Failure(
+                    $"Cannot pay — request is {request.Status}, not Billed.");
+
+            await _uow.BeginTransactionAsync();
+            try
+            {
+                // ── Mark bill paid ─────────────────────────────────────
+                bill.PaymentStatus = PaymentStatus.Paid;
+                bill.PaidAt = DateTime.UtcNow;
+                _uow.Bills.Update(bill);
+
+                // ── Move request to Completed ──────────────────────────
+                request.Status = RequestStatus.Completed;
+                request.UpdatedAt = DateTime.UtcNow;
+                _uow.ServiceRequests.Update(request);
+
+                // ── Free the technician back to Available ──────────────
+                if (request.AssignedTechnicianProfileId.HasValue)
+                {
+                    var tech = await _uow.TechnicianProfiles
+                        .GetByIdAsync(request.AssignedTechnicianProfileId.Value);
+
+                    if (tech != null && tech.Status == TechnicianStatus.Busy)
+                    {
+                        tech.Status = TechnicianStatus.Available;
+                        _uow.TechnicianProfiles.Update(tech);
+                    }
+                }
+
+                // ── Log history ────────────────────────────────────────
+                await _uow.ServiceHistories.AddAsync(new ServiceHistory
+                {
+                    RequestId = request.RequestId,
+                    Status = RequestStatus.Completed,
+                    ChangedByUserId = customerId,
+                    Note = $"Payment received. " +
+                                      $"Amount: ₹{bill.TotalAmount:N2}. " +
+                                      $"Service completed.",
+                    ChangedAt = DateTime.UtcNow
+                });
+
+                await _uow.CommitTransactionAsync();
+
+                _logger.LogInformation(
+                    "Bill #{BillId} paid by customer {CustomerId}. " +
+                    "Request #{RequestId} completed. Technician freed.",
+                    billId, customerId, request.RequestId);
+
+                return Result<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                await _uow.RollbackTransactionAsync();
+                _logger.LogError(ex,
+                    "Payment failed for bill #{BillId}", billId);
+                return Result<bool>.Failure(
+                    "Payment processing failed. Please try again.");
+            }
         }
     }
 }

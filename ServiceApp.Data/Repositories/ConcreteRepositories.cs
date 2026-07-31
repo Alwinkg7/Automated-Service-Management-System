@@ -216,7 +216,7 @@ namespace ServiceApp.Data.Repositories
         public async Task<Bill?> GetByRequestIdAsync(int requestId) =>
             await _dbSet
                 .Include(b => b.BillItems)
-                .FirstOrDefaultAsync(b => b.RequestId == requestId);
+                .FirstOrDefaultAsync(b => b.ServiceRequestId == requestId);
 
         // Full detail — for customer "View Bill" and "Pay" pages
         public async Task<Bill?> GetWithItemsAndPaymentAsync(int billId) =>
@@ -225,7 +225,7 @@ namespace ServiceApp.Data.Repositories
                 .Include(b => b.Payment)
                 .Include(b => b.Technician)
                     .ThenInclude(t => t.User)
-                .FirstOrDefaultAsync(b => b.BillId == billId);
+                .FirstOrDefaultAsync(b => b.Id == billId);
         public async Task AddItemAsync(BillItem item) =>
         await _context.BillItems.AddAsync(item);
     }

@@ -23,16 +23,22 @@
 //  Transient  = new instance every time it's requested
 // =================================================================
 
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Events;
+using ServiceApp.Core.Common;
 using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
 using ServiceApp.Core.Interfaces;
 using ServiceApp.Data;
 using ServiceApp.Data.Context;
+using ServiceApp.Infrastructure;
+using ServiceApp.Services;
 using ServiceApp.Services.Implementations;
+using System.Text;
 
 // ── Bootstrap Serilog BEFORE anything else ────────────────────────
 // This catches startup errors (wrong connection string etc.)
@@ -117,6 +123,67 @@ try
     .AddEntityFrameworkStores<ApplicationDbContext>() // store in our SQL Server
     .AddDefaultTokenProviders();                       // for password reset etc.
 
+    // ── JWT Authentication (for Flutter API) ──────────────────────────
+    var jwtSettings = builder.Configuration.GetSection("Jwt");
+    var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
+
+    builder.Services.AddAuthentication(options =>
+    {
+        // Keep cookie auth as default for MVC (don't break existing web)
+        // JWT is used only when explicitly requested
+    })
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(key)
+        };
+    });
+
+    // ── CORS for Flutter (development) ───────────────────────────────
+    //builder.Services.AddCors(options =>
+    //{
+    //    options.AddPolicy("FlutterDev", policy =>
+    //    {
+    //        policy
+    //            .WithOrigins(
+    //                "http://10.0.2.2",      
+    //                "http://localhost:61816",
+    //                "http://localhost:53274",
+    //                "http://127.0.0.1"        
+    //            )
+    //            .AllowAnyHeader()
+    //            .AllowAnyMethod()
+    //            .AllowCredentials();
+    //    });
+
+    //    // Tighter policy for production — update with your real domain
+    //    options.AddPolicy("FlutterProd", policy =>
+    //    {
+    //        policy
+    //            .WithOrigins("https://serviceapp.com")
+    //            .AllowAnyHeader()
+    //            .WithMethods("GET", "POST", "PUT", "DELETE");
+    //    });
+    //});
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("FlutterDev", policy =>
+        {
+            policy
+                .SetIsOriginAllowed(_ => true)  // ← allow ALL origins in dev
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+                //.AllowCredentials();
+        });
+    });
+
     // =============================================================
     //  STEP 4 — Auth cookie configuration
     //
@@ -137,6 +204,17 @@ try
         // Sliding expiration: timer resets on each request
         // So active users never get logged out mid-session
         options.SlidingExpiration = true;
+
+        options.Events.OnRedirectToLogin = context =>
+        {
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                context.Response.StatusCode = 401;
+                return Task.CompletedTask;
+            }
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        };
     });
 
     // =============================================================
@@ -153,6 +231,15 @@ try
     builder.Services.AddScoped<IServiceRequestService, ServiceRequestService>();
     builder.Services.AddScoped<IBillService, BillService>(); 
     builder.Services.AddScoped<IPaymentService, PaymentService>();
+    builder.Services.AddScoped<ITechnicianService, TechnicianService>();
+  
+
+    // Bind Razorpay config section to the settings class
+    builder.Services.Configure<RazorpaySettings>(
+        builder.Configuration.GetSection(RazorpaySettings.SectionName));
+
+    // Register Razorpay service
+    builder.Services.AddScoped<IRazorpayService, RazorpayService>();
 
     // =============================================================
     //  STEP 6 — MVC with Areas
@@ -170,7 +257,6 @@ try
     //    - Tag helpers
     // =============================================================
     builder.Services.AddControllersWithViews();
-    builder.Services.AddScoped<IPaymentService, PaymentService>();
     // ── BUILD the WebApplication ──────────────────────────────────
     var app = builder.Build();
 
@@ -200,6 +286,8 @@ try
     //  8. Endpoints            (invoke the controller action)
     // =============================================================
 
+   
+
     if (!app.Environment.IsDevelopment())
     {
         // Production: show a friendly error page instead of stack trace
@@ -208,7 +296,11 @@ try
         app.UseHsts();
     }
 
-    app.UseHttpsRedirection();
+    //app.UseHttpsRedirection();
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHttpsRedirection();   // only force HTTPS in production
+    }
 
     // Serve files from wwwroot (CSS, JS, images) — no auth check
     app.UseStaticFiles();
@@ -218,7 +310,9 @@ try
     app.UseSerilogRequestLogging();
 
     app.UseRouting();
-
+    var isDev = app.Environment.IsDevelopment();
+    //app.UseCors(isDev ? "FlutterDev" : "FlutterProd");
+    app.UseCors("FlutterDev");
     // Authentication MUST come before Authorization
     // UseAuthentication reads the cookie and sets User.Identity
     // UseAuthorization checks the [Authorize] attributes

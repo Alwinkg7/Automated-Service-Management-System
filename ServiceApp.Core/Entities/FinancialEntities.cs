@@ -24,36 +24,24 @@ namespace ServiceApp.Core.Entities
     // ----------------------------------------------------------
     public class Bill
     {
-        public int BillId { get; set; }
-
-        // One bill per request — enforced by unique index in DbContext
-        public int RequestId { get; set; }
-        public virtual ServiceRequest Request { get; set; } = null!;
-
-        // The technician who created this bill
+        public int Id { get; set; }
+        public int ServiceRequestId { get; set; }
         public int TechnicianProfileId { get; set; }
-        public virtual TechnicianProfile Technician { get; set; } = null!;
-
-        // Sum of all BillItem amounts.
-        // Calculated in the service layer, stored here so we don't
-        // recalculate on every page load.
-        public decimal TotalAmount { get; set; }
-
-        // Starts Unpaid. Moves to Paid after gateway webhook confirms.
         public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
-
+        public decimal LaborCost { get; set; }
+        public decimal MaterialCost { get; set; }
+        public decimal TotalAmount { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public bool IsPaid { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? PaidAt { get; set; }  // stamped when PaymentStatus → Paid
+        public DateTime? PaidAt { get; set; }
 
-        // ── Navigation ────────────────────────────────────────────
-
-        public virtual ICollection<BillItem> BillItems { get; set; }
-            = new List<BillItem>();
-
-        // The payment record — null until customer pays
-        public virtual Payment? Payment { get; set; }
+        // Navigation
+        public ServiceRequest ServiceRequest { get; set; } = null!;
+        public TechnicianProfile Technician { get; set; } = null!; 
+        public ICollection<BillItem> BillItems { get; set; } = new List<BillItem>();
+        public Payment? Payment { get; set; }          
     }
-
 
     // ----------------------------------------------------------
     //  BillItem — one line on the invoice
@@ -61,20 +49,13 @@ namespace ServiceApp.Core.Entities
     public class BillItem
     {
         public int BillItemId { get; set; }
-
         public int BillId { get; set; }
         public virtual Bill Bill { get; set; } = null!;
-
         public string Description { get; set; } = string.Empty;
         public int Quantity { get; set; } = 1;
         public decimal UnitPrice { get; set; }
-
-        // Computed property — NOT stored in DB.
-        // EF is told to ignore this via .Ignore() in DbContext.
-        // Calculated on the fly: Quantity × UnitPrice
         public decimal Amount => Quantity * UnitPrice;
     }
-
 
     // ----------------------------------------------------------
     //  Payment — created after gateway confirms payment
@@ -93,23 +74,12 @@ namespace ServiceApp.Core.Entities
     public class Payment
     {
         public int PaymentId { get; set; }
-
         public int BillId { get; set; }
         public virtual Bill Bill { get; set; } = null!;
-
         public decimal Amount { get; set; }
-
-        // "Razorpay", "Stripe", "Cash" — set based on how customer paid
         public string PaymentMethod { get; set; } = string.Empty;
-
-        // Transaction ID from Razorpay/Stripe.
-        // Has a UNIQUE INDEX in DB — this is how we prevent
-        // double-processing if the gateway fires the webhook twice.
         public string? GatewayTransactionId { get; set; }
-
-        // Order ID created on the gateway before payment starts
         public string? GatewayOrderId { get; set; }
-
         public DateTime PaidAt { get; set; } = DateTime.UtcNow;
     }
 }

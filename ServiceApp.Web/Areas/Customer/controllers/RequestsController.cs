@@ -70,7 +70,7 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
 
                 // Pre-select their preferred category if set
                 Category = profile?.PreferredCategory
-                    ?? ServiceCategory.Electrician
+                    ?? ServiceCategory.Electrical
             };
 
             return View(vm);
@@ -108,7 +108,7 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
             if (!result.IsSuccess)
             {
                 // Service returned a business error
-                ModelState.AddModelError(string.Empty, result.Error!);
+                ModelState.AddModelError(string.Empty, result.ErrorMessage!);
                 return View(vm);
             }
 
@@ -135,7 +135,7 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction("Dashboard", "Home");
             }
 
@@ -174,7 +174,7 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction(nameof(Index));
             }
 
@@ -207,7 +207,7 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
 
             if (!detailResult.IsSuccess)
             {
-                TempData["Error"] = detailResult.Error;
+                TempData["Error"] = detailResult.ErrorMessage;
                 return RedirectToAction(nameof(Index));
             }
 
@@ -223,7 +223,7 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction(nameof(Details), new { id });
             }
 
@@ -243,7 +243,7 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
                 id, userId, rating, feedback);
 
             if (!result.IsSuccess)
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
             else
                 TempData["Success"] = "Thank you for your rating!";
 

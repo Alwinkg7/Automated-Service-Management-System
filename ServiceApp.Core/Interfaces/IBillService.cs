@@ -39,7 +39,12 @@ namespace ServiceApp.Core.Interfaces
 
         // Load bill by its own ID.
         Task<Result<Bill>> GetBillByIdAsync(int billId);
+
+        Task<Result<bool>> PayBillAsync(
+        int billId,
+        string customerId);
     }
+
 
     // Simple DTO carrying one line item from the form.
     // Not an entity — just a data transfer object.

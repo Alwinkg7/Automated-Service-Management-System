@@ -64,13 +64,13 @@ namespace ServiceApp.Core.Enums
     // The auto-assignment engine matches these two fields.
     public enum ServiceCategory
     {
-        Electrician,
-        Plumber,
-        Carpenter,
-        Painter,
-        Cleaner,
-        ACTechnician,
-        Mechanic,
-        Other
+        Plumbing,
+        Electrical,
+        Carpentry,
+        Cleaning,
+        AC_Repair,        
+        Appliance_Repair, 
+        Painting,
+        General
     }
 }

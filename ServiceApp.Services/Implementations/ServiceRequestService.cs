@@ -23,6 +23,7 @@
 //     Any other jump is rejected with a clear error message.
 // =================================================================
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ServiceApp.Core.Common;
 using ServiceApp.Core.Entities;
@@ -35,13 +36,16 @@ namespace ServiceApp.Services.Implementations
     {
         private readonly IUnitOfWork _uow;
         private readonly ILogger<ServiceRequestService> _logger;
+        //private readonly DbContext _context; 
 
         public ServiceRequestService(
             IUnitOfWork uow,
-            ILogger<ServiceRequestService> logger)
+            ILogger<ServiceRequestService> logger
+            )
         {
             _uow = uow;
             _logger = logger;
+            
         }
 
         // =============================================================
@@ -90,6 +94,8 @@ namespace ServiceApp.Services.Implementations
                     RequestStatus.Pending,
                     customerId,
                     "Service request created by customer.");
+
+                await _uow.SaveChangesAsync();
 
                 await _uow.CommitTransactionAsync();
 
@@ -546,6 +552,44 @@ namespace ServiceApp.Services.Implementations
                     $"No available technicians for {category} right now.");
 
             return Result<IEnumerable<TechnicianProfile>>.Success(techs);
+        }
+
+        // Add inside your existing ServiceRequestService class
+        public async Task<Result<bool>> RateRequestAsync(int requestId, int stars, string? comment)
+        {
+            if (stars < 1 || stars > 5)
+                return Result<bool>.Failure("Rating must be between 1 and 5.");
+
+            var request = await _uow.ServiceRequests.GetWithDetailsAsync(requestId);
+            if (request == null)
+                return Result<bool>.Failure("Request not found.");
+
+            if (request.Status != RequestStatus.Completed)
+                return Result<bool>.Failure("Only completed requests can be rated.");
+
+            if (request.CustomerRating.HasValue)
+                return Result<bool>.Failure("Already rated.");
+
+            request.CustomerRating = stars;
+            request.CustomerFeedback = comment;
+
+            if (request.AssignedTechnicianProfileId.HasValue)
+            {
+                var tech = await _uow.TechnicianProfiles
+                    .GetByIdAsync(request.AssignedTechnicianProfileId.Value);
+                if (tech != null)
+                {
+                    var total = tech.TotalJobsCompleted;
+                    tech.Rating = total > 0
+                        ? Math.Round(((tech.Rating * total) + stars) / (total + 1), 2)
+                        : stars;
+                    _uow.TechnicianProfiles.Update(tech);
+                }
+            }
+
+            _uow.ServiceRequests.Update(request);
+            await _uow.SaveChangesAsync();
+            return Result<bool>.Success(true);
         }
 
         // =============================================================

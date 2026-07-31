@@ -59,7 +59,7 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction("Dashboard", "Home");
             }
 
@@ -103,7 +103,7 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction(nameof(Index));
             }
 
@@ -127,7 +127,7 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
 
             if (!requestResult.IsSuccess)
             {
-                TempData["Error"] = requestResult.Error;
+                TempData["Error"] = requestResult.ErrorMessage;
                 return RedirectToAction(nameof(Index));
             }
 
@@ -187,7 +187,7 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction(nameof(Assign), new { id });
             }
 
@@ -213,7 +213,7 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
 
             if (!result.IsSuccess)
             {
-                TempData["Error"] = result.Error;
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction(nameof(Details), new { id });
             }
 
