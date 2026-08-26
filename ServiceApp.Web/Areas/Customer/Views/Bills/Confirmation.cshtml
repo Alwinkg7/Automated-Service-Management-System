@@ -19,87 +19,98 @@
             Payment confirmed!
         </h2>
         <p style="font-size:15px; color:var(--text-secondary);
-                  margin-bottom:28px">
+                  margin-bottom:28px; line-height:1.6">
             Thank you for using ServiceApp.
-            Your request has been marked as completed.
+            Your request has been marked as complete.
         </p>
 
-        @* Payment receipt *@
-        <div style="background:var(--bg-page); border-radius:var(--radius);
-                    padding:18px; margin-bottom:24px; text-align:left">
+        @* Receipt card *@
+        <div style="background:var(--bg-page);
+                    border-radius:var(--radius);
+                    padding:18px; margin-bottom:24px;
+                    text-align:left">
+
             <p style="font-size:12px; font-weight:600;
                       color:var(--text-secondary);
                       text-transform:uppercase; letter-spacing:.5px;
                       margin-bottom:12px">
                 Payment receipt
             </p>
+
             <div style="display:flex; flex-direction:column; gap:8px">
+
                 <div style="display:flex; justify-content:space-between">
-                    <span style="font-size:13px;
-                                 color:var(--text-secondary)">
+                    <span style="font-size:13px; color:var(--text-secondary)">
                         Payment ID
                     </span>
                     <span style="font-size:13px; font-weight:500">
                         #@Model.PaymentId
                     </span>
                 </div>
+
                 <div style="display:flex; justify-content:space-between">
-                    <span style="font-size:13px;
-                                 color:var(--text-secondary)">
+                    <span style="font-size:13px; color:var(--text-secondary)">
                         Bill ID
                     </span>
                     <span style="font-size:13px; font-weight:500">
                         #@Model.BillId
                     </span>
                 </div>
-                <div style="display:flex; justify-content:space-between">
-                    <span style="font-size:13px;
-                                 color:var(--text-secondary)">
+
+                <div style="display:flex; justify-content:space-between;
+                            padding-top:8px;
+                            border-top:1px solid var(--border)">
+                    <span style="font-size:13px; color:var(--text-secondary)">
                         Amount paid
                     </span>
-                    <span style="font-size:15px; font-weight:700;
+                    <span style="font-size:18px; font-weight:700;
                                  color:var(--success)">
                         ₹@(Model.Amount.ToString("N2"))
                     </span>
                 </div>
+
                 <div style="display:flex; justify-content:space-between">
-                    <span style="font-size:13px;
-                                 color:var(--text-secondary)">
+                    <span style="font-size:13px; color:var(--text-secondary)">
                         Method
                     </span>
                     <span style="font-size:13px; font-weight:500">
                         @Model.PaymentMethod
                     </span>
                 </div>
+
                 <div style="display:flex; justify-content:space-between">
-                    <span style="font-size:13px;
-                                 color:var(--text-secondary)">
+                    <span style="font-size:13px; color:var(--text-secondary)">
                         Paid at
                     </span>
                     <span style="font-size:13px">
                         @(Model.PaidAt.ToString("dd MMM yyyy, hh:mm tt"))
                     </span>
                 </div>
-                @if (!string.IsNullOrEmpty(Model.GatewayTransactionId))
+
+                @* Transaction ID — only for online payments *@
+                @if (!string.IsNullOrEmpty(Model.GatewayTransactionId)
+                     && !Model.GatewayTransactionId.StartsWith("CASH"))
                 {
-                    <div style="display:flex; justify-content:space-between">
-                        <span style="font-size:13px;
-                                         color:var(--text-secondary)">
+                    <div style="display:flex; justify-content:space-between;
+                                align-items:flex-start; flex-wrap:wrap; gap:4px">
+                        <span style="font-size:13px; color:var(--text-secondary);
+                                     flex-shrink:0">
                             Transaction ref
                         </span>
-                        <span style="font-size:12px;
-                                         font-family:var(--font-mono);
-                                         color:var(--text-secondary)">
+                        <span style="font-size:11px; font-family:monospace;
+                                     color:var(--text-secondary);
+                                     word-break:break-all; text-align:right">
                             @Model.GatewayTransactionId
                         </span>
                     </div>
                 }
+
             </div>
         </div>
 
-        @* Actions *@
-        <div style="display:flex; gap:10px; justify-content:center;
-                    flex-wrap:wrap">
+        @* Action buttons *@
+        <div style="display:flex; gap:10px;
+                    justify-content:center; flex-wrap:wrap">
             <a asp-area="Customer"
                asp-controller="Requests"
                asp-action="Index"

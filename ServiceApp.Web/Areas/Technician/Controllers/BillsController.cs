@@ -1,9 +1,12 @@
 ﻿// =================================================================
 //  Areas/Technician/Controllers/BillsController.cs
 //
+//  Technician creates and views bills for their completed jobs.
+//  Payment actions belong to the Customer area — not here.
+//
 //  GET  /Technician/Bills/Create?requestId={id} → bill form
 //  POST /Technician/Bills/Create                → submit bill
-//  GET  /Technician/Bills/Details/{requestId}   → view bill
+//  GET  /Technician/Bills/Details?requestId={id}→ view bill
 // =================================================================
 
 using Microsoft.AspNetCore.Authorization;
@@ -56,8 +59,6 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
             }
 
             var request = requestResult.Data!;
-
-            // Verify this technician owns this job
             var userId = _userManager.GetUserId(User)!;
             var tech = await _uow.TechnicianProfiles
                 .GetByUserIdAsync(userId);
@@ -71,7 +72,6 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
                 return RedirectToAction("Index", "Jobs");
             }
 
-            // Already billed? Show existing bill
             if (request.Bill != null)
             {
                 TempData["Error"] =
@@ -99,14 +99,12 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
 
         // =============================================================
         //  POST /Technician/Bills/Create
-        //  Submit the bill.
         // =============================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(
             CreateBillViewModel vm, int requestId)
         {
-            // Re-load request for display if validation fails
             var requestResult = await _requestService
                 .GetRequestDetailsAsync(requestId);
 
@@ -118,7 +116,6 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
 
             vm.Request = requestResult.Data!;
 
-            // Filter out completely blank rows before validating
             var filledItems = vm.Items?
                 .Where(i => !string.IsNullOrWhiteSpace(i.Description)
                          && i.UnitPrice > 0)
@@ -133,8 +130,6 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
             }
 
             var userId = _userManager.GetUserId(User)!;
-
-            // Convert ViewModel rows to service layer DTOs
             var billItems = filledItems
                 .Select(i => new BillItemInput
                 {
@@ -149,22 +144,21 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
 
             if (!result.IsSuccess)
             {
-                ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+                ModelState.AddModelError(string.Empty,
+                    result.ErrorMessage!);
                 return View(vm);
             }
 
             TempData["Success"] =
-                $"Bill created successfully! " +
-                $"Total: ₹{result.Data!.TotalAmount:N2}. " +
+                $"Bill created! Total: ₹{result.Data!.TotalAmount:N2}. " +
                 "Waiting for customer payment.";
 
-            return RedirectToAction(nameof(Details),
-                new { requestId });
+            return RedirectToAction(nameof(Details), new { requestId });
         }
 
         // =============================================================
-        //  GET /Technician/Bills/Details/{requestId}
-        //  View the bill for a completed or billed job.
+        //  GET /Technician/Bills/Details?requestId={id}
+        //  View the bill — read only for technician.
         // =============================================================
         [HttpGet]
         public async Task<IActionResult> Details(int requestId)
