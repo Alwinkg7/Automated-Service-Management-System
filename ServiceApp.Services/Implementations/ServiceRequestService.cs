@@ -36,14 +36,17 @@ namespace ServiceApp.Services.Implementations
     {
         private readonly IUnitOfWork _uow;
         private readonly ILogger<ServiceRequestService> _logger;
+        private readonly INotificationService _notifications;
         //private readonly DbContext _context; 
 
         public ServiceRequestService(
             IUnitOfWork uow,
+            INotificationService notifications,
             ILogger<ServiceRequestService> logger
             )
         {
             _uow = uow;
+            _notifications = notifications;
             _logger = logger;
             
         }
@@ -66,6 +69,30 @@ namespace ServiceApp.Services.Implementations
             if (customer == null)
                 return Result<ServiceRequest>.Failure(
                     "Customer account not found.");
+
+            // ── Duplicate check ────────────────────────────────────────
+            // Prevent double-submit: if customer already has a Pending
+            // request for the same category + address created within
+            // the last 30 seconds → reject it as a duplicate
+            var recentDuplicate = await _uow.ServiceRequests
+                .FirstOrDefaultAsync(r =>
+                    r.CustomerId == customerId &&
+                    r.Category == category &&
+                    r.Address == address.Trim() &&
+                    r.Status == RequestStatus.Pending &&
+                    r.CreatedAt >= DateTime.UtcNow.AddSeconds(-30));
+
+            if (recentDuplicate != null)
+            {
+                _logger.LogWarning(
+                    "Duplicate request blocked for customer {CustomerId}. " +
+                    "Request #{RequestId} already exists.",
+                    customerId, recentDuplicate.RequestId);
+
+                // Return the existing request — not an error
+                return Result<ServiceRequest>.Success(recentDuplicate);
+            }
+
 
             await _uow.BeginTransactionAsync();
             try
@@ -98,6 +125,8 @@ namespace ServiceApp.Services.Implementations
                 await _uow.SaveChangesAsync();
 
                 await _uow.CommitTransactionAsync();
+
+                await _notifications.NotifyAdminNewRequestAsync(request.RequestId, category.ToString(), customer.FullName);
 
                 _logger.LogInformation(
                     "Request #{RequestId} created by customer {CustomerId} " +
@@ -186,6 +215,10 @@ namespace ServiceApp.Services.Implementations
 
                 await _uow.CommitTransactionAsync();
 
+                await _notifications.NotifyTechnicianAssignedAsync(tech.UserId, requestId, request.Category.ToString(), request.Customer?.FullName ?? "Customer", request.Address ?? "");
+
+                await _notifications.NotifyAdminStatusChangedAsync(requestId, "Assigned");
+
                 _logger.LogInformation(
                     "Request #{RequestId} assigned to technician " +
                     "{TechnicianId} by admin {AdminId}",
@@ -269,6 +302,14 @@ namespace ServiceApp.Services.Implementations
                     "Technician accepted the job. Work in progress.");
 
                 await _uow.CommitTransactionAsync();
+
+                // Load user info for the notification
+                var techUser = await _uow.TechnicianProfiles
+                    .GetWithUserAsync(tech.TechnicianProfileId);
+
+                await _notifications.NotifyCustomerJobAcceptedAsync(request.CustomerId, requestId, techUser?.User.FullName ?? "Your technician", techUser?.User.Phone ?? "");
+
+                await _notifications.NotifyAdminStatusChangedAsync(requestId, "InProgress");
 
                 _logger.LogInformation(
                     "Request #{RequestId} accepted by technician {TechId}. " +

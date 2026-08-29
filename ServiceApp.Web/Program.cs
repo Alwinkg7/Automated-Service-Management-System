@@ -23,11 +23,14 @@
 //  Transient  = new instance every time it's requested
 // =================================================================
 
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using Serilog.Core;
 using Serilog.Events;
 using ServiceApp.Core.Common;
 using ServiceApp.Core.Entities;
@@ -38,6 +41,9 @@ using ServiceApp.Data.Context;
 using ServiceApp.Infrastructure;
 using ServiceApp.Services;
 using ServiceApp.Services.Implementations;
+using ServiceApp.Services.Implementations;
+using ServiceApp.Web.Hubs;
+using ServiceApp.Web.Services;
 using System.Text;
 
 // ── Bootstrap Serilog BEFORE anything else ────────────────────────
@@ -241,6 +247,11 @@ try
     // Register Razorpay service
     builder.Services.AddScoped<IRazorpayService, RazorpayService>();
 
+    // SignalR — enables WebSocket hub
+    builder.Services.AddSignalR();
+    // Notification service — wraps SignalR for use in service layer
+    builder.Services.AddScoped<INotificationService, NotificationService>();
+
     // =============================================================
     //  STEP 6 — MVC with Areas
     //
@@ -257,6 +268,37 @@ try
     //    - Tag helpers
     // =============================================================
     builder.Services.AddControllersWithViews();
+
+    // ── Hangfire ──────────────────────────────────────────────────
+    // Uses the same SQL Server database — creates its own tables
+    // Hangfire tables: HangfireJob, HangfireState, HangfireQueue etc.
+    builder.Services.AddHangfire(config => config
+        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UseSqlServerStorage(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            new SqlServerStorageOptions
+            {
+                CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                QueuePollInterval = TimeSpan.Zero,
+                UseRecommendedIsolationLevel = true,
+                DisableGlobalLocks = true
+            }));
+
+    // Hangfire server — processes background jobs
+    // WorkerCount: how many parallel jobs can run
+    builder.Services.AddHangfireServer(options =>
+    {
+        options.WorkerCount = 2;  // 2 workers is enough for this app
+        options.Queues = new[] { "auto-assign", "default" };
+    });
+
+    // Auto-assignment service
+    builder.Services.AddScoped<IAutoAssignmentService, AutoAssignmentService>();
+
+
     // ── BUILD the WebApplication ──────────────────────────────────
     var app = builder.Build();
 
@@ -319,6 +361,30 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
+    // ── Hangfire dashboard ────────────────────────────────────────
+    // Accessible at /hangfire — shows all jobs, their status, logs
+    // In production: restrict with authorization policy
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        // Only admins can see the Hangfire dashboard
+        // For now allows all — add auth filter in production
+        Authorization = new[]
+        {
+        new Hangfire.Dashboard.LocalRequestsOnlyAuthorizationFilter()
+    }
+    });
+
+    // ── Register the recurring auto-assignment job ─────────────────
+    // Cron.MinuteInterval(2) = runs every 2 minutes
+    // Job ID "auto-assign" — if already exists, updates the schedule
+    RecurringJob.AddOrUpdate<IAutoAssignmentService>(
+        recurringJobId: "auto-assign",
+        methodCall: service => service.RunAsync(),
+        cronExpression: Cron.MinuteInterval(2),
+        queue: "auto-assign");
+
+    Log.Information("Hangfire auto-assignment job registered (every 2 minutes)");
+
     // =============================================================
     //  STEP 9 — Route configuration
     //
@@ -336,6 +402,10 @@ try
     app.MapControllerRoute(
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}");
+
+    // Map the SignalR hub endpoint
+    // Clients connect to: /hubs/service
+    app.MapHub<ServiceHub>("/hubs/service");
 
     app.Run();
 }

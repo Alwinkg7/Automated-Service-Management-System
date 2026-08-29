@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNet.SignalR.JS" Version="2.4.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ServiceApp.Core\ServiceApp.Core.csproj" />
     <ProjectReference Include="..\ServiceApp.Data\ServiceApp.Data.csproj" />
   </ItemGroup>

@@ -29,11 +29,13 @@ namespace ServiceApp.Services.Implementations
     {
         private readonly IUnitOfWork _uow;
         private readonly ILogger<BillService> _logger;
+        private readonly INotificationService _notifications;
 
-        public BillService(IUnitOfWork uow, ILogger<BillService> logger)
+        public BillService(IUnitOfWork uow, ILogger<BillService> logger, INotificationService notifications)
         {
             _uow = uow;
             _logger = logger;
+            _notifications = notifications;
         }
 
         // =============================================================
@@ -158,6 +160,15 @@ namespace ServiceApp.Services.Implementations
                 await _uow.ServiceHistories.AddAsync(history);
 
                 await _uow.CommitTransactionAsync();
+
+                // Notify customer — bill is ready to pay
+                await _notifications.NotifyCustomerBillCreatedAsync(
+                    request.CustomerId,
+                    requestId,
+                    Math.Round(totalAmount, 2));
+
+                await _notifications.NotifyAdminStatusChangedAsync(
+                    requestId, "Billed");
 
                 _logger.LogInformation(
                     "Bill #{BillId} created for request #{RequestId}. " +

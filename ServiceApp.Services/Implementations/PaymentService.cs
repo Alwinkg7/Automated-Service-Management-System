@@ -33,12 +33,14 @@ namespace ServiceApp.Services.Implementations
         private readonly IUnitOfWork _uow;
         private readonly ILogger<PaymentService> _logger;
         private readonly IRazorpayService _razorpay;
+        private readonly INotificationService _notifications;
 
-        public PaymentService(IUnitOfWork uow, ILogger<PaymentService> logger, IRazorpayService razorpay)
+        public PaymentService(IUnitOfWork uow, ILogger<PaymentService> logger, IRazorpayService razorpay, INotificationService notifications)
         {
             _uow = uow;
             _logger = logger;
             _razorpay = razorpay;
+            _notifications = notifications;
         }
 
         // =============================================================
@@ -188,6 +190,23 @@ namespace ServiceApp.Services.Implementations
 
                 // ── Commit all 5 steps together ─────────────────────
                 await _uow.CommitTransactionAsync();
+
+                // Notify technician — job done, they're available again
+                if (request.AssignedTechnicianProfileId.HasValue)
+                {
+                    var tech = await _uow.TechnicianProfiles
+                        .GetByIdAsync(request.AssignedTechnicianProfileId.Value);
+                    if (tech != null)
+                    {
+                        await _notifications.NotifyTechnicianJobCompletedAsync(
+                            tech.UserId,
+                            bill.ServiceRequestId,
+                            bill.TotalAmount);
+                    }
+                }
+
+                await _notifications.NotifyAdminStatusChangedAsync(
+                    bill.ServiceRequestId, "Completed");
 
                 _logger.LogInformation(
                     "Payment processed for bill #{BillId}. " +
@@ -386,6 +405,23 @@ namespace ServiceApp.Services.Implementations
                 await _uow.ServiceHistories.AddAsync(history);
 
                 await _uow.CommitTransactionAsync();
+
+                // Notify technician — job done, they're available again
+                if (request.AssignedTechnicianProfileId.HasValue)
+                {
+                    var tech = await _uow.TechnicianProfiles
+                        .GetByIdAsync(request.AssignedTechnicianProfileId.Value);
+                    if (tech != null)
+                    {
+                        await _notifications.NotifyTechnicianJobCompletedAsync(
+                            tech.UserId,
+                            bill.ServiceRequestId,
+                            bill.TotalAmount);
+                    }
+                }
+
+                await _notifications.NotifyAdminStatusChangedAsync(
+                    bill.ServiceRequestId, "Completed");
 
                 _logger.LogInformation(
                     "Razorpay payment {PaymentId} processed. " +

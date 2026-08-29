@@ -25,11 +25,13 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
     {
         private readonly IUnitOfWork _uow;
         private readonly ILogger<HomeController> _logger;
+        private readonly IAutoAssignmentService _autoAssignment;
 
-        public HomeController(IUnitOfWork uow, ILogger<HomeController> logger)
+        public HomeController(IUnitOfWork uow, ILogger<HomeController> logger, IAutoAssignmentService autoAssignment)
         {
             _uow = uow;
             _logger = logger;
+            _autoAssignment = autoAssignment;
         }
 
         // GET /Admin/Home/Dashboard
@@ -73,6 +75,50 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
             };
 
             return View(vm);
+        }
+
+        // POST /Admin/Home/RunAutoAssign
+        // Admin can manually trigger one assignment cycle
+        // Useful when they want immediate assignment without waiting 2 min
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RunAutoAssign()
+        {
+            _logger.LogInformation(
+                "Manual auto-assignment triggered by admin {Admin}",
+                User.Identity?.Name);
+
+            await _autoAssignment.RunAsync();
+
+            TempData["Success"] =
+                "Auto-assignment cycle completed. " +
+                "Check All Requests to see what was assigned.";
+
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        // GET /Admin/Home/GetCounts
+        // Returns live counts as JSON — called by SignalR client JS
+        // when admin dashboard receives a StatusChanged notification
+        [HttpGet]
+        public async Task<IActionResult> GetCounts()
+        {
+            var pending = await _uow.ServiceRequests
+                .CountAsync(r => r.Status == RequestStatus.Pending);
+            var inProgress = await _uow.ServiceRequests
+                .CountAsync(r => r.Status == RequestStatus.InProgress);
+            var completed = await _uow.ServiceRequests
+                .CountAsync(r => r.Status == RequestStatus.Completed);
+            var available = await _uow.TechnicianProfiles
+                .CountAsync(t => t.Status == TechnicianStatus.Available);
+
+            return Json(new
+            {
+                pending,
+                inProgress,
+                completed,
+                available
+            });
         }
     }
 }

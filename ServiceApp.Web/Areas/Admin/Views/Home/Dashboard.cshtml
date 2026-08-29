@@ -16,9 +16,26 @@
 
 <div class="page-header">
     <h2>Dashboard</h2>
-    <span style="font-size:13px; color:var(--text-secondary)">
-        @DateTime.Now.ToString("dddd, dd MMMM yyyy")
-    </span>
+    <div style="display:flex; gap:10px; align-items:center">
+        <span style="font-size:13px; color:var(--text-secondary)">
+            @DateTime.Now.ToString("dddd, dd MMMM yyyy")
+        </span>
+
+        @* Manual trigger — useful for testing or immediate assignment *@
+        <form asp-area="Admin"
+              asp-controller="Home"
+              asp-action="RunAutoAssign"
+              method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit"
+                    class="btn-outline btn-sm"
+                    onclick="return confirm(
+                        'Run auto-assignment now? ' +
+                        'All pending requests will be processed.')">
+                ⚡ Run auto-assign now
+            </button>
+        </form>
+    </div>
 </div>
 
 @* ── Stat cards ──────────────────────────────────────────────── *@
@@ -26,7 +43,7 @@
 
     <div class="stat-card stat-pending">
         <span class="stat-label">Pending</span>
-        <span class="stat-value">@Model.PendingCount</span>
+        <span class="stat-value" data-stat-count="pending">@Model.PendingCount</span>
         <span style="font-size:12px; color:var(--text-muted)">
             Awaiting assignment
         </span>
@@ -34,7 +51,7 @@
 
     <div class="stat-card stat-progress">
         <span class="stat-label">In progress</span>
-        <span class="stat-value">@Model.InProgressCount</span>
+        <span class="stat-value" data-stat-count="inProgress">@Model.InProgressCount</span>
         <span style="font-size:12px; color:var(--text-muted)">
             Active jobs
         </span>
@@ -42,7 +59,7 @@
 
     <div class="stat-card stat-done">
         <span class="stat-label">Completed</span>
-        <span class="stat-value">@Model.CompletedCount</span>
+        <span class="stat-value" data-stat-count="completed">@Model.CompletedCount</span>
         <span style="font-size:12px; color:var(--text-muted)">
             All time
         </span>
@@ -50,7 +67,7 @@
 
     <div class="stat-card stat-tech">
         <span class="stat-label">Available techs</span>
-        <span class="stat-value">@Model.AvailableTechs</span>
+        <span class="stat-value" data-stat-count="available">@Model.AvailableTechs</span>
         <span style="font-size:12px; color:var(--text-muted)">
             of @Model.TotalTechs total
         </span>

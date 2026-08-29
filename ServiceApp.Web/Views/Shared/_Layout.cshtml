@@ -19,6 +19,10 @@
    User.IsInRole() reads auth cookie — zero DB calls.
    ================================================================= *@
 
+@using Microsoft.AspNetCore.Identity
+@using ServiceApp.Core.Entities
+@inject UserManager<ApplicationUser> UserManager
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -27,7 +31,11 @@
     <title>@ViewData["Title"] — ServiceApp</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
-<body>
+@{
+    var currentUser = await UserManager.GetUserAsync(User);
+}
+<body data-user-id="@currentUser?.Id"
+      data-user-role="@currentUser?.Role.ToString()">
 
     <div class="app-shell">
 
@@ -73,6 +81,11 @@
                             Create admin
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="/hangfire" target="_blank">
+                            ⚙ Job scheduler
+                        </a>
+                    </li>  
                 }
 
                 @if (User.IsInRole("Customer"))
@@ -208,6 +221,11 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
+    @* SignalR client library — from CDN *@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+
+    @* Our SignalR notification handler *@
+    <script src="~/js/signalr-client.js" asp-append-version="true"></script>
 
 </body>
 </html>
