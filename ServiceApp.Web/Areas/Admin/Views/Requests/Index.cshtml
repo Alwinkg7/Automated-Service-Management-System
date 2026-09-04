@@ -1,4 +1,4 @@
-﻿@model ServiceApp.Web.Areas.Admin.Models.AdminRequestListViewModel
+﻿@model ServiceApp.Web.Areas.Admin.Models.RequestSearchViewModel
 @using ServiceApp.Core.Enums
 @{
     ViewData["Title"] = "All requests";
@@ -6,55 +6,160 @@
 
 <div class="page-header">
     <h2>All requests</h2>
-    <span style="font-size:13px; color:var(--text-secondary)">
-        @Model.AllCount total requests
-    </span>
-</div>
+    <div style="display:flex; gap:8px; align-items:center">
+        <span style="font-size:13px; color:var(--text-secondary)">
+            @Model.TotalCount result@(Model.TotalCount == 1 ? "" : "s")
+        </span>
 
-@* ── Filter tabs ──────────────────────────────────────────────── *@
-<div style="display:flex; gap:6px; margin-bottom:20px;
-            flex-wrap:wrap; overflow-x:auto; padding-bottom:4px">
-    @{
-        var tabs = new[]
-        {
-        (label:"All",         value:(string?)null,   count:Model.AllCount),
-        (label:"Pending",     value:"Pending",       count:Model.PendingCount),
-        (label:"Assigned",    value:"Assigned",      count:Model.AssignedCount),
-        (label:"In progress", value:"InProgress",    count:Model.InProgressCount),
-        (label:"Billed",      value:"Billed",        count:Model.BilledCount),
-        (label:"Completed",   value:"Completed",     count:Model.CompletedCount),
-        (label:"Cancelled",   value:"Cancelled",     count:Model.CancelledCount),
-        };
-    }
-    @foreach (var tab in tabs)
-    {
-        var isActive = (tab.value == null && Model.CurrentFilter == null)
-        || tab.value == Model.CurrentFilter?.ToString();
-        <a asp-action="Index"
-           asp-route-filter="@tab.value"
-           style="padding:6px 14px; border-radius:20px; font-size:12.5px;
-                      font-weight:500; text-decoration:none; border:1px solid;
-                      white-space:nowrap;
-                      @(isActive
-                               ? "background:var(--primary);color:#fff;border-color:var(--primary)"
-                               : "background:var(--bg-white);color:var(--text-secondary);border-color:var(--border)")">
-            @tab.label
-            <span style="opacity:0.8">(@tab.count)</span>
+        @* CSV export — passes current filters *@
+        <a asp-action="ExportCsv"
+           asp-route-search="@Model.SearchTerm"
+           asp-route-status="@Model.StatusFilter"
+           asp-route-dateRange="@Model.DateRange"
+           asp-route-dateFrom="@(Model.DateFrom?.ToString("yyyy-MM-dd"))"
+           asp-route-dateTo="@(Model.DateTo?.ToString("yyyy-MM-dd"))"
+           class="btn-outline btn-sm">
+            Export CSV
         </a>
-    }
+    </div>
 </div>
 
-@* ── Requests table ───────────────────────────────────────────── *@
+@* ── Search bar ───────────────────────────────────────────────── *@
+<form asp-action="Index" method="get" id="filterForm">
+
+    <div style="display:flex; gap:10px; margin-bottom:14px;
+                flex-wrap:wrap; align-items:flex-end">
+
+        @* Search input *@
+        <div style="flex:1; min-width:220px">
+            <input name="search"
+                   value="@Model.SearchTerm"
+                   class="form-control"
+                   placeholder="Search by customer, description, address, or #ID..."
+                   style="height:36px" />
+        </div>
+
+        @* Date range select *@
+        <select name="dateRange"
+                class="form-control"
+                style="width:160px; height:36px; font-size:13px"
+                onchange="handleDateRange(this)">
+            <option value=""
+                    selected="@(string.IsNullOrEmpty(Model.DateRange) ? "selected" : null)">
+                All time
+            </option>
+            <option value="today"
+                    selected="@(Model.DateRange == "today" ? "selected" : null)">
+                Today
+            </option>
+            <option value="week"
+                    selected="@(Model.DateRange == "week" ? "selected" : null)">
+                Last 7 days
+            </option>
+            <option value="month"
+                    selected="@(Model.DateRange == "month" ? "selected" : null)">
+                Last 30 days
+            </option>
+            <option value="custom"
+                    selected="@(Model.DateRange == "custom" ? "selected" : null)">
+                Custom range
+            </option>
+        </select>
+
+        @* Custom date range — shown only when "custom" selected *@
+        <div id="customDateRange"
+             style="display:@(Model.DateRange == "custom" ? "flex" : "none");
+                    gap:8px; align-items:center">
+            <input name="dateFrom"
+                   type="date"
+                   value="@(Model.DateFrom?.ToString("yyyy-MM-dd"))"
+                   class="form-control"
+                   style="width:150px; height:36px; font-size:13px" />
+            <span style="font-size:13px;
+                         color:var(--text-secondary)">to</span>
+            <input name="dateTo"
+                   type="date"
+                   value="@(Model.DateTo?.ToString("yyyy-MM-dd"))"
+                   class="form-control"
+                   style="width:150px; height:36px; font-size:13px" />
+        </div>
+
+        @* Hidden status field — tabs update this *@
+        <input type="hidden" name="status"
+               id="statusInput"
+               value="@Model.StatusFilter" />
+
+        <button type="submit" class="btn-primary btn-sm"
+                style="height:36px; padding:0 16px">
+            Search
+        </button>
+
+        @* Clear all filters *@
+        @if (!string.IsNullOrEmpty(Model.SearchTerm) ||
+             !string.IsNullOrEmpty(Model.StatusFilter) ||
+             !string.IsNullOrEmpty(Model.DateRange))
+        {
+            <a asp-action="Index"
+               class="btn-outline btn-sm"
+               style="height:36px; line-height:36px; padding:0 12px">
+                Clear all
+            </a>
+        }
+    </div>
+
+    @* ── Status filter tabs ───────────────────────────────────────*@
+    <div style="display:flex; gap:6px; margin-bottom:16px;
+                flex-wrap:wrap">
+        @{
+            var tabs = new[]
+            {
+                (label:"All",         value:(string?)null, count:Model.AllCount),
+                (label:"Pending",     value:"Pending",     count:Model.PendingCount),
+                (label:"Assigned",    value:"Assigned",    count:Model.AssignedCount),
+                (label:"In progress", value:"InProgress",  count:Model.InProgressCount),
+                (label:"Billed",      value:"Billed",      count:Model.BilledCount),
+                (label:"Completed",   value:"Completed",   count:Model.CompletedCount),
+                (label:"Cancelled",   value:"Cancelled",   count:Model.CancelledCount),
+            };
+        }
+        @foreach (var tab in tabs)
+        {
+            var isActive = (tab.value == null && string.IsNullOrEmpty(
+                                Model.StatusFilter))
+                        || tab.value == Model.StatusFilter;
+            <button type="button"
+                    onclick="setStatus('@tab.value')"
+                    style="padding:6px 14px; border-radius:20px;
+                           font-size:12.5px; font-weight:500;
+                           cursor:pointer; border:1px solid;
+                           @(isActive
+                             ? "background:var(--primary);color:#fff;border-color:var(--primary)"
+                             : "background:var(--bg-white);color:var(--text-secondary);border-color:var(--border)")">
+                @tab.label
+                <span style="opacity:.8">(@tab.count)</span>
+            </button>
+        }
+    </div>
+
+</form>
+
+@* ── Results table ────────────────────────────────────────────── *@
 @if (!Model.Requests.Any())
 {
     <div class="empty-state">
-        <span class="empty-icon">✓</span>
-        <h3>No requests found</h3>
+        <span class="empty-icon">🔍</span>
+        <h3>No results found</h3>
         <p>
-            @(Model.CurrentFilter != null
-                    ? $"No {Model.CurrentFilter} requests at the moment."
-                    : "No service requests have been created yet.")
+            @if (!string.IsNullOrEmpty(Model.SearchTerm))
+            {
+                <span>No requests match "@Model.SearchTerm".</span>
+            }
+            else
+            {
+                <span>No requests found for the selected filters.</span>
+            }
         </p>
+        <a asp-action="Index" class="btn-outline">Clear filters</a>
     </div>
 }
 else
@@ -71,6 +176,7 @@ else
                     <th>Preferred time</th>
                     <th>Technician</th>
                     <th>Status</th>
+                    <th>Created</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -79,16 +185,16 @@ else
                 {
                     <tr>
                         <td style="color:var(--text-muted);
-                                           font-weight:500">
+                                   font-weight:500">
                             #@r.RequestId
                         </td>
                         <td>
                             <p style="font-weight:500; font-size:13px">
-                                @r.Customer.FullName
+                                @r.Customer?.FullName
                             </p>
                             <p style="font-size:11px;
-                                              color:var(--text-muted)">
-                                @r.Customer.Phone
+                                      color:var(--text-muted)">
+                                @r.Customer?.Phone
                             </p>
                         </td>
                         <td>
@@ -102,56 +208,60 @@ else
                             @r.Description
                         </td>
                         <td style="font-size:12px;
-                                           color:var(--text-secondary)">
-                            <span>@r.Address</span><br />
+                                   color:var(--text-secondary)">
+                            @r.Address
+                            <br />
                             <span style="color:var(--text-muted)">
                                 @r.PinCode
                             </span>
                         </td>
                         <td style="font-size:12px;
-                                           color:var(--text-secondary);
-                                           white-space:nowrap">
-                            @r.PreferredDateTime.ToString("dd MMM")
+                                   color:var(--text-secondary);
+                                   white-space:nowrap">
+                            @(r.PreferredDateTime.ToString("dd MMM"))
                             <br />
                             <span style="color:var(--text-muted)">
-                                @r.PreferredDateTime.ToString("hh:mm tt")
+                                @(r.PreferredDateTime.ToString("hh:mm tt"))
                             </span>
                         </td>
                         <td>
                             @if (r.AssignedTechnician != null)
                             {
-                                <p style="font-size:13px; font-weight:500">
-                                    @r.AssignedTechnician.User.FullName
+                                <p style="font-size:13px;
+                                          font-weight:500">
+                                    @r.AssignedTechnician.User?.FullName
                                 </p>
                                 <p style="font-size:11px;
-                                                      color:var(--text-muted)">
+                                          color:var(--text-muted)">
                                     @r.AssignedTechnician.Skill
                                 </p>
                             }
                             else
                             {
                                 <span style="font-size:12px;
-                                                        color:var(--text-muted)">
+                                            color:var(--text-muted)">
                                     Not assigned
                                 </span>
                             }
                         </td>
                         <td>
                             <span class="status-badge
-                                        status-@r.Status.ToString().ToLower()">
+                                status-@(r.Status.ToString().ToLower())">
                                 @r.Status
                             </span>
                         </td>
+                        <td style="font-size:12px;
+                                   color:var(--text-secondary);
+                                   white-space:nowrap">
+                            @(r.CreatedAt.ToString("dd MMM yyyy"))
+                        </td>
                         <td>
-                            <div style="display:flex; gap:6px;
-                                                flex-wrap:wrap">
+                            <div style="display:flex; gap:6px">
                                 <a asp-action="Details"
                                    asp-route-id="@r.RequestId"
                                    class="btn-outline btn-sm">
                                     View
                                 </a>
-
-                                @* Assign button — only for Pending *@
                                 @if (r.Status == RequestStatus.Pending)
                                 {
                                     <a asp-action="Assign"
@@ -160,16 +270,14 @@ else
                                         Assign
                                     </a>
                                 }
-
-                                @* Cancel — Pending or Assigned only *@
                                 @if (r.Status == RequestStatus.Pending ||
-                                                        r.Status == RequestStatus.Assigned)
+                                     r.Status == RequestStatus.Assigned)
                                 {
                                     <form asp-action="Cancel"
                                           asp-route-id="@r.RequestId"
                                           method="post"
                                           onsubmit="return confirm(
-                                                          'Cancel request #@r.RequestId?')">
+                                              'Cancel request #@r.RequestId?')">
                                         @Html.AntiForgeryToken()
                                         <button type="submit"
                                                 class="btn-danger btn-sm">
@@ -184,4 +292,129 @@ else
             </tbody>
         </table>
     </div>
+
+    @* ── Pagination ───────────────────────────────────────────── *@
+    @if (Model.TotalPages > 1)
+    {
+        <div style="display:flex; justify-content:space-between;
+                    align-items:center; margin-top:16px;
+                    flex-wrap:wrap; gap:10px">
+
+            @* Page info *@
+            <span style="font-size:13px; color:var(--text-secondary)">
+                Showing
+                @((Model.CurrentPage - 1) * Model.PageSize + 1)–@(Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalCount))
+                of @Model.TotalCount
+            </span>
+
+            @* Page buttons *@
+            <div style="display:flex; gap:6px">
+
+                @* Previous *@
+                @if (Model.HasPrevious)
+                {
+                    <a asp-action="Index"
+                       asp-route-search="@Model.SearchTerm"
+                       asp-route-status="@Model.StatusFilter"
+                       asp-route-dateRange="@Model.DateRange"
+                       asp-route-dateFrom="@(Model.DateFrom?.ToString("yyyy-MM-dd"))"
+                       asp-route-dateTo="@(Model.DateTo?.ToString("yyyy-MM-dd"))"
+                       asp-route-page="@(Model.CurrentPage - 1)"
+                       class="btn-outline btn-sm">
+                        ← Previous
+                    </a>
+                }
+
+                @* Numbered pages — show max 5 around current *@
+                @{
+                    int start = Math.Max(1, Model.CurrentPage - 2);
+                    int end   = Math.Min(Model.TotalPages,
+                                         Model.CurrentPage + 2);
+                }
+
+                @if (start > 1)
+                {
+                    <a asp-action="Index"
+                       asp-route-search="@Model.SearchTerm"
+                       asp-route-status="@Model.StatusFilter"
+                       asp-route-dateRange="@Model.DateRange"
+                       asp-route-page="1"
+                       class="btn-outline btn-sm">1</a>
+                    @if (start > 2)
+                    {
+                        <span style="line-height:30px;
+                                     color:var(--text-muted)">…</span>
+                    }
+                }
+
+                @for (int p = start; p <= end; p++)
+                {
+                    <a asp-action="Index"
+                       asp-route-search="@Model.SearchTerm"
+                       asp-route-status="@Model.StatusFilter"
+                       asp-route-dateRange="@Model.DateRange"
+                       asp-route-dateFrom="@(Model.DateFrom?.ToString("yyyy-MM-dd"))"
+                       asp-route-dateTo="@(Model.DateTo?.ToString("yyyy-MM-dd"))"
+                       asp-route-page="@p"
+                       style="padding:5px 11px; border-radius:6px;
+                              font-size:13px; font-weight:500;
+                              text-decoration:none; border:1px solid;
+                              @(p == Model.CurrentPage
+                                ? "background:var(--primary);color:#fff;border-color:var(--primary)"
+                                : "background:var(--bg-white);color:var(--text-secondary);border-color:var(--border)")">
+                        @p
+                    </a>
+                }
+
+                @if (end < Model.TotalPages)
+                {
+                    @if (end < Model.TotalPages - 1)
+                    {
+                        <span style="line-height:30px;
+                                     color:var(--text-muted)">…</span>
+                    }
+                    <a asp-action="Index"
+                       asp-route-search="@Model.SearchTerm"
+                       asp-route-status="@Model.StatusFilter"
+                       asp-route-dateRange="@Model.DateRange"
+                       asp-route-page="@Model.TotalPages"
+                       class="btn-outline btn-sm">
+                        @Model.TotalPages
+                    </a>
+                }
+
+                @* Next *@
+                @if (Model.HasNext)
+                {
+                    <a asp-action="Index"
+                       asp-route-search="@Model.SearchTerm"
+                       asp-route-status="@Model.StatusFilter"
+                       asp-route-dateRange="@Model.DateRange"
+                       asp-route-dateFrom="@(Model.DateFrom?.ToString("yyyy-MM-dd"))"
+                       asp-route-dateTo="@(Model.DateTo?.ToString("yyyy-MM-dd"))"
+                       asp-route-page="@(Model.CurrentPage + 1)"
+                       class="btn-outline btn-sm">
+                        Next →
+                    </a>
+                }
+            </div>
+        </div>
+    }
+}
+
+@section Scripts {
+<script>
+    // Set status hidden input and submit the filter form
+    function setStatus(value) {
+        document.getElementById('statusInput').value = value || '';
+        document.getElementById('filterForm').submit();
+    }
+
+    // Show/hide custom date range inputs
+    function handleDateRange(select) {
+        var custom = document.getElementById('customDateRange');
+        custom.style.display =
+            select.value === 'custom' ? 'flex' : 'none';
+    }
+</script>
 }

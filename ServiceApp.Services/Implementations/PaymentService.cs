@@ -34,13 +34,15 @@ namespace ServiceApp.Services.Implementations
         private readonly ILogger<PaymentService> _logger;
         private readonly IRazorpayService _razorpay;
         private readonly INotificationService _notifications;
+        private readonly IEmailService _email;
 
-        public PaymentService(IUnitOfWork uow, ILogger<PaymentService> logger, IRazorpayService razorpay, INotificationService notifications)
+        public PaymentService(IUnitOfWork uow, ILogger<PaymentService> logger, IRazorpayService razorpay, INotificationService notifications, IEmailService email)
         {
             _uow = uow;
             _logger = logger;
             _razorpay = razorpay;
             _notifications = notifications;
+            _email = email;
         }
 
         // =============================================================
@@ -190,6 +192,40 @@ namespace ServiceApp.Services.Implementations
 
                 // ── Commit all 5 steps together ─────────────────────
                 await _uow.CommitTransactionAsync();
+
+                // Load customer and technician info for emails
+                var customerUser = await _uow.Users.GetByIdAsync(request.CustomerId);
+
+                // Email customer receipt
+                if (customerUser != null)
+                {
+                    _ = _email.SendPaymentReceiptToCustomerAsync(
+                        customerUser.Email!,
+                        customerUser.FullName,
+                        bill.ServiceRequestId,
+                        bill.Id,
+                        bill.TotalAmount,
+                        payment.PaymentMethod,
+                        payment.GatewayTransactionId ?? "N/A",
+                        payment.PaidAt);
+                }
+
+                // Email technician
+                if (request.AssignedTechnicianProfileId.HasValue)
+                {
+                    var tech = await _uow.TechnicianProfiles
+                        .GetWithUserAsync(
+                            request.AssignedTechnicianProfileId.Value);
+
+                    if (tech?.User != null)
+                    {
+                        _ = _email.SendPaymentReceiptToTechnicianAsync(
+                            tech.User.Email!,
+                            tech.User.FullName,
+                            bill.ServiceRequestId,
+                            bill.TotalAmount);
+                    }
+                }
 
                 // Notify technician — job done, they're available again
                 if (request.AssignedTechnicianProfileId.HasValue)
@@ -405,6 +441,40 @@ namespace ServiceApp.Services.Implementations
                 await _uow.ServiceHistories.AddAsync(history);
 
                 await _uow.CommitTransactionAsync();
+
+                // Load customer and technician info for emails
+                var customerUser = await _uow.Users.GetByIdAsync(request.CustomerId);
+
+                // Email customer receipt
+                if (customerUser != null)
+                {
+                    _ = _email.SendPaymentReceiptToCustomerAsync(
+                        customerUser.Email!,
+                        customerUser.FullName,
+                        bill.ServiceRequestId,
+                        bill.Id,
+                        bill.TotalAmount,
+                        payment.PaymentMethod,
+                        payment.GatewayTransactionId ?? "N/A",
+                        payment.PaidAt);
+                }
+
+                // Email technician
+                if (request.AssignedTechnicianProfileId.HasValue)
+                {
+                    var tech = await _uow.TechnicianProfiles
+                        .GetWithUserAsync(
+                            request.AssignedTechnicianProfileId.Value);
+
+                    if (tech?.User != null)
+                    {
+                        _ = _email.SendPaymentReceiptToTechnicianAsync(
+                            tech.User.Email!,
+                            tech.User.FullName,
+                            bill.ServiceRequestId,
+                            bill.TotalAmount);
+                    }
+                }
 
                 // Notify technician — job done, they're available again
                 if (request.AssignedTechnicianProfileId.HasValue)

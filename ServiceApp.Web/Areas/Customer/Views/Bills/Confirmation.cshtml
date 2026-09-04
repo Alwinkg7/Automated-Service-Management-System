@@ -117,6 +117,15 @@
                class="btn-primary">
                 View my requests
             </a>
+            @* Download PDF button *@
+            <a asp-area="Customer"
+               asp-controller="Bills"
+               asp-action="Download"
+               asp-route-billId="@Model.BillId"
+               class="btn-outline"
+               target="_blank">
+                Download invoice PDF
+            </a>
             <a asp-area="Customer"
                asp-controller="Requests"
                asp-action="Create"

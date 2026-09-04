@@ -25,6 +25,12 @@
            class="btn-primary btn-sm">
             Complete now
         </a>
+        <a asp-area="Customer"
+           asp-controller="Requests"
+           asp-action="History"
+           class="btn-link">
+            View full history →
+        </a>
     </div>
 }
 
@@ -62,6 +68,7 @@
         <span class="stat-label">Completed</span>
         <span class="stat-value">@Model.CompletedCount</span>
     </div>
+
 
 </div>
 

@@ -1,0 +1,265 @@
+﻿@model ServiceApp.Web.Areas.Admin.Models.TechnicianListViewModel
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = "Technicians";
+    var skills = ViewBag.Skills as List<string> ?? new List<string>();
+}
+
+<div class="page-header">
+    <h2>Technicians</h2>
+    <span style="font-size:13px; color:var(--text-secondary)">
+        @Model.TotalCount registered
+    </span>
+</div>
+
+@* ── Status filter tabs ───────────────────────────────────────── *@
+<div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap">
+    @{
+        var statusTabs = new[]
+        {
+            (label:"All",       value:(string?)null, count:Model.TotalCount),
+            (label:"Available", value:"Available",   count:Model.AvailableCount),
+            (label:"Busy",      value:"Busy",        count:Model.BusyCount),
+            (label:"Offline",   value:"Offline",     count:Model.OfflineCount),
+        };
+    }
+    @foreach (var tab in statusTabs)
+    {
+        var isActive = tab.value == null
+            ? Model.StatusFilter == null
+            : tab.value == Model.StatusFilter?.ToString();
+
+        <a asp-action="Index"
+           asp-route-status="@tab.value"
+           asp-route-skill="@Model.SkillFilter"
+           style="padding:6px 14px; border-radius:20px; font-size:12.5px;
+                  font-weight:500; text-decoration:none; border:1px solid;
+                  @(isActive
+                    ? "background:var(--primary);color:#fff;border-color:var(--primary)"
+                    : "background:var(--bg-white);color:var(--text-secondary);border-color:var(--border)")">
+            @tab.label
+            <span style="opacity:.8">(@tab.count)</span>
+        </a>
+    }
+
+    @* Skill filter dropdown *@
+    <form asp-action="Index" method="get"
+          style="margin-left:auto; display:flex; gap:8px">
+        <input type="hidden" name="status"
+               value="@Model.StatusFilter?.ToString()" />
+        <select name="skill" class="form-control"
+                style="min-width:160px; height:36px;
+                       font-size:13px"
+                onchange="this.form.submit()">
+            <option value="">All skills</option>
+            @foreach (var s in skills)
+            {
+                if (Model.SkillFilter == s)
+                {
+                    <option value="@s" selected>@s</option>
+                }
+                else
+                {
+                    <option value="@s">@s</option>
+                }
+            }
+        </select>
+        @if (!string.IsNullOrEmpty(Model.SkillFilter))
+        {
+            <a asp-action="Index"
+               asp-route-status="@Model.StatusFilter?.ToString()"
+               class="btn-outline btn-sm"
+               style="align-self:center">
+                Clear
+            </a>
+        }
+    </form>
+</div>
+
+@if (!Model.Technicians.Any())
+{
+    <div class="empty-state">
+        <span class="empty-icon">🔧</span>
+        <h3>No technicians found</h3>
+        <p>
+            @(Model.SkillFilter != null || Model.StatusFilter != null
+                ? "No technicians match the selected filters."
+                : "No technicians have registered yet.")
+        </p>
+    </div>
+}
+else
+{
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Technician</th>
+                    <th>Skill</th>
+                    <th>Status</th>
+                    <th>Rating</th>
+                    <th>Jobs done</th>
+                    <th>Active jobs</th>
+                    <th>Total earned</th>
+                    <th>Account</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in Model.Technicians)
+                {
+                    <tr style="@(!t.IsActive ? "opacity:0.5" : "")">
+
+                        @* Name + email *@
+                        <td>
+                            <div style="display:flex; gap:10px;
+                                        align-items:center">
+                                <div style="width:36px; height:36px;
+                                            border-radius:50%;
+                                            background:#7C3AED22;
+                                            color:#7C3AED;
+                                            display:flex;
+                                            align-items:center;
+                                            justify-content:center;
+                                            font-size:14px;
+                                            font-weight:700;
+                                            flex-shrink:0">
+                                    @(t.FullName.Substring(0, 1).ToUpper())
+                                </div>
+                                <div>
+                                    <p style="font-size:13px;
+                                              font-weight:500;
+                                              margin-bottom:1px">
+                                        @t.FullName
+                                    </p>
+                                    <p style="font-size:11px;
+                                              color:var(--text-muted)">
+                                        @t.Phone
+                                    </p>
+                                </div>
+                            </div>
+                        </td>
+
+                        @* Skill *@
+                        <td>
+                            <span class="category-badge">@t.Skill</span>
+                        </td>
+
+                        @* Status *@
+                        <td>
+                            <span class="status-badge
+                                @(t.Status == TechnicianStatus.Available
+                                    ? "tech-available"
+                                    : t.Status == TechnicianStatus.Busy
+                                        ? "tech-busy"
+                                        : "tech-offline")">
+                                @t.Status
+                            </span>
+                        </td>
+
+                        @* Rating *@
+                        <td>
+                            @if (t.Rating > 0)
+                            {
+                                <span style="color:#D97706; font-weight:500">
+                                    ★ @(t.Rating.ToString("F1"))
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="color:var(--text-muted)">
+                                    New
+                                </span>
+                            }
+                        </td>
+
+                        @* Jobs done *@
+                        <td style="font-weight:500">
+                            @t.TotalJobsCompleted
+                        </td>
+
+                        @* Active jobs *@
+                        <td>
+                            @if (t.ActiveJobCount > 0)
+                            {
+                                <span style="font-size:12px;
+                                             padding:2px 8px;
+                                             border-radius:20px;
+                                             background:#EDE9FE;
+                                             color:#7C3AED;
+                                             font-weight:600">
+                                    @t.ActiveJobCount active
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="color:var(--text-muted);
+                                             font-size:12px">
+                                    —
+                                </span>
+                            }
+                        </td>
+
+                        @* Total earned *@
+                        <td style="font-weight:500;
+                                   color:var(--success)">
+                            ₹@(t.TotalEarned.ToString("N0"))
+                        </td>
+
+                        @* Account status *@
+                        <td>
+                            <span style="font-size:11px;
+                                         padding:2px 8px;
+                                         border-radius:20px;
+                                         font-weight:600;
+                                         @(t.IsActive
+                                             ? "background:var(--success-light);color:var(--success)"
+                                             : "background:#FEE2E2;color:var(--danger)")">
+                                @(t.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </td>
+
+                        @* Actions *@
+                        <td>
+                            <div style="display:flex; gap:6px;
+                                        flex-wrap:wrap">
+                                <a asp-action="Details"
+                                   asp-route-id="@t.TechnicianProfileId"
+                                   class="btn-outline btn-sm">
+                                    View
+                                </a>
+
+                                @if (t.IsActive)
+                                {
+                                    <form asp-action="Deactivate"
+                                          asp-route-id="@t.TechnicianProfileId"
+                                          method="post"
+                                          onsubmit="return confirm(
+                                              'Deactivate @t.FullName?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit"
+                                                class="btn-danger btn-sm">
+                                            Deactivate
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-action="Reactivate"
+                                          asp-route-id="@t.TechnicianProfileId"
+                                          method="post">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit"
+                                                class="btn-outline btn-sm">
+                                            Reactivate
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

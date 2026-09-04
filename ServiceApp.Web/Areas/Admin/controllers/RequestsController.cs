@@ -1,11 +1,19 @@
 ﻿// =================================================================
 //  Areas/Admin/Controllers/RequestsController.cs
 //
-//  GET  /Admin/Requests/Index          → all requests + filters
-//  GET  /Admin/Requests/Details/{id}   → request detail view
-//  GET  /Admin/Requests/Assign/{id}    → assign technician screen
+//  Updated to support:
+//  - Full-text search (customer name, description, address)
+//  - Date range filter (today, this week, this month, custom)
+//  - Status filter tabs
+//  - Pagination (15 per page)
+//  - CSV export (all matching results, no pagination limit)
+//
+//  GET  /Admin/Requests/Index          → list with search + filter
+//  GET  /Admin/Requests/Details/{id}   → request detail
+//  GET  /Admin/Requests/Assign/{id}    → assign technician
 //  POST /Admin/Requests/Assign/{id}    → confirm assignment
-//  POST /Admin/Requests/Cancel/{id}    → admin cancels a request
+//  POST /Admin/Requests/Cancel/{id}    → cancel request
+//  GET  /Admin/Requests/ExportCsv      → download CSV
 // =================================================================
 
 using Microsoft.AspNetCore.Authorization;
@@ -15,6 +23,7 @@ using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
 using ServiceApp.Core.Interfaces;
 using ServiceApp.Web.Areas.Admin.Models;
+using System.Text;
 
 namespace ServiceApp.Web.Areas.Admin.Controllers
 {
@@ -41,38 +50,31 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
 
         // =============================================================
         //  GET /Admin/Requests/Index
-        //  All requests across all customers.
-        //  Optional filter: ?filter=Pending
+        //  All requests with search, date filter, status, pagination
         // =============================================================
         [HttpGet]
-        public async Task<IActionResult> Index(string? filter = null)
+        public async Task<IActionResult> Index(
+            string? search = null,
+            string? status = null,
+            string? dateRange = null,
+            DateTime? dateFrom = null,
+            DateTime? dateTo = null,
+            int page = 1)
         {
-            // Parse filter
-            RequestStatus? statusFilter = null;
-            if (!string.IsNullOrEmpty(filter) &&
-                Enum.TryParse<RequestStatus>(filter, out var parsed))
-                statusFilter = parsed;
+            // Load all requests with details (Customer + Technician)
+            var all = (await _uow.ServiceRequests
+                .GetAllWithDetailsAsync()).ToList();
 
-            // Load requests — filtered or all
-            var result = await _requestService
-                .GetAllRequestsAsync(statusFilter);
-
-            if (!result.IsSuccess)
+            // ── Tab counts (always from unfiltered full list) ───────
+            var vm = new RequestSearchViewModel
             {
-                TempData["Error"] = result.ErrorMessage;
-                return RedirectToAction("Dashboard", "Home");
-            }
+                SearchTerm = search,
+                StatusFilter = status,
+                DateRange = dateRange,
+                DateFrom = dateFrom,
+                DateTo = dateTo,
+                CurrentPage = Math.Max(1, page),
 
-            // Load all for counts (tab badges always show full counts)
-            var allResult = await _requestService.GetAllRequestsAsync();
-            var all = allResult.Data?.ToList() ?? new List<ServiceRequest>();
-
-            var vm = new AdminRequestListViewModel
-            {
-                Requests = result.Data!.ToList(),
-                CurrentFilter = statusFilter,
-
-                // Count badges — always based on full list
                 AllCount = all.Count,
                 PendingCount = all.Count(r =>
                     r.Status == RequestStatus.Pending),
@@ -88,12 +90,159 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
                     r.Status == RequestStatus.Cancelled)
             };
 
+            // ── Apply filters sequentially ─────────────────────────
+
+            var filtered = all.AsEnumerable();
+
+            // 1. Search — customer name, description, address
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLower();
+                filtered = filtered.Where(r =>
+                    (r.Customer?.FullName.ToLower()
+                        .Contains(term) ?? false) ||
+                    r.Description.ToLower()
+                        .Contains(term) ||
+                    r.Address.ToLower()
+                        .Contains(term) ||
+                    r.PinCode.Contains(term) ||
+                    r.RequestId.ToString() == term);
+            }
+
+            // 2. Status filter
+            if (!string.IsNullOrEmpty(status) &&
+                Enum.TryParse<RequestStatus>(status, out var parsedStatus))
+            {
+                filtered = filtered.Where(r => r.Status == parsedStatus);
+            }
+
+            // 3. Date range filter
+            (dateFrom, dateTo) = ResolveDateRange(
+                dateRange, dateFrom, dateTo);
+
+            if (dateFrom.HasValue)
+                filtered = filtered.Where(r =>
+                    r.CreatedAt.Date >= dateFrom.Value.Date);
+
+            if (dateTo.HasValue)
+                filtered = filtered.Where(r =>
+                    r.CreatedAt.Date <= dateTo.Value.Date);
+
+            // Sort: newest first
+            var sorted = filtered
+                .OrderByDescending(r => r.CreatedAt)
+                .ToList();
+
+            vm.TotalCount = sorted.Count;
+            vm.DateFrom = dateFrom;
+            vm.DateTo = dateTo;
+
+            // 4. Paginate
+            vm.Requests = sorted
+                .Skip((vm.CurrentPage - 1) * vm.PageSize)
+                .Take(vm.PageSize)
+                .ToList();
+
             return View(vm);
         }
 
         // =============================================================
+        //  GET /Admin/Requests/ExportCsv
+        //  Downloads all matching results as a CSV file.
+        //  Same filter params as Index — no pagination limit.
+        // =============================================================
+        [HttpGet]
+        public async Task<IActionResult> ExportCsv(
+            string? search = null,
+            string? status = null,
+            string? dateRange = null,
+            DateTime? dateFrom = null,
+            DateTime? dateTo = null)
+        {
+            var all = (await _uow.ServiceRequests
+                .GetAllWithDetailsAsync()).ToList();
+
+            var filtered = all.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLower();
+                filtered = filtered.Where(r =>
+                    (r.Customer?.FullName.ToLower()
+                        .Contains(term) ?? false) ||
+                    r.Description.ToLower()
+                        .Contains(term) ||
+                    r.Address.ToLower().Contains(term));
+            }
+
+            if (!string.IsNullOrEmpty(status) &&
+                Enum.TryParse<RequestStatus>(status, out var parsedStatus))
+                filtered = filtered.Where(r => r.Status == parsedStatus);
+
+            (dateFrom, dateTo) = ResolveDateRange(
+                dateRange, dateFrom, dateTo);
+
+            if (dateFrom.HasValue)
+                filtered = filtered.Where(r =>
+                    r.CreatedAt.Date >= dateFrom.Value.Date);
+
+            if (dateTo.HasValue)
+                filtered = filtered.Where(r =>
+                    r.CreatedAt.Date <= dateTo.Value.Date);
+
+            var results = filtered
+                .OrderByDescending(r => r.CreatedAt)
+                .ToList();
+
+            // ── Build CSV ──────────────────────────────────────────
+            var csv = new StringBuilder();
+
+            // Header row
+            csv.AppendLine(
+                "Request ID,Customer,Phone,Category," +
+                "Description,Address,Pin Code," +
+                "Preferred Time,Technician,Status," +
+                "Created At,Bill Amount,Payment Status");
+
+            // Data rows
+            foreach (var r in results)
+            {
+                csv.AppendLine(string.Join(",",
+                    r.RequestId,
+                    CsvEscape(r.Customer?.FullName ?? ""),
+                    CsvEscape(r.Customer?.Phone ?? ""),
+                    r.Category,
+                    CsvEscape(r.Description),
+                    CsvEscape(r.Address),
+                    r.PinCode,
+                    r.PreferredDateTime.ToString("dd MMM yyyy HH:mm"),
+                    CsvEscape(r.AssignedTechnician?.User?.FullName ?? ""),
+                    r.Status,
+                    r.CreatedAt.ToString("dd MMM yyyy HH:mm"),
+                    r.Bill?.TotalAmount.ToString("F2") ?? "",
+                    r.Bill?.PaymentStatus.ToString() ?? ""
+                ));
+            }
+
+            var bytes = Encoding.UTF8.GetBytes(csv.ToString());
+            var fileName =
+                $"ServiceApp-Requests-" +
+                $"{DateTime.Now:yyyyMMdd-HHmm}.csv";
+
+            _logger.LogInformation(
+                "CSV exported by admin {Admin}: {Count} records",
+                User.Identity?.Name, results.Count);
+
+            // Return as downloadable file
+            // UTF-8 BOM ensures Excel opens it correctly
+            var bom = Encoding.UTF8.GetPreamble();
+            var output = bom.Concat(bytes).ToArray();
+
+            return File(output, "text/csv", fileName);
+        }
+
+        // =============================================================
         //  GET /Admin/Requests/Details/{id}
-        //  Full detail view — same as customer but with admin actions
         // =============================================================
         [HttpGet]
         public async Task<IActionResult> Details(int id)
@@ -112,16 +261,10 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
 
         // =============================================================
         //  GET /Admin/Requests/Assign/{id}
-        //  Show the assign screen:
-        //    - Request details on the left
-        //    - Available matching technicians on the right
-        //
-        //  Only Pending requests can be assigned.
         // =============================================================
         [HttpGet]
         public async Task<IActionResult> Assign(int id)
         {
-            // Load the request
             var requestResult = await _requestService
                 .GetRequestDetailsAsync(id);
 
@@ -133,21 +276,17 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
 
             var request = requestResult.Data!;
 
-            // Only Pending requests can be assigned
             if (request.Status != RequestStatus.Pending)
             {
                 TempData["Error"] =
                     $"Request #{id} is {request.Status} " +
-                    "and cannot be assigned. " +
-                    "Only Pending requests can be assigned.";
+                    "and cannot be assigned.";
                 return RedirectToAction(nameof(Index));
             }
 
-            // Find available technicians matching the category
             var techResult = await _requestService
                 .GetAvailableTechniciansAsync(request.Category);
 
-            // Not a hard error if none found — show empty state
             var technicians = techResult.IsSuccess
                 ? techResult.Data!.ToList()
                 : new List<TechnicianProfile>();
@@ -163,8 +302,6 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
 
         // =============================================================
         //  POST /Admin/Requests/Assign/{id}
-        //  Admin confirms the assignment.
-        //  Calls service layer which validates + transitions status.
         // =============================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -181,9 +318,9 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
             var adminUserId = _userManager.GetUserId(User)!;
 
             var result = await _requestService.AssignTechnicianAsync(
-                requestId: id,
-                technicianProfileId: vm.SelectedTechnicianProfileId,
-                adminUserId: adminUserId);
+                id,
+                vm.SelectedTechnicianProfileId,
+                adminUserId);
 
             if (!result.IsSuccess)
             {
@@ -192,15 +329,15 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
             }
 
             TempData["Success"] =
-                $"Technician assigned to request #{id} successfully.";
+                $"Technician assigned to request #{id}.";
 
-            return RedirectToAction(nameof(Index),
-                new { filter = "Assigned" });
+            return RedirectToAction(
+                nameof(Index),
+                new { status = "Assigned" });
         }
 
         // =============================================================
         //  POST /Admin/Requests/Cancel/{id}
-        //  Admin cancels a Pending or Assigned request.
         // =============================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -217,9 +354,38 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
                 return RedirectToAction(nameof(Details), new { id });
             }
 
-            TempData["Success"] =
-                $"Request #{id} has been cancelled.";
+            TempData["Success"] = $"Request #{id} cancelled.";
             return RedirectToAction(nameof(Index));
+        }
+
+        // =============================================================
+        //  HELPER — resolve date range string to actual dates
+        // =============================================================
+        private static (DateTime? from, DateTime? to) ResolveDateRange(
+            string? dateRange,
+            DateTime? customFrom,
+            DateTime? customTo)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            return dateRange switch
+            {
+                "today" => (today, today),
+                "week" => (today.AddDays(-6), today),
+                "month" => (today.AddDays(-29), today),
+                "custom" => (customFrom, customTo),
+                _ => (null, null)
+            };
+        }
+
+        // Escape a value for CSV — wrap in quotes if it has comma/quote/newline
+        private static string CsvEscape(string value)
+        {
+            if (value.Contains(',') ||
+                value.Contains('"') ||
+                value.Contains('\n'))
+                return $"\"{value.Replace("\"", "\"\"")}\"";
+            return value;
         }
     }
 }

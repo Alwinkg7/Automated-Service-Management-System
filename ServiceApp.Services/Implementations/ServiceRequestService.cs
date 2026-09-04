@@ -37,16 +37,19 @@ namespace ServiceApp.Services.Implementations
         private readonly IUnitOfWork _uow;
         private readonly ILogger<ServiceRequestService> _logger;
         private readonly INotificationService _notifications;
+        private readonly IEmailService _email;
         //private readonly DbContext _context; 
 
         public ServiceRequestService(
             IUnitOfWork uow,
             INotificationService notifications,
+            IEmailService email,
             ILogger<ServiceRequestService> logger
             )
         {
             _uow = uow;
             _notifications = notifications;
+            _email = email;
             _logger = logger;
             
         }
@@ -127,6 +130,14 @@ namespace ServiceApp.Services.Implementations
                 await _uow.CommitTransactionAsync();
 
                 await _notifications.NotifyAdminNewRequestAsync(request.RequestId, category.ToString(), customer.FullName);
+
+                // Fire-and-forget — email failure must not affect request creation
+                _ = _email.SendRequestConfirmationAsync(
+                    customer.Email!,
+                    customer.FullName,
+                    request.RequestId,
+                    category.ToString(),
+                    preferredDateTime.ToString("dd MMM yyyy, hh:mm tt"));
 
                 _logger.LogInformation(
                     "Request #{RequestId} created by customer {CustomerId} " +
@@ -219,6 +230,26 @@ namespace ServiceApp.Services.Implementations
 
                 await _notifications.NotifyAdminStatusChangedAsync(requestId, "Assigned");
 
+                // Email customer
+                _ = _email.SendTechnicianAssignedToCustomerAsync(
+                    request.Customer?.Email ?? "",
+                    request.Customer?.FullName ?? "",
+                    requestId,
+                    tech.User.FullName,
+                    tech.User.Phone,
+                    request.Category.ToString());
+
+                // Email technician
+                _ = _email.SendJobAssignedToTechnicianAsync(
+                    tech.User.Email ?? "",
+                    tech.User.FullName,
+                    requestId,
+                    request.Customer?.FullName ?? "",
+                    request.Customer?.Phone ?? "",
+                    request.Address ?? "",
+                    request.Category.ToString(),
+                    request.PreferredDateTime.ToString("dd MMM yyyy, hh:mm tt"));
+
                 _logger.LogInformation(
                     "Request #{RequestId} assigned to technician " +
                     "{TechnicianId} by admin {AdminId}",
@@ -310,6 +341,13 @@ namespace ServiceApp.Services.Implementations
                 await _notifications.NotifyCustomerJobAcceptedAsync(request.CustomerId, requestId, techUser?.User.FullName ?? "Your technician", techUser?.User.Phone ?? "");
 
                 await _notifications.NotifyAdminStatusChangedAsync(requestId, "InProgress");
+
+                _ = _email.SendJobAcceptedToCustomerAsync(
+                    request.Customer?.Email ?? "",
+                    request.Customer?.FullName ?? "",
+                    requestId,
+                    tech.User.FullName,
+                    tech.User.Phone);
 
                 _logger.LogInformation(
                     "Request #{RequestId} accepted by technician {TechId}. " +

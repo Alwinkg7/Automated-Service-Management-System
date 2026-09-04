@@ -56,7 +56,14 @@
             Active jobs
         </span>
     </div>
-
+    <div style="margin-bottom:24px; text-align:right">
+        <a asp-area="Admin"
+           asp-controller="Analytics"
+           asp-action="Index"
+           class="btn-outline btn-sm">
+            View full analytics →
+        </a>
+    </div>
     <div class="stat-card stat-done">
         <span class="stat-label">Completed</span>
         <span class="stat-value" data-stat-count="completed">@Model.CompletedCount</span>

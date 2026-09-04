@@ -27,18 +27,21 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
         private readonly IUnitOfWork _uow;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<BillsController> _logger;
+        private readonly IBillPdfService _pdfService;
 
         public BillsController(
             IBillService billService,
             IServiceRequestService requestService,
             IUnitOfWork uow,
             UserManager<ApplicationUser> userManager,
+            IBillPdfService pdfService,
             ILogger<BillsController> logger)
         {
             _billService = billService;
             _requestService = requestService;
             _uow = uow;
             _userManager = userManager;
+            _pdfService = pdfService;
             _logger = logger;
         }
 
@@ -173,6 +176,48 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
             }
 
             return View(result.Data!);
+        }
+
+        // GET /Technician/Bills/Download/{billId}
+        [HttpGet]
+        public async Task<IActionResult> Download(int billId)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var tech = await _uow.TechnicianProfiles
+                .GetByUserIdAsync(userId);
+
+            if (tech == null)
+                return RedirectToAction("Index", "Jobs");
+
+            // Verify this technician created this bill
+            var billResult = await _billService.GetBillByIdAsync(billId);
+            if (!billResult.IsSuccess ||
+                billResult.Data!.TechnicianProfileId != tech.TechnicianProfileId)
+            {
+                TempData["Error"] =
+                    "You can only download bills you created.";
+                return RedirectToAction("Index", "Jobs");
+            }
+
+            try
+            {
+                var pdfBytes = await _pdfService
+                    .GenerateBillPdfAsync(billId);
+
+                var fileName =
+                    $"ServiceApp-Invoice-{billId}-" +
+                    $"{DateTime.Now:yyyyMMdd}.pdf";
+
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "PDF generation failed for bill #{BillId}", billId);
+                TempData["Error"] =
+                    "Could not generate PDF. Please try again.";
+                return RedirectToAction("Index", "Jobs");
+            }
         }
     }
 }

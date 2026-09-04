@@ -30,12 +30,14 @@ namespace ServiceApp.Services.Implementations
         private readonly IUnitOfWork _uow;
         private readonly ILogger<BillService> _logger;
         private readonly INotificationService _notifications;
+        private readonly IEmailService _email;
 
-        public BillService(IUnitOfWork uow, ILogger<BillService> logger, INotificationService notifications)
+        public BillService(IUnitOfWork uow, ILogger<BillService> logger, INotificationService notifications, IEmailService email)
         {
             _uow = uow;
             _logger = logger;
             _notifications = notifications;
+            _email = email;
         }
 
         // =============================================================
@@ -169,6 +171,13 @@ namespace ServiceApp.Services.Implementations
 
                 await _notifications.NotifyAdminStatusChangedAsync(
                     requestId, "Billed");
+
+                _ = _email.SendBillCreatedToCustomerAsync(
+                    request.Customer?.Email ?? "",
+                    request.Customer?.FullName ?? "",
+                    requestId,
+                    bill.Id,
+                    Math.Round(totalAmount, 2));
 
                 _logger.LogInformation(
                     "Bill #{BillId} created for request #{RequestId}. " +

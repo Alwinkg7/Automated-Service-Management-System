@@ -12,13 +12,23 @@
             Created @Model.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")
         </span>
     </div>
-    <a asp-area="Technician"
-       asp-controller="Jobs"
-       asp-action="Details"
-       asp-route-id="@Model.ServiceRequestId"
-       class="btn-outline">
-        ← Back to job
-    </a>
+    <div style="display:flex; gap:8px">
+        <a asp-area="Technician"
+           asp-controller="Bills"
+           asp-action="Download"
+           asp-route-billId="@Model.Id"
+           class="btn-outline"
+           target="_blank">
+            Download PDF
+        </a>
+        <a asp-area="Technician"
+           asp-controller="Jobs"
+           asp-action="Details"
+           asp-route-id="@Model.ServiceRequestId"
+           class="btn-outline">
+            ← Back to job
+        </a>
+    </div>
 </div>
 
 <div style="max-width:680px">

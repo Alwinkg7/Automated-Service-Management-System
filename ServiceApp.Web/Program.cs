@@ -41,7 +41,8 @@ using ServiceApp.Data.Context;
 using ServiceApp.Infrastructure;
 using ServiceApp.Services;
 using ServiceApp.Services.Implementations;
-using ServiceApp.Services.Implementations;
+using QuestPDF.Infrastructure;
+using ServiceApp.Web.Services;
 using ServiceApp.Web.Hubs;
 using ServiceApp.Web.Services;
 using System.Text;
@@ -244,6 +245,9 @@ try
     builder.Services.Configure<RazorpaySettings>(
         builder.Configuration.GetSection(RazorpaySettings.SectionName));
 
+    builder.Services.Configure<SendGridSettings>(
+    builder.Configuration.GetSection(SendGridSettings.SectionName));
+
     // Register Razorpay service
     builder.Services.AddScoped<IRazorpayService, RazorpayService>();
 
@@ -251,6 +255,8 @@ try
     builder.Services.AddSignalR();
     // Notification service — wraps SignalR for use in service layer
     builder.Services.AddScoped<INotificationService, NotificationService>();
+
+    builder.Services.AddScoped<IEmailService, EmailService>();
 
     // =============================================================
     //  STEP 6 — MVC with Areas
@@ -295,6 +301,10 @@ try
         options.Queues = new[] { "auto-assign", "default" };
     });
 
+    // QuestPDF licence (Community = free for open source / <$1M revenue)
+    QuestPDF.Settings.License = LicenseType.Community;
+    // PDF service
+    builder.Services.AddScoped<IBillPdfService, BillPdfService>();
     // Auto-assignment service
     builder.Services.AddScoped<IAutoAssignmentService, AutoAssignmentService>();
 

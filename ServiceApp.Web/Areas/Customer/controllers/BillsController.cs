@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using ServiceApp.Core.Entities;
 using ServiceApp.Core.Interfaces;
+using ServiceApp.Services.Implementations;
 
 namespace ServiceApp.Web.Areas.Customer.Controllers
 {
@@ -26,16 +27,24 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration _configuration;
         private readonly ILogger<BillsController> _logger;
-
+        private readonly IBillPdfService _pdfService;
+        private readonly IBillService _billService;
+        private readonly IUnitOfWork _uow;
         public BillsController(
             IPaymentService paymentService,
             UserManager<ApplicationUser> userManager,
             IConfiguration configuration,
+            IBillPdfService pdfService,
+            IBillService billService,
+            IUnitOfWork uow,
             ILogger<BillsController> logger)
         {
             _paymentService = paymentService;
             _userManager = userManager;
+            _pdfService = pdfService;
             _configuration = configuration;
+            _billService = billService;
+            _uow = uow;
             _logger = logger;
         }
 
@@ -206,5 +215,60 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
 
             return View(payment);
         }
+
+        // =============================================================
+        //  GET /Customer/Bills/Download/{billId}
+        //  Download the PDF invoice for a completed bill.
+        //  Only the customer who owns the request can download.
+        // =============================================================
+        [HttpGet]
+        public async Task<IActionResult> Download(int billId)
+        {
+            var userId = _userManager.GetUserId(User)!;
+
+            // Security: verify customer owns this bill
+            var billResult = await _billService.GetBillByIdAsync(billId);
+            if (!billResult.IsSuccess)
+            {
+                TempData["Error"] = "Bill not found.";
+                return RedirectToAction("Index", "Requests");
+            }
+
+            var bill = billResult.Data!;
+            var request = await _uow.ServiceRequests
+                .GetByIdAsync(bill.ServiceRequestId);
+
+            if (request == null || request.CustomerId != userId)
+            {
+                TempData["Error"] =
+                    "You can only download bills for your own requests.";
+                return RedirectToAction("Index", "Requests");
+            }
+
+            try
+            {
+                var pdfBytes = await _pdfService
+                    .GenerateBillPdfAsync(billId);
+
+                var fileName =
+                    $"ServiceApp-Invoice-{billId}-" +
+                    $"{DateTime.Now:yyyyMMdd}.pdf";
+
+                _logger.LogInformation(
+                    "Bill #{BillId} PDF downloaded by customer {UserId}",
+                    billId, userId);
+
+                // Return as a downloadable file
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "PDF generation failed for bill #{BillId}", billId);
+                TempData["Error"] =
+                    "Could not generate PDF. Please try again.";
+                return RedirectToAction("Index", "Requests");
+            }
+        } 
     }
 }

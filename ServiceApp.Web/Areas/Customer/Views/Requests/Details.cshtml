@@ -312,6 +312,18 @@
                     Book again
                 </a>
             }
+            @if (Model.Status == RequestStatus.Completed && Model.Bill != null)
+            {
+                <a asp-area="Customer"
+                   asp-controller="Bills"
+                   asp-action="Download"
+                   asp-route-billId="@Model.Bill.Id"
+                   class="btn-outline"
+                   style="display:block; text-align:center; margin-top:8px"
+                   target="_blank">
+                    Download invoice PDF
+                </a>
+            }
         </div>
 
         @* Quick status info *@

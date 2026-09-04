@@ -1,0 +1,358 @@
+﻿@model ServiceApp.Web.Areas.Admin.Models.TechnicianDetailViewModel
+@using ServiceApp.Core.Enums
+@using System.Text.Json
+@{
+    ViewData["Title"] = $"{Model.Profile.FullName} — Technician";
+    var earningsMonths = JsonSerializer.Serialize(Model.EarningsMonths);
+    var earningsValues = JsonSerializer.Serialize(Model.EarningsValues);
+}
+
+<div class="page-header">
+    <div>
+        <h2>@Model.Profile.FullName</h2>
+        <span style="font-size:13px; color:var(--text-secondary)">
+            @Model.Profile.Skill · Technician
+        </span>
+    </div>
+    <a asp-action="Index" class="btn-outline">← All technicians</a>
+</div>
+
+<div style="display:grid; grid-template-columns:320px 1fr;
+            gap:20px; align-items:start">
+
+    @* ── Left: profile card ───────────────────────────────────── *@
+    <div style="display:flex; flex-direction:column; gap:14px">
+
+        @* Profile overview *@
+        <div class="form-card" style="padding:18px">
+
+            @* Avatar + name *@
+            <div style="display:flex; gap:14px; align-items:center;
+                        margin-bottom:16px">
+                <div style="width:56px; height:56px; border-radius:50%;
+                            background:#7C3AED22; color:#7C3AED;
+                            display:flex; align-items:center;
+                            justify-content:center; font-size:22px;
+                            font-weight:700; flex-shrink:0">
+                    @(Model.Profile.FullName.Substring(0, 1).ToUpper())
+                </div>
+                <div>
+                    <p style="font-size:16px; font-weight:600;
+                              margin-bottom:3px">
+                        @Model.Profile.FullName
+                    </p>
+                    <span class="status-badge
+                        @(Model.Profile.Status == TechnicianStatus.Available
+                            ? "tech-available"
+                            : Model.Profile.Status == TechnicianStatus.Busy
+                                ? "tech-busy"
+                                : "tech-offline")">
+                        @Model.Profile.Status
+                    </span>
+                </div>
+            </div>
+
+            @* Stats *@
+            <div style="display:grid; grid-template-columns:1fr 1fr;
+                        gap:10px; margin-bottom:16px">
+                <div style="background:var(--bg-page);
+                            border-radius:var(--radius);
+                            padding:10px 12px">
+                    <p style="font-size:11px;
+                              color:var(--text-secondary);
+                              margin-bottom:3px">
+                        Rating
+                    </p>
+                    <p style="font-size:18px; font-weight:600;
+                              color:#D97706">
+                        @if (Model.Profile.Rating > 0)
+                        {
+                            <span>★ @(Model.Profile.Rating.ToString("F1"))</span>
+                        }
+                        else
+                        {
+                            <span style="font-size:13px;
+                                         color:var(--text-muted)">
+                                No ratings
+                            </span>
+                        }
+                    </p>
+                </div>
+                <div style="background:var(--bg-page);
+                            border-radius:var(--radius);
+                            padding:10px 12px">
+                    <p style="font-size:11px;
+                              color:var(--text-secondary);
+                              margin-bottom:3px">
+                        Jobs done
+                    </p>
+                    <p style="font-size:18px; font-weight:600;
+                              color:var(--primary)">
+                        @Model.Profile.TotalJobsCompleted
+                    </p>
+                </div>
+                <div style="background:var(--bg-page);
+                            border-radius:var(--radius);
+                            padding:10px 12px">
+                    <p style="font-size:11px;
+                              color:var(--text-secondary);
+                              margin-bottom:3px">
+                        Total earned
+                    </p>
+                    <p style="font-size:18px; font-weight:600;
+                              color:var(--success)">
+                        ₹@(Model.Profile.TotalEarned.ToString("N0"))
+                    </p>
+                </div>
+                <div style="background:var(--bg-page);
+                            border-radius:var(--radius);
+                            padding:10px 12px">
+                    <p style="font-size:11px;
+                              color:var(--text-secondary);
+                              margin-bottom:3px">
+                        Experience
+                    </p>
+                    <p style="font-size:18px; font-weight:600">
+                        @(Model.Profile.YearsOfExperience.HasValue
+                            ? Model.Profile.YearsOfExperience + " yrs"
+                            : "—")
+                    </p>
+                </div>
+            </div>
+
+            @* Contact info *@
+            <div style="display:flex; flex-direction:column;
+                        gap:6px; margin-bottom:14px">
+                <p style="font-size:13px; color:var(--text-secondary)">
+                    📞 @Model.Profile.Phone
+                </p>
+                <p style="font-size:13px; color:var(--text-secondary)">
+                    ✉ @Model.Profile.Email
+                </p>
+                @if (!string.IsNullOrEmpty(Model.Profile.ServiceAreaPinCode))
+                {
+                    <p style="font-size:13px; color:var(--text-secondary)">
+                        📍 Service area: @Model.Profile.ServiceAreaPinCode
+                    </p>
+                }
+            </div>
+
+            @* Bio *@
+            @if (!string.IsNullOrEmpty(Model.Profile.Bio))
+            {
+                <div style="background:var(--bg-page);
+                            border-radius:var(--radius);
+                            padding:10px 12px; margin-bottom:14px">
+                    <p style="font-size:12px; line-height:1.6;
+                              color:var(--text-secondary)">
+                        @Model.Profile.Bio
+                    </p>
+                </div>
+            }
+
+            @* Account status *@
+            <div style="padding-top:12px;
+                        border-top:0.5px solid var(--border)">
+                @if (Model.Profile.IsActive)
+                {
+                    <form asp-action="Deactivate"
+                          asp-route-id="@Model.Profile.TechnicianProfileId"
+                          method="post"
+                          onsubmit="return confirm(
+                              'Deactivate this technician account?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit"
+                                class="btn-danger"
+                                style="width:100%">
+                            Deactivate account
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <form asp-action="Reactivate"
+                          asp-route-id="@Model.Profile.TechnicianProfileId"
+                          method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit"
+                                class="btn-outline"
+                                style="width:100%">
+                            Reactivate account
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        @* Override status *@
+        <div class="form-card" style="padding:18px">
+            <h4 style="font-size:13px; font-weight:600;
+                       margin-bottom:4px">
+                Override status
+            </h4>
+            <p style="font-size:12px; color:var(--text-secondary);
+                      margin-bottom:12px">
+                Use when a technician is stuck as Busy
+                after a cancelled job.
+            </p>
+            <form asp-action="OverrideStatus"
+                  method="post"
+                  style="display:flex; gap:8px">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id"
+                       value="@Model.Profile.TechnicianProfileId" />
+                <select name="newStatus"
+                        class="form-control"
+                        style="flex:1; font-size:13px">
+                    <option value="Available"
+                        selected="@(Model.Profile.Status == TechnicianStatus.Available ? "selected" : null)">
+                        Available
+                    </option>
+                    <option value="Busy"
+                        selected="@(Model.Profile.Status == TechnicianStatus.Busy ? "selected" : null)">
+                        Busy
+                    </option>
+                    <option value="Offline"
+                        selected="@(Model.Profile.Status == TechnicianStatus.Offline ? "selected" : null)">
+                        Offline
+                    </option>
+                </select>
+                <button type="submit" class="btn-primary">
+                    Override
+                </button>
+            </form>
+        </div>
+    </div>
+
+    @* ── Right: earnings chart + job history ──────────────────── *@
+    <div style="display:flex; flex-direction:column; gap:16px">
+
+        @* Earnings chart *@
+        <div class="form-card" style="padding:18px">
+            <h3 style="font-size:14px; font-weight:600;
+                       margin-bottom:14px">
+                Earnings — last 6 months
+            </h3>
+            <div style="position:relative; height:200px">
+                <canvas id="earningsChart"></canvas>
+            </div>
+        </div>
+
+        @* Job history *@
+        <div class="table-card">
+            <div class="table-card-header">
+                <h3>Job history
+                    <span style="font-size:12px; font-weight:400;
+                                 color:var(--text-muted); margin-left:6px">
+                        @Model.JobHistory.Count total
+                    </span>
+                </h3>
+            </div>
+
+            @if (!Model.JobHistory.Any())
+            {
+                <div class="empty-state"
+                     style="border:none; padding:30px">
+                    <p>No jobs yet.</p>
+                </div>
+            }
+            else
+            {
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Customer</th>
+                            <th>Category</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Earned</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var j in Model.JobHistory)
+                        {
+                            <tr>
+                                <td style="color:var(--text-muted)">
+                                    #@j.RequestId
+                                </td>
+                                <td style="font-size:13px">
+                                    @(j.Customer?.FullName ?? "—")
+                                </td>
+                                <td>
+                                    <span class="category-badge">
+                                        @j.Category
+                                    </span>
+                                </td>
+                                <td style="font-size:12px;
+                                           color:var(--text-secondary)">
+                                    @(j.CreatedAt.ToString("dd MMM yyyy"))
+                                </td>
+                                <td>
+                                    <span class="status-badge
+                                        status-@(j.Status.ToString().ToLower())">
+                                        @j.Status
+                                    </span>
+                                </td>
+                                <td style="font-weight:500;
+                                           color:var(--success)">
+                                    @if (j.Bill != null &&
+                                         j.Bill.PaymentStatus ==
+                                             PaymentStatus.Paid)
+                                    {
+                                        <span>
+                                            ₹@(j.Bill.TotalAmount.ToString("N0"))
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:var(--text-muted)">
+                                            —
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+    var months   = @Html.Raw(earningsMonths);
+    var earnings = @Html.Raw(earningsValues);
+
+    new Chart(document.getElementById('earningsChart'), {
+        type: 'bar',
+        data: {
+            labels:   months,
+            datasets: [{
+                label:           'Earnings (₹)',
+                data:            earnings,
+                backgroundColor: 'rgba(79,70,229,0.75)',
+                borderRadius:    6,
+                borderSkipped:   false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: {
+                        callback: val =>
+                            '₹' + val.toLocaleString('en-IN')
+                    }
+                }
+            }
+        }
+    });
+</script>
+}

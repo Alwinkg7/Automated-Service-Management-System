@@ -1,0 +1,242 @@
+﻿@model ServiceApp.Web.Areas.Customer.Models.RebookViewModel
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = "Re-book service";
+}
+
+<div class="page-header">
+    <div>
+        <h2>Book same service again</h2>
+        <span style="font-size:13px; color:var(--text-secondary)">
+            Pre-filled from request #@Model.OriginalRequestId —
+            adjust anything before submitting
+        </span>
+    </div>
+    <a asp-action="History" class="btn-outline">← My history</a>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 360px;
+            gap:24px; align-items:start">
+
+    @* ── Left: re-book form ───────────────────────────────────── *@
+    <div class="form-card">
+
+        @* Previous technician badge *@
+        @if (!string.IsNullOrEmpty(Model.PreviousTechnicianName))
+        {
+            <div style="display:flex; align-items:center; gap:10px;
+                        padding:12px 14px; margin-bottom:18px;
+                        background:var(--primary-light);
+                        border:1px solid var(--primary);
+                        border-radius:var(--radius)">
+                <div style="width:36px; height:36px; border-radius:50%;
+                            background:#7C3AED22; color:#7C3AED;
+                            display:flex; align-items:center;
+                            justify-content:center; font-size:14px;
+                            font-weight:700; flex-shrink:0">
+                    @(Model.PreviousTechnicianName.Substring(0, 1).ToUpper())
+                </div>
+                <div>
+                    <p style="font-size:12px; color:var(--primary);
+                              font-weight:600; margin-bottom:1px">
+                        Previous technician
+                    </p>
+                    <p style="font-size:14px; font-weight:600;
+                              color:var(--text-primary)">
+                        @Model.PreviousTechnicianName
+                    </p>
+                    <p style="font-size:11px; color:var(--text-secondary)">
+                        Our system will try to assign them again
+                        if they are available.
+                    </p>
+                </div>
+            </div>
+        }
+
+        <form asp-action="Rebook" method="post">
+            @Html.AntiForgeryToken()
+
+            <input type="hidden" name="OriginalRequestId"
+                   value="@Model.OriginalRequestId" />
+            <input type="hidden" name="PreviousTechnicianName"
+                   value="@Model.PreviousTechnicianName" />
+
+            <div asp-validation-summary="ModelOnly"
+                 class="toast toast-error"
+                 style="margin-bottom:16px"></div>
+
+            @* Service category — read only, cannot change *@
+            <div class="form-group">
+                <label>Service type</label>
+                <div style="display:flex; align-items:center; gap:10px">
+                    <span class="category-badge"
+                          style="font-size:14px; padding:6px 14px">
+                        @Model.Category
+                    </span>
+                    <span style="font-size:12px;
+                                 color:var(--text-secondary)">
+                        Same as original request
+                    </span>
+                </div>
+                <input type="hidden" name="Category"
+                       value="@Model.Category" />
+            </div>
+
+            @* Description — pre-filled, editable *@
+            <div class="form-group">
+                <label asp-for="Description">
+                    Describe the problem
+                    <span style="font-size:11px; font-weight:400;
+                                 color:var(--text-muted)">
+                        (pre-filled from original — update if needed)
+                    </span>
+                </label>
+                <textarea asp-for="Description"
+                          class="form-control"
+                          rows="3"></textarea>
+                <span asp-validation-for="Description"
+                      class="field-error"></span>
+            </div>
+
+            @* Address — pre-filled, editable *@
+            <div class="form-group">
+                <label asp-for="Address">Service address</label>
+                <input asp-for="Address"
+                       class="form-control"
+                       placeholder="House no, street, area" />
+                <span asp-validation-for="Address"
+                      class="field-error"></span>
+            </div>
+
+            @* Pin code *@
+            <div class="form-group">
+                <label asp-for="PinCode">Pin code</label>
+                <input asp-for="PinCode"
+                       class="form-control"
+                       style="max-width:200px" />
+                <span asp-validation-for="PinCode"
+                      class="field-error"></span>
+            </div>
+
+            @* New preferred date/time *@
+            <div class="form-group">
+                <label asp-for="PreferredDateTime">
+                    New preferred date &amp; time
+                </label>
+                <input asp-for="PreferredDateTime"
+                       class="form-control"
+                       type="datetime-local"
+                       style="max-width:280px" />
+                <span asp-validation-for="PreferredDateTime"
+                      class="field-error"></span>
+                <span class="form-hint">
+                    Must be at least 1 hour from now
+                </span>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:8px">
+                <button type="submit"
+                        class="btn-primary"
+                        id="rebookBtn"
+                        onclick="this.disabled=true;
+                                 this.textContent='Booking...';
+                                 this.form.submit();">
+                    Confirm re-booking
+                </button>
+                <a asp-action="History" class="btn-outline">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+    @* ── Right: info panel ────────────────────────────────────── *@
+    <div style="display:flex; flex-direction:column; gap:12px">
+
+        <div class="form-card" style="padding:16px">
+            <h4 style="font-size:13px; font-weight:600;
+                       margin-bottom:10px">
+                What happens next
+            </h4>
+            <div style="display:flex; flex-direction:column; gap:10px">
+                @{
+                    var steps = new[]
+                    {
+                        ("1", "New request created",
+                         "A fresh request is created with your details."),
+                        ("2", "Assignment",
+                         "Admin or auto-engine assigns the best available technician."),
+                        ("3", "Technician accepts",
+                         "They accept and head to your address."),
+                        ("4", "Job done",
+                         "Pay when complete, download your invoice.")
+                    };
+                }
+                @foreach (var (num, title, desc) in steps)
+                {
+                    <div style="display:flex; gap:10px;
+                                align-items:flex-start">
+                        <div style="width:22px; height:22px;
+                                    border-radius:50%;
+                                    background:var(--primary-light);
+                                    color:var(--primary);
+                                    display:flex; align-items:center;
+                                    justify-content:center;
+                                    font-size:11px; font-weight:600;
+                                    flex-shrink:0">
+                            @num
+                        </div>
+                        <div>
+                            <p style="font-size:13px; font-weight:500;
+                                      margin-bottom:1px">@title</p>
+                            <p style="font-size:12px;
+                                      color:var(--text-secondary)">
+                                @desc
+                            </p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.PreviousTechnicianName))
+        {
+            <div class="form-card"
+                 style="padding:16px; background:var(--primary-light);
+                        border-color:var(--primary)">
+                <h4 style="font-size:13px; font-weight:600;
+                           margin-bottom:6px; color:var(--primary)">
+                    About re-booking a technician
+                </h4>
+                <p style="font-size:12px; color:var(--text-secondary);
+                          line-height:1.6">
+                    We note your preference for
+                    <strong>@Model.PreviousTechnicianName</strong>.
+                    If they are available when your request is assigned,
+                    the system will prioritise them. If they are unavailable,
+                    the next best available technician will be assigned.
+                </p>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <script>
+        // Set datetime-local min to 1 hour from now
+        (function () {
+            var input = document.getElementById('PreferredDateTime');
+            if (!input) return;
+            var now = new Date();
+            now.setHours(now.getHours() + 1);
+            var pad = n => String(n).padStart(2, '0');
+            input.setAttribute('min',
+                now.getFullYear() + '-' +
+                pad(now.getMonth() + 1) + '-' +
+                pad(now.getDate()) + 'T' +
+                pad(now.getHours()) + ':' +
+                pad(now.getMinutes()));
+        })();
+    </script>
+}

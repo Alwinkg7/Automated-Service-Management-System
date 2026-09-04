@@ -91,7 +91,7 @@ namespace ServiceApp.Data.Repositories
         public async Task<IEnumerable<TechnicianProfile>> GetAllWithUsersAsync() =>
             await _dbSet
                 .Include(t => t.User)
-                .OrderBy(t => t.User.FullName)
+                .OrderByDescending(t => t.TotalJobsCompleted)
                 .AsNoTracking()
                 .ToListAsync();
 

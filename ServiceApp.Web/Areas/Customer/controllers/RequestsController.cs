@@ -249,5 +249,182 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
 
             return RedirectToAction(nameof(Details), new { id });
         }
+
+        // =============================================================
+        //  GET /Customer/Requests/History
+        //  Full service history — completed + cancelled requests only.
+        //  Separate from Index (which shows active + past mixed).
+        // =============================================================
+        [HttpGet]
+        public async Task<IActionResult> History(
+            string? search = null,
+            string? category = null)
+        {
+            var userId = _userManager.GetUserId(User)!;
+
+            var result = await _requestService
+                .GetCustomerRequestsAsync(userId);
+
+            if (!result.IsSuccess)
+            {
+                TempData["Error"] = result.ErrorMessage;
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Only show terminal states on history page
+            var all = result.Data!
+                .Where(r => r.Status == RequestStatus.Completed
+                         || r.Status == RequestStatus.Cancelled)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToList();
+
+            // Parse optional category filter
+            ServiceCategory? catFilter = null;
+            if (!string.IsNullOrEmpty(category) &&
+                Enum.TryParse<ServiceCategory>(category, out var parsedCat))
+                catFilter = parsedCat;
+
+            // Apply filters
+            var filtered = all.AsEnumerable();
+
+            if (catFilter.HasValue)
+                filtered = filtered.Where(r => r.Category == catFilter.Value);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLower();
+                filtered = filtered.Where(r =>
+                    r.Description.ToLower().Contains(term) ||
+                    r.Address.ToLower().Contains(term) ||
+                    (r.AssignedTechnician?.User?.FullName
+                        .ToLower().Contains(term) ?? false));
+            }
+
+            var historyList = filtered.ToList();
+            var completed = all.Where(r =>
+                r.Status == RequestStatus.Completed).ToList();
+
+            var vm = new ServiceHistoryViewModel
+            {
+                History = historyList,
+                TotalJobs = all.Count,
+                CompletedJobs = all.Count(r =>
+                    r.Status == RequestStatus.Completed),
+                CancelledJobs = all.Count(r =>
+                    r.Status == RequestStatus.Cancelled),
+                TotalSpent = completed
+                    .Where(r => r.Bill != null)
+                    .Sum(r => r.Bill!.TotalAmount),
+                AverageRating = completed
+                    .Where(r => r.CustomerRating.HasValue)
+                    .Select(r => (double)r.CustomerRating!.Value)
+                    .DefaultIfEmpty(0)
+                    .Average(),
+                CategoryFilter = catFilter,
+                SearchTerm = search
+            };
+
+            // Pass category enum list to view for filter dropdown
+            ViewBag.Categories = Enum.GetValues<ServiceCategory>()
+                .Select(c => c.ToString())
+                .ToList();
+
+            return View(vm);
+        }
+
+        // =============================================================
+        //  GET /Customer/Requests/Rebook/{id}
+        //  Pre-fills the Create form with data from a past request.
+        //  Customer can adjust anything before submitting.
+        // =============================================================
+        [HttpGet]
+        public async Task<IActionResult> Rebook(int id)
+        {
+            var userId = _userManager.GetUserId(User)!;
+
+            var result = await _requestService.GetRequestDetailsAsync(id);
+
+            if (!result.IsSuccess)
+            {
+                TempData["Error"] = result.ErrorMessage;
+                return RedirectToAction(nameof(History));
+            }
+
+            var original = result.Data!;
+
+            // Security: only the customer who made the original request
+            if (original.CustomerId != userId)
+            {
+                TempData["Error"] =
+                    "You can only re-book your own past requests.";
+                return RedirectToAction(nameof(History));
+            }
+
+            // Only allow re-booking completed or cancelled requests
+            if (original.Status != RequestStatus.Completed &&
+                original.Status != RequestStatus.Cancelled)
+            {
+                TempData["Error"] =
+                    "You can only re-book completed or cancelled requests.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            var vm = new RebookViewModel
+            {
+                Category = original.Category,
+                Description = original.Description,
+                Address = original.Address,
+                PinCode = original.PinCode,
+                PreferredDateTime = DateTime.Now.AddHours(3),
+                PreviousTechnicianName = original.AssignedTechnician
+                    ?.User?.FullName,
+                OriginalRequestId = id
+            };
+
+            return View(vm);
+        }
+
+        // =============================================================
+        //  POST /Customer/Requests/Rebook
+        //  Submit the re-booked request — same as Create but
+        //  pre-filled. Creates a brand new ServiceRequest row.
+        // =============================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Rebook(RebookViewModel vm)
+        {
+            // Validate time is at least 1 hour in future
+            if (vm.PreferredDateTime <= DateTime.Now.AddHours(1))
+            {
+                ModelState.AddModelError(
+                    nameof(vm.PreferredDateTime),
+                    "Please select a time at least 1 hour from now.");
+            }
+
+            if (!ModelState.IsValid)
+                return View(vm);
+
+            var userId = _userManager.GetUserId(User)!;
+
+            var result = await _requestService.CreateRequestAsync(
+                customerId: userId,
+                description: vm.Description,
+                category: vm.Category,
+                address: vm.Address,
+                pinCode: vm.PinCode,
+                preferredDateTime: vm.PreferredDateTime);
+
+            if (!result.IsSuccess)
+            {
+                ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+                return View(vm);
+            }
+
+            TempData["Success"] =
+                $"Re-booking confirmed! Your new {vm.Category} request " +
+                $"#{result.Data!.RequestId} is Pending.";
+
+            return RedirectToAction(nameof(Index));
+        }
     }
 }

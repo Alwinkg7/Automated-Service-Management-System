@@ -1,0 +1,302 @@
+﻿@model ServiceApp.Web.Areas.Customer.Models.ServiceHistoryViewModel
+@using ServiceApp.Core.Enums
+@{
+    ViewData["Title"] = "My service history";
+    var categories = ViewBag.Categories as List<string>
+        ?? new List<string>();
+}
+
+<div class="page-header">
+    <h2>Service history</h2>
+    <a asp-action="Create" class="btn-primary">
+        + Book a service
+    </a>
+</div>
+
+@* ── Stats strip ──────────────────────────────────────────────── *@
+<div style="display:grid; grid-template-columns:repeat(5,1fr);
+            gap:12px; margin-bottom:24px">
+
+    <div class="stat-card">
+        <span class="stat-label">Total bookings</span>
+        <span class="stat-value" style="color:var(--primary)">
+            @Model.TotalJobs
+        </span>
+    </div>
+    <div class="stat-card stat-done">
+        <span class="stat-label">Completed</span>
+        <span class="stat-value">@Model.CompletedJobs</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Cancelled</span>
+        <span class="stat-value" style="color:var(--danger)">
+            @Model.CancelledJobs
+        </span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Total spent</span>
+        <span class="stat-value" style="color:var(--success)">
+            ₹@(Model.TotalSpent.ToString("N0"))
+        </span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Avg rating given</span>
+        <span class="stat-value" style="color:#D97706">
+            @if (Model.AverageRating > 0)
+            {
+                <span>★ @(Model.AverageRating.ToString("F1"))</span>
+            }
+            else
+            {
+                <span style="font-size:14px;
+                             color:var(--text-muted)">
+                    No ratings yet
+                </span>
+            }
+        </span>
+    </div>
+</div>
+
+@* ── Search + filter ──────────────────────────────────────────── *@
+<form asp-action="History" method="get">
+    <div style="display:flex; gap:10px; margin-bottom:16px;
+                flex-wrap:wrap; align-items:center">
+
+        <input name="search"
+               value="@Model.SearchTerm"
+               class="form-control"
+               placeholder="Search description, address, technician..."
+               style="flex:1; min-width:220px; height:36px" />
+
+        <select name="category"
+                class="form-control"
+                style="width:170px; height:36px; font-size:13px"
+                onchange="this.form.submit()">
+            <option value="">All categories</option>
+            @foreach (var c in categories)
+            {
+                <option value="@c"
+                        selected="@(Model.CategoryFilter?.ToString() == c ? "selected" : null)">
+                    @c
+                </option>
+            }
+        </select>
+
+        <button type="submit"
+                class="btn-primary btn-sm"
+                style="height:36px; padding:0 16px">
+            Search
+        </button>
+
+        @if (!string.IsNullOrEmpty(Model.SearchTerm) ||
+             Model.CategoryFilter.HasValue)
+        {
+            <a asp-action="History"
+               class="btn-outline btn-sm"
+               style="height:36px; line-height:36px; padding:0 12px">
+                Clear
+            </a>
+        }
+    </div>
+</form>
+
+@* ── History list ─────────────────────────────────────────────── *@
+@if (!Model.History.Any())
+{
+    <div class="empty-state">
+        <span class="empty-icon">📋</span>
+        <h3>
+            @if (!string.IsNullOrEmpty(Model.SearchTerm) ||
+                 Model.CategoryFilter.HasValue)
+            {
+                <span>No results found</span>
+            }
+            else
+            {
+                <span>No service history yet</span>
+            }
+        </h3>
+        <p>
+            @if (!string.IsNullOrEmpty(Model.SearchTerm) ||
+                 Model.CategoryFilter.HasValue)
+            {
+                <span>
+                    Try clearing the filters to see all history.
+                </span>
+            }
+            else
+            {
+                <span>
+                    Your completed and cancelled requests
+                    will appear here.
+                </span>
+            }
+        </p>
+        <a asp-action="Create" class="btn-primary">
+            Book your first service
+        </a>
+    </div>
+}
+else
+{
+    <div style="display:flex; flex-direction:column; gap:12px">
+        @foreach (var r in Model.History)
+        {
+            @* Card style changes based on status *@
+            <div style="background:var(--bg-white);
+                        border:1px solid @(r.Status == RequestStatus.Completed ? "var(--success)" : "var(--border)");
+                        border-radius:var(--radius-lg);
+                        padding:16px 18px; @(r.Status == RequestStatus.Completed ? "" : "opacity:.85")">
+
+                @* Card header *@
+                <div style="display:flex; justify-content:space-between;
+                            align-items:flex-start; margin-bottom:10px">
+
+                    <div style="display:flex; align-items:center; gap:8px">
+                        <span class="req-category">@r.Category</span>
+                        <span style="font-size:12px;
+                                     color:var(--text-muted)">
+                            #@r.RequestId
+                        </span>
+                        <span style="font-size:11px;
+                                     color:var(--text-muted)">
+                            @(r.CreatedAt.ToString("dd MMM yyyy"))
+                        </span>
+                    </div>
+
+                    <span class="status-badge
+                        status-@(r.Status.ToString().ToLower())">
+                        @r.Status
+                    </span>
+                </div>
+
+                @* Description *@
+                <p style="font-size:13px; color:var(--text-primary);
+                          margin-bottom:10px; line-height:1.5">
+                    @r.Description
+                </p>
+
+                @* Meta row *@
+                <div style="display:flex; gap:16px; flex-wrap:wrap;
+                            font-size:12px; color:var(--text-secondary);
+                            margin-bottom:12px">
+                    <span>📍 @r.Address</span>
+                    <span>📅 @(r.PreferredDateTime.ToString("dd MMM yyyy, hh:mm tt"))</span>
+
+                    @* Technician info *@
+                    @if (r.AssignedTechnician != null)
+                    {
+                        <span>
+                            👷
+                            <strong>@r.AssignedTechnician.User?.FullName</strong>
+                            — @r.AssignedTechnician.Skill
+                        </span>
+                    }
+
+                    @* Amount paid *@
+                    @if (r.Bill != null &&
+                         r.Bill.PaymentStatus == PaymentStatus.Paid)
+                    {
+                        <span style="color:var(--success); font-weight:500">
+                            ₹@(r.Bill.TotalAmount.ToString("N2")) paid
+                        </span>
+                    }
+                </div>
+
+                @* Rating row *@
+                @if (r.Status == RequestStatus.Completed)
+                {
+                    <div style="margin-bottom:12px">
+                        @if (r.CustomerRating.HasValue)
+                        {
+                            <div style="display:flex; align-items:center;
+                                        gap:6px">
+                                <span style="font-size:12px;
+                                             color:var(--text-secondary)">
+                                    Your rating:
+                                </span>
+                                <span style="color:#D97706; font-size:16px">
+                                    @string.Concat(Enumerable.Repeat("★",
+                                        r.CustomerRating.Value))
+                                    @string.Concat(Enumerable.Repeat("☆",
+                                        5 - r.CustomerRating.Value))
+                                </span>
+                                @if (!string.IsNullOrEmpty(
+                                    r.CustomerFeedback))
+                                {
+                                    <span style="font-size:12px;
+                                                 color:var(--text-secondary);
+                                                 font-style:italic">
+                                        "@r.CustomerFeedback"
+                                    </span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <span style="font-size:12px;
+                                         color:var(--text-muted)">
+                                You haven't rated this job yet.
+                            </span>
+                        }
+                    </div>
+                }
+
+                @* Action buttons *@
+                <div style="display:flex; gap:8px; flex-wrap:wrap">
+                    <a asp-action="Details"
+                       asp-route-id="@r.RequestId"
+                       class="btn-outline btn-sm">
+                        View details
+                    </a>
+
+                    @* Download invoice — only if completed + paid *@
+                    @if (r.Status == RequestStatus.Completed &&
+                         r.Bill != null)
+                    {
+                        <a asp-area="Customer"
+                           asp-controller="Bills"
+                           asp-action="Download"
+                           asp-route-billId="@r.Bill.Id"
+                           class="btn-outline btn-sm"
+                           target="_blank">
+                            Download invoice
+                        </a>
+                    }
+
+                    @* Rate — only if completed + not yet rated *@
+                    @if (r.Status == RequestStatus.Completed &&
+                         !r.CustomerRating.HasValue)
+                    {
+                        <a asp-action="Details"
+                           asp-route-id="@r.RequestId"
+                           class="btn-outline btn-sm"
+                           style="color:var(--primary);
+                                  border-color:var(--primary)">
+                            Leave a rating
+                        </a>
+                    }
+
+                    @* RE-BOOK — the main feature of this step *@
+                    <a asp-action="Rebook"
+                       asp-route-id="@r.RequestId"
+                       class="btn-primary btn-sm">
+                        @if (r.AssignedTechnician != null &&
+                             r.Status == RequestStatus.Completed)
+                        {
+                            <span>
+                                Book
+                                @r.AssignedTechnician.User?.FullName
+                                again
+                            </span>
+                        }
+                        else
+                        {
+                            <span>Book same service again</span>
+                        }
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+}

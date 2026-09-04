@@ -1,0 +1,452 @@
+﻿@model ServiceApp.Web.Areas.Admin.Models.AnalyticsViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Analytics";
+
+    @* Serialize data for Chart.js — done server side so JS gets clean arrays *@
+    var revenueDates  = JsonSerializer.Serialize(Model.RevenueDates);
+    var revenueValues = JsonSerializer.Serialize(Model.RevenueValues);
+    var reqDates      = JsonSerializer.Serialize(Model.RequestDates);
+    var reqCounts     = JsonSerializer.Serialize(Model.RequestCounts);
+    var catLabels     = JsonSerializer.Serialize(Model.CategoryLabels);
+    var catCounts     = JsonSerializer.Serialize(Model.CategoryCounts);
+}
+
+<div class="page-header">
+    <h2>Analytics</h2>
+    <span style="font-size:13px; color:var(--text-secondary)">
+        Live platform data
+    </span>
+</div>
+
+@* ── Top stat cards ───────────────────────────────────────────── *@
+<div class="stat-grid" style="grid-template-columns:repeat(6,1fr);
+                               margin-bottom:24px">
+    <div class="stat-card">
+        <span class="stat-label">Total requests</span>
+        <span class="stat-value" style="color:var(--primary)">
+            @Model.TotalRequests
+        </span>
+    </div>
+    <div class="stat-card stat-done">
+        <span class="stat-label">Completed</span>
+        <span class="stat-value">@Model.CompletedRequests</span>
+    </div>
+    <div class="stat-card stat-pending">
+        <span class="stat-label">Pending</span>
+        <span class="stat-value">@Model.PendingRequests</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Completion rate</span>
+        <span class="stat-value" style="color:#7C3AED">
+            @Model.CompletionRate%
+        </span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Total revenue</span>
+        <span class="stat-value" style="color:var(--success)">
+            ₹@(Model.TotalRevenue.ToString("N0"))
+        </span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Customers</span>
+        <span class="stat-value" style="color:var(--info)">
+            @Model.TotalCustomers
+        </span>
+    </div>
+</div>
+
+@* ── Charts row 1: Revenue + Requests ────────────────────────── *@
+<div style="display:grid; grid-template-columns:1fr 1fr;
+            gap:16px; margin-bottom:20px">
+
+    @* Revenue trend *@
+    <div class="table-card" style="padding:18px">
+        <h3 style="font-size:14px; font-weight:600;
+                   margin-bottom:16px">
+            Revenue — last 7 days
+        </h3>
+        <div style="position:relative; height:220px">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>
+
+    @* Request volume *@
+    <div class="table-card" style="padding:18px">
+        <h3 style="font-size:14px; font-weight:600;
+                   margin-bottom:16px">
+            Requests — last 7 days
+        </h3>
+        <div style="position:relative; height:220px">
+            <canvas id="requestChart"></canvas>
+        </div>
+    </div>
+</div>
+
+@* ── Charts row 2: Category donut + Status bar ───────────────── *@
+<div style="display:grid; grid-template-columns:1fr 1fr;
+            gap:16px; margin-bottom:20px">
+
+    @* Category breakdown donut *@
+    <div class="table-card" style="padding:18px">
+        <h3 style="font-size:14px; font-weight:600;
+                   margin-bottom:16px">
+            Requests by category
+        </h3>
+        <div style="position:relative; height:220px">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+
+    @* Status breakdown bar *@
+    <div class="table-card" style="padding:18px">
+        <h3 style="font-size:14px; font-weight:600;
+                   margin-bottom:16px">
+            Requests by status
+        </h3>
+        <div style="position:relative; height:220px">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+</div>
+
+@* ── Bottom row: leaderboard + activity ─────────────────────── *@
+<div style="display:grid; grid-template-columns:1fr 1fr;
+            gap:16px">
+
+    @* Technician leaderboard *@
+    <div class="table-card">
+        <div class="table-card-header">
+            <h3>Top technicians</h3>
+        </div>
+        @if (!Model.TopTechnicians.Any())
+        {
+            <div class="empty-state" style="border:none; padding:30px">
+                <p>No completed jobs yet.</p>
+            </div>
+        }
+        else
+        {
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Technician</th>
+                        <th>Jobs</th>
+                        <th>Rating</th>
+                        <th>Earned</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.TopTechnicians.Count; i++)
+                    {
+                        var t = Model.TopTechnicians[i];
+                        <tr>
+                            <td style="color:var(--text-muted);
+                                       font-weight:600">
+                                @(i + 1)
+                            </td>
+                            <td>
+                                <div style="display:flex; gap:9px;
+                                            align-items:center">
+                                    <div style="width:30px; height:30px;
+                                                border-radius:50%;
+                                                background:#7C3AED22;
+                                                color:#7C3AED;
+                                                display:flex;
+                                                align-items:center;
+                                                justify-content:center;
+                                                font-size:12px;
+                                                font-weight:700;
+                                                flex-shrink:0">
+                                        @(t.FullName.Substring(0, 1).ToUpper())
+                                    </div>
+                                    <div>
+                                        <p style="font-size:13px;
+                                                  font-weight:500;
+                                                  margin-bottom:1px">
+                                            @t.FullName
+                                        </p>
+                                        <p style="font-size:11px;
+                                                  color:var(--text-muted)">
+                                            @t.Skill
+                                        </p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="font-weight:600">
+                                @t.TotalJobsCompleted
+                            </td>
+                            <td style="color:#D97706">
+                                @if (t.Rating > 0)
+                                {
+                                    <span>★ @(t.Rating.ToString("F1"))</span>
+                                }
+                                else
+                                {
+                                    <span style="color:var(--text-muted)">—</span>
+                                }
+                            </td>
+                            <td style="color:var(--success);
+                                       font-weight:500">
+                                ₹@(t.TotalEarned.ToString("N0"))
+                            </td>
+                            <td>
+                                <span class="status-badge
+                                    @(t.Status == "Available"
+                                        ? "tech-available"
+                                        : t.Status == "Busy"
+                                            ? "tech-busy"
+                                            : "tech-offline")">
+                                    @t.Status
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    @* Recent activity feed *@
+    <div class="table-card">
+        <div class="table-card-header">
+            <h3>Recent activity</h3>
+        </div>
+        @if (!Model.RecentActivities.Any())
+        {
+            <div class="empty-state" style="border:none; padding:30px">
+                <p>No activity yet.</p>
+            </div>
+        }
+        else
+        {
+            <div style="padding:8px 0">
+                @foreach (var a in Model.RecentActivities)
+                {
+                    @* Status dot color *@
+
+                    var dotColor = a.Status switch
+                    {
+                        "Completed"  => "var(--success)",
+                        "InProgress" => "#7C3AED",
+                        "Assigned"   => "var(--info)",
+                        "Billed"     => "#D97706",
+                        "Cancelled"  => "var(--danger)",
+                        _            => "var(--text-muted)"
+                    };
+
+                    <div style="display:flex; gap:12px;
+                                padding:10px 18px;
+                                border-bottom:0.5px solid var(--border);
+                                align-items:flex-start">
+                        @* Status dot *@
+                        <div style="width:8px; height:8px;
+                                    border-radius:50%;
+                                    background:@dotColor;
+                                    margin-top:5px;
+                                    flex-shrink:0">
+                        </div>
+                        <div style="flex:1">
+                            <div style="display:flex;
+                                        justify-content:space-between;
+                                        align-items:center;
+                                        margin-bottom:2px">
+                                <span style="font-size:13px;
+                                             font-weight:500">
+                                    #@a.RequestId
+                                    <span class="category-badge"
+                                          style="margin-left:6px">
+                                        @a.Category
+                                    </span>
+                                </span>
+                                <span class="status-badge
+                                    status-@(a.Status.ToLower())"
+                                      style="font-size:10px">
+                                    @a.Status
+                                </span>
+                            </div>
+                            <p style="font-size:11.5px;
+                                      color:var(--text-secondary);
+                                      margin-bottom:2px">
+                                @a.Note
+                            </p>
+                            <p style="font-size:11px;
+                                      color:var(--text-muted)">
+                                @(a.ChangedAt.ToString("dd MMM, hh:mm tt"))
+                            </p>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+@* Chart.js from CDN *@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<script>
+// Data from server — serialized as JSON
+var revenueDates  = @Html.Raw(revenueDates);
+var revenueValues = @Html.Raw(revenueValues);
+var reqDates      = @Html.Raw(reqDates);
+var reqCounts     = @Html.Raw(reqCounts);
+var catLabels     = @Html.Raw(catLabels);
+var catCounts     = @Html.Raw(catCounts);
+
+// Shared chart options
+var gridColor  = 'rgba(0,0,0,0.06)';
+var fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+Chart.defaults.font.family  = fontFamily;
+Chart.defaults.font.size    = 12;
+Chart.defaults.color        = '#6B7280';
+
+// ── Revenue line chart ────────────────────────────────────────
+new Chart(document.getElementById('revenueChart'), {
+    type: 'line',
+    data: {
+        labels:   revenueDates,
+        datasets: [{
+            label:           'Revenue (₹)',
+            data:            revenueValues,
+            borderColor:     '#4F46E5',
+            backgroundColor: 'rgba(79,70,229,0.08)',
+            borderWidth:     2,
+            fill:            true,
+            tension:         0.4,
+            pointRadius:     4,
+            pointBackgroundColor: '#4F46E5'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: ctx =>
+                        ' ₹' + ctx.parsed.y.toLocaleString('en-IN')
+                }
+            }
+        },
+        scales: {
+            x: { grid: { color: gridColor } },
+            y: {
+                grid: { color: gridColor },
+                ticks: {
+                    callback: val =>
+                        '₹' + val.toLocaleString('en-IN')
+                }
+            }
+        }
+    }
+});
+
+// ── Requests bar chart ────────────────────────────────────────
+new Chart(document.getElementById('requestChart'), {
+    type: 'bar',
+    data: {
+        labels:   reqDates,
+        datasets: [{
+            label:           'Requests',
+            data:            reqCounts,
+            backgroundColor: 'rgba(79,70,229,0.75)',
+            borderRadius:    6,
+            borderSkipped:   false
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false } },
+            y: {
+                grid: { color: gridColor },
+                ticks: { stepSize: 1 }
+            }
+        }
+    }
+});
+
+// ── Category donut chart ──────────────────────────────────────
+var donutColors = [
+    '#4F46E5','#059669','#D97706','#DC2626',
+    '#7C3AED','#2563EB','#0891B2','#BE185D'
+];
+
+new Chart(document.getElementById('categoryChart'), {
+    type: 'doughnut',
+    data: {
+        labels:   catLabels,
+        datasets: [{
+            data:            catCounts,
+            backgroundColor: donutColors.slice(0, catLabels.length),
+            borderWidth:     2,
+            borderColor:     '#ffffff',
+            hoverOffset:     6
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+            legend: {
+                position: 'right',
+                labels:   { boxWidth: 12, padding: 12 }
+            }
+        }
+    }
+});
+
+// ── Status bar chart ──────────────────────────────────────────
+new Chart(document.getElementById('statusChart'), {
+    type: 'bar',
+    data: {
+        labels: [
+            'Pending','Assigned','In Progress',
+            'Billed','Completed','Cancelled'
+        ],
+        datasets: [{
+            data: [
+                @Model.StatusPending,
+                @Model.StatusAssigned,
+                @Model.StatusInProgress,
+                @Model.StatusBilled,
+                @Model.StatusCompleted,
+                @Model.StatusCancelled
+            ],
+            backgroundColor: [
+                '#FEF3C7','#DBEAFE','#EDE9FE',
+                '#FEF9C3','#D1FAE5','#FEE2E2'
+            ],
+            borderColor: [
+                '#D97706','#2563EB','#7C3AED',
+                '#92400E','#059669','#DC2626'
+            ],
+            borderWidth: 1.5,
+            borderRadius: 6,
+            borderSkipped: false
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false } },
+            y: {
+                grid: { color: gridColor },
+                ticks: { stepSize: 1 }
+            }
+        }
+    }
+});
+</script>
+}

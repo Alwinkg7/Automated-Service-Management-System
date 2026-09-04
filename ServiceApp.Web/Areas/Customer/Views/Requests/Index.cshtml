@@ -172,6 +172,17 @@
                                class="btn-outline btn-sm">
                                 View
                             </a>
+
+                            @if (r.Status == RequestStatus.Completed ||
+                                 r.Status == RequestStatus.Cancelled)
+                            {
+                                <a asp-action="Rebook"
+                                   asp-route-id="@r.RequestId"
+                                   class="btn-primary btn-sm"
+                                   style="margin-left:4px">
+                                    Re-book
+                                </a>
+                            }
                         </td>
                     </tr>
                 }
