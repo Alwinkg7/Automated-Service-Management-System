@@ -114,4 +114,46 @@ namespace ServiceApp.Core.Interfaces
         // Gateways retry webhooks on timeout — we must not double-process.
         Task<Payment?> GetByGatewayTransactionIdAsync(string transactionId);
     }
+
+    public interface IWithdrawalRepository : IRepository<TechnicianWithdrawal>
+    {
+        Task<IEnumerable<TechnicianWithdrawal>> GetByTechnicianAsync(
+            string technicianUserId);
+
+        Task<IEnumerable<TechnicianWithdrawal>> GetAllPendingAsync();
+
+        Task<decimal> GetTotalWithdrawnAsync(string technicianUserId);
+    }
+
+    public interface IPromoCodeRepository : IRepository<PromoCode>
+    {
+        Task<PromoCode?> GetByCodeAsync(string code);
+        Task<bool> HasCustomerUsedCodeAsync(string customerId, int promoCodeId);
+        Task<bool> IsFirstBookingAsync(string customerId);
+        Task AddUsageAsync(PromoUsage usage);
+    }
+
+    public interface ILoyaltyRepository : IRepository<LoyaltyLedger>
+    {
+        Task<int> GetPointsBalanceAsync(string customerId);
+        Task<IEnumerable<LoyaltyLedger>> GetHistoryAsync(
+            string customerId);
+        Task ExpireOldPointsAsync();
+    }
+
+    public interface IReferralRepository : IRepository<ReferralCode>
+    {
+        Task<ReferralCode?> GetByCodeAsync(string code);
+        Task<ReferralCode?> GetByOwnerAsync(string ownerId);
+        Task<string> GenerateUniqueCodeAsync(string ownerId);
+    }
+
+    public interface IDisputeRepository : IRepository<Dispute>
+    {
+        Task<IEnumerable<Dispute>> GetAllWithDetailsAsync();
+        Task<IEnumerable<Dispute>> GetByStatusAsync(string status);
+        Task<Dispute?> GetWithDetailsAsync(int disputeId);
+        Task<IEnumerable<Dispute>> GetSlaBreachedAsync();
+        Task<Dispute?> GetByRequestIdAsync(int requestId);
+    }
 }

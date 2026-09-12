@@ -1,0 +1,251 @@
+﻿@model ServiceApp.Web.Areas.Customer.Models.PromotionsViewModel
+@{
+    ViewData["Title"] = "Rewards & promotions";
+}
+
+<div class="page-header">
+    <h2>Rewards &amp; promotions</h2>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr;
+            gap:20px; align-items:start">
+
+    @* ── Left column ─────────────────────────────────────────── *@
+    <div style="display:flex; flex-direction:column; gap:16px">
+
+        @* Points balance card *@
+        <div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);
+                    border-radius:var(--radius-lg); padding:24px;
+                    color:#fff">
+            <p style="font-size:13px; opacity:.8; margin-bottom:6px">
+                Your loyalty points
+            </p>
+            <p style="font-size:48px; font-weight:700; line-height:1;
+                      margin-bottom:8px">
+                @Model.PointsBalance
+                <span style="font-size:18px; font-weight:400;
+                             opacity:.8">
+                    pts
+                </span>
+            </p>
+            <p style="font-size:14px; opacity:.85">
+                Worth ₹@(Model.PointsValue.ToString("N2")) in discounts
+            </p>
+            <div style="margin-top:12px; padding-top:12px;
+                        border-top:1px solid rgba(255,255,255,.2);
+                        font-size:12px; opacity:.75">
+                100 points = ₹10 discount · Points expire in 12 months
+            </div>
+        </div>
+
+        @* How to earn more *@
+        <div class="form-card" style="padding:16px">
+            <h4 style="font-size:13px; font-weight:600;
+                       margin-bottom:12px">
+                How to earn points
+            </h4>
+            <div style="display:flex; flex-direction:column; gap:10px">
+                @{
+                    var ways = new[]
+                    {
+                        ("💳", "Pay for a service",
+                         "Earn 1 point per ₹10 spent automatically"),
+                        ("👥", "Refer a friend",
+                         "Get 200 points when they sign up with your code"),
+                        ("⭐", "Leave a rating",
+                         "Rating submitted — points awarded on payment"),
+                    };
+                }
+                @foreach (var (icon, title, desc) in ways)
+                {
+                    <div style="display:flex; gap:12px;
+                                align-items:flex-start">
+                        <span style="font-size:20px;
+                                     flex-shrink:0">@icon</span>
+                        <div>
+                            <p style="font-size:13px; font-weight:500;
+                                      margin-bottom:1px">@title</p>
+                            <p style="font-size:12px;
+                                      color:var(--text-secondary)">
+                                @desc
+                            </p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* Check promo code *@
+        <div class="form-card" style="padding:16px">
+            <h4 style="font-size:13px; font-weight:600;
+                       margin-bottom:10px">
+                Check a promo code
+            </h4>
+            <form asp-action="CheckPromo" method="post">
+                @Html.AntiForgeryToken()
+                <div style="display:flex; gap:8px; margin-bottom:10px">
+                    <input name="promoCode"
+                           class="form-control"
+                           placeholder="Enter code e.g. SAVE100"
+                           style="flex:1; text-transform:uppercase" />
+                    <button type="submit" class="btn-primary">
+                        Check
+                    </button>
+                </div>
+                <input name="billAmount" type="hidden" value="500" />
+            </form>
+
+            @if (!string.IsNullOrEmpty(Model.PromoMessage))
+            {
+                <div style="padding:10px 12px; border-radius:8px;
+                            font-size:13px; font-weight:500;
+                            @(Model.PromoValid
+                                ? "background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7"
+                                : "background:#FEE2E2;color:#7F1D1D;border:1px solid #FCA5A5")">
+                    @(Model.PromoValid ? "✓" : "✗") @Model.PromoMessage
+                </div>
+            }
+        </div>
+    </div>
+
+    @* ── Right column ─────────────────────────────────────────── *@
+    <div style="display:flex; flex-direction:column; gap:16px">
+
+        @* Referral code *@
+        <div class="form-card" style="padding:20px">
+            <h4 style="font-size:14px; font-weight:600;
+                       margin-bottom:6px">
+                Your referral code
+            </h4>
+            <p style="font-size:12px; color:var(--text-secondary);
+                      margin-bottom:14px">
+                Share this code with friends. They get 100 bonus points
+                on signup. You get 200 points when they join.
+            </p>
+
+            @* Code display *@
+            <div style="display:flex; align-items:center; gap:10px;
+                        background:var(--bg-page); border-radius:8px;
+                        padding:12px 16px; margin-bottom:12px;
+                        border:1.5px dashed var(--border-dark)">
+                <span id="refCode"
+                      style="font-size:22px; font-weight:700;
+                             font-family:monospace; letter-spacing:3px;
+                             color:var(--primary); flex:1">
+                    @Model.ReferralCode
+                </span>
+                <button type="button"
+                        onclick="copyCode()"
+                        class="btn-outline btn-sm"
+                        id="copyBtn">
+                    Copy
+                </button>
+            </div>
+
+            @* Share message *@
+            <div style="background:var(--bg-page);
+                        border-radius:8px; padding:12px;
+                        font-size:12px; color:var(--text-secondary);
+                        line-height:1.6; border:0.5px solid var(--border)">
+                "Hey! I use ServiceApp for home services — 
+                electricians, plumbers, cleaners. 
+                Sign up with my code
+                <strong>@Model.ReferralCode</strong>
+                and get 100 bonus loyalty points!
+                serviceapp.com/signup"
+            </div>
+        </div>
+
+        @* Points history *@
+        <div class="table-card">
+            <div class="table-card-header">
+                <h3>Points history</h3>
+            </div>
+
+            @if (!Model.PointsHistory.Any())
+            {
+                <div class="empty-state"
+                     style="border:none; padding:24px">
+                    <p>No points transactions yet.
+                       Complete a booking to start earning!</p>
+                </div>
+            }
+            else
+            {
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Note</th>
+                            <th>Points</th>
+                            <th>Expires</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var h in Model.PointsHistory)
+                        {
+                            var isPositive = h.Points > 0;
+                            <tr>
+                                <td style="font-size:12px;
+                                           color:var(--text-secondary);
+                                           white-space:nowrap">
+                                    @(h.TransactedAt
+                                        .ToString("dd MMM yyyy"))
+                                </td>
+                                <td>
+                                    <span style="font-size:11px;
+                                                 padding:2px 8px;
+                                                 border-radius:20px;
+                                                 font-weight:500;
+                                                 @(h.TransactionType == "Earned" || h.TransactionType == "Referral"
+                                                   ? "background:#D1FAE5;color:#065F46"
+                                                   : h.TransactionType == "Redeemed"
+                                                     ? "background:#DBEAFE;color:#1E40AF"
+                                                     : "background:#FEE2E2;color:#7F1D1D")">
+                                        @h.TransactionType
+                                    </span>
+                                </td>
+                                <td style="font-size:12px;
+                                           color:var(--text-secondary);
+                                           max-width:200px">
+                                    @h.Note
+                                </td>
+                                <td style="font-weight:600;
+                                           font-size:14px;
+                                           @(isPositive
+                                             ? "color:var(--success)"
+                                             : "color:var(--danger)")">
+                                    @(isPositive ? "+" : "")@h.Points
+                                </td>
+                                <td style="font-size:11px;
+                                           color:var(--text-muted)">
+                                    @(h.ExpiresAt.Year > 2100
+                                        ? "Never"
+                                        : h.ExpiresAt.ToString("dd MMM yyyy"))
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function copyCode() {
+        var code = document.getElementById('refCode').textContent.trim();
+        navigator.clipboard.writeText(code).then(function() {
+            var btn = document.getElementById('copyBtn');
+            btn.textContent = 'Copied!';
+            btn.style.color = 'var(--success)';
+            setTimeout(function() {
+                btn.textContent = 'Copy';
+                btn.style.color = '';
+            }, 2000);
+        });
+    }
+</script>
+}

@@ -1,0 +1,134 @@
+﻿@model IEnumerable<ServiceApp.Core.Entities.Dispute>
+@{
+    ViewData["Title"] = "My disputes";
+}
+
+<div class="page-header">
+    <h2>My disputes</h2>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <span class="empty-icon">✓</span>
+        <h3>No disputes</h3>
+        <p>You haven't raised any disputes.</p>
+    </div>
+}
+else
+{
+    <div style="display:flex; flex-direction:column; gap:12px">
+        @foreach (var d in Model)
+        {
+            var statusColor = d.Status switch
+            {
+                "Resolved"    => "var(--success)",
+                "UnderReview" => "#7C3AED",
+                _             => "#D97706"
+            };
+            <div style="background:var(--bg-white);
+                        border-radius:var(--radius-lg);
+                        border:1px solid var(--border);
+                        padding:16px 18px">
+
+                <div style="display:flex;
+                            justify-content:space-between;
+                            align-items:flex-start;
+                            margin-bottom:10px">
+                    <div>
+                        <span style="font-size:12px;
+                                     color:var(--text-muted)">
+                            Dispute #@d.DisputeId ·
+                            Request #@d.RequestId
+                        </span>
+                        <p style="font-size:14px; font-weight:600;
+                                  margin-top:2px">
+                            @d.Reason.Replace("_", " ")
+                        </p>
+                    </div>
+                    <span style="font-size:11px; padding:3px 10px;
+                                 border-radius:20px; font-weight:600;
+                                 background:@(statusColor)20;
+                                 color:@statusColor">
+                        @d.Status
+                    </span>
+                </div>
+
+                <p style="font-size:13px; color:var(--text-secondary);
+                          line-height:1.5; margin-bottom:10px">
+                    @(d.Description.Length > 120
+                        ? d.Description.Substring(0, 120) + "…"
+                        : d.Description)
+                </p>
+
+                <div style="display:flex; gap:16px; flex-wrap:wrap;
+                            font-size:12px; color:var(--text-secondary);
+                            margin-bottom:12px">
+                    <span>
+                        Raised:
+                        @(d.RaisedAt.ToString("dd MMM yyyy, hh:mm tt"))
+                    </span>
+
+                    @if (d.Status != "Resolved")
+                    {
+                        @if (d.IsSlaBreached)
+                        {
+                            <span style="color:var(--danger);
+                                         font-weight:500">
+                                ⚠ SLA breached
+                            </span>
+                        }
+                        else
+                        {
+                            <span>
+                                SLA:
+                                @(d.HoursUntilSla > 0
+                                    ? d.HoursUntilSla.ToString("F0") + "h remaining"
+                                    : "Breach imminent")
+                            </span>
+                        }
+                    }
+                    else
+                    {
+                        <span>
+                            Resolved:
+                            @(d.ResolvedAt?.ToString("dd MMM yyyy") ?? "—")
+                        </span>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(d.AdminNote))
+                {
+                    <div style="background:var(--bg-page);
+                                border-radius:6px; padding:8px 12px;
+                                font-size:12px; color:var(--text-secondary);
+                                margin-bottom:10px">
+                        <strong style="color:var(--text-primary)">
+                            Admin note:
+                        </strong>
+                        @d.AdminNote
+                    </div>
+                }
+
+                @if (d.RefundIssued)
+                {
+                    <div style="background:#D1FAE5;
+                                border:1px solid #6EE7B7;
+                                border-radius:6px; padding:8px 12px;
+                                font-size:12px; color:#065F46;
+                                margin-bottom:10px">
+                        ✓ Refund of
+                        ₹@(d.RefundAmount?.ToString("N2"))
+                        issued · Ref: @d.RazorpayRefundId
+                    </div>
+                }
+
+                <a asp-action="Details"
+                   asp-route-id="@d.DisputeId"
+                   class="btn-outline btn-sm">
+                    View details
+                </a>
+            </div>
+        }
+    </div>
+}

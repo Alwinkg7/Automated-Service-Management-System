@@ -40,6 +40,12 @@ namespace ServiceApp.Core.Interfaces
         IServiceHistoryRepository ServiceHistories { get; }
         IBillRepository Bills { get; }
         IPaymentRepository Payments { get; }
+        IServiceZoneRepository ServiceZones { get; }
+        IWithdrawalRepository Withdrawals { get; }
+        IPromoCodeRepository PromoCodes { get; }
+        ILoyaltyRepository Loyalty { get; }
+        IReferralRepository Referrals { get; }
+        IDisputeRepository Disputes { get; }
 
         // Save all pending changes (INSERTs, UPDATEs, DELETEs)
         // Use this for simple single-step operations

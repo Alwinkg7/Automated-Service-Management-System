@@ -20,6 +20,9 @@ using ServiceApp.Core.Common;
 using ServiceApp.Core.Interfaces;
 using System.Security.Cryptography;
 using System.Text;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace ServiceApp.Infrastructure
 {
@@ -141,6 +144,119 @@ namespace ServiceApp.Infrastructure
                     orderId);
                 return false;
             }
+        }
+
+        // =============================================================
+        //  REFUND PAYMENT
+        //  Issues a refund against an existing Razorpay payment ID.
+        //  Amount is in rupees — we convert to paise internally.
+        //  Returns the Razorpay refund ID on success.
+        //  Throws RazorpayException on failure — caller must handle.
+        // =============================================================
+        public async Task<string> RefundPaymentAsync(
+            string paymentId,
+            decimal amount,
+            string reason)
+        {
+            // ================================================================
+
+            var amountPaise = (long)(amount * 100);
+            var url = $"https://api.razorpay.com/v1/payments/{paymentId}/refund";
+
+            // Basic auth — base64(KeyId:KeySecret)
+            var credentials = Convert.ToBase64String(
+                System.Text.Encoding.UTF8.GetBytes(
+                    $"{_settings.KeyId}:{_settings.KeySecret}"));
+
+            // Build JSON body
+            var body = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                amount = amountPaise,
+                notes = new { reason = reason }
+            });
+
+            using var http = new HttpClient();
+            using var request = new HttpRequestMessage(System.Net.Http.HttpMethod.Post, url);
+
+            request.Headers.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue(
+                    "Basic", credentials);
+
+            request.Content = new StringContent(
+                body,
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            _logger.LogInformation(
+                "Calling Razorpay refund API for payment {PaymentId}, " +
+                "amount ₹{Amount} ({Paise} paise)",
+                paymentId, amount, amountPaise);
+
+            HttpResponseMessage response;
+            string responseBody;
+
+            try
+            {
+                response = await http.SendAsync(request);
+                responseBody = await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "HTTP call to Razorpay refund API failed for {PaymentId}",
+                    paymentId);
+                throw new InvalidOperationException(
+                    "Could not connect to Razorpay. " +
+                    "Check your internet connection and try again.", ex);
+            }
+
+            _logger.LogInformation(
+                "Razorpay refund API response: {StatusCode} — {Body}",
+                (int)response.StatusCode, responseBody);
+
+            // Parse the response
+            var json = System.Text.Json.JsonDocument.Parse(responseBody).RootElement;
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // Extract Razorpay error description
+                var errorDesc = "Unknown error";
+                if (json.TryGetProperty("error", out var errorEl))
+                {
+                    if (errorEl.TryGetProperty("description", out var desc))
+                        errorDesc = desc.GetString() ?? errorDesc;
+                    else if (errorEl.TryGetProperty("code", out var code))
+                        errorDesc = code.GetString() ?? errorDesc;
+                }
+
+                _logger.LogError(
+                    "Razorpay refund failed for {PaymentId}. " +
+                    "Status: {Status}. Error: {Error}",
+                    paymentId, (int)response.StatusCode, errorDesc);
+
+                throw new InvalidOperationException(
+                    $"Razorpay refund failed: {errorDesc}");
+            }
+
+            // Extract refund ID from response
+            if (!json.TryGetProperty("id", out var refundIdEl))
+            {
+                _logger.LogError(
+                    "Razorpay refund response had no 'id' field. " +
+                    "Body: {Body}", responseBody);
+                throw new InvalidOperationException(
+                    "Razorpay returned an unexpected response. " +
+                    "Check your dashboard to confirm refund status.");
+            }
+
+            var refundId = refundIdEl.GetString()!;
+
+            _logger.LogInformation(
+                "Razorpay refund successful. RefundId: {RefundId}, " +
+                "PaymentId: {PaymentId}, Amount: ₹{Amount}",
+                refundId, paymentId, amount);
+
+            return refundId;
         }
     }
 }

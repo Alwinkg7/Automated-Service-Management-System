@@ -49,6 +49,13 @@ namespace ServiceApp.Data.Context
         public DbSet<Bill> Bills => Set<Bill>();
         public DbSet<BillItem> BillItems => Set<BillItem>();
         public DbSet<Payment> Payments => Set<Payment>();
+        public DbSet<ServiceZone> ServiceZones => Set<ServiceZone>();
+        public DbSet<TechnicianWithdrawal> TechnicianWithdrawals => Set<TechnicianWithdrawal>();
+        public DbSet<PromoCode> PromoCodes => Set<PromoCode>();
+        public DbSet<PromoUsage> PromoUsages => Set<PromoUsage>();
+        public DbSet<LoyaltyLedger> LoyaltyLedger => Set<LoyaltyLedger>();
+        public DbSet<ReferralCode> ReferralCodes => Set<ReferralCode>();
+        public DbSet<Dispute> Disputes => Set<Dispute>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -66,6 +73,125 @@ namespace ServiceApp.Data.Context
             ConfigureBill(builder);
             ConfigureBillItem(builder);
             ConfigurePayment(builder);
+            builder.Entity<ServiceZone>(e =>
+            {
+                e.HasKey(z => z.ZoneId);
+                e.Property(z => z.ZoneName).HasMaxLength(100).IsRequired();
+                e.Property(z => z.City).HasMaxLength(100).IsRequired();
+                e.Property(z => z.State).HasMaxLength(100).IsRequired();
+                e.Property(z => z.PinCodes).HasMaxLength(2000).IsRequired();
+                e.HasIndex(z => z.ZoneName).IsUnique();
+            });
+
+            builder.Entity<TechnicianWithdrawal>(e =>
+            {
+                e.HasKey(w => w.WithdrawalId);
+                e.Property(w => w.Amount)
+                    .HasColumnType("decimal(18,2)");
+                e.Property(w => w.Status)
+                    .HasMaxLength(20)
+                    .HasDefaultValue("Pending");
+                e.Property(w => w.UpiId)
+                    .HasMaxLength(200);
+                e.Property(w => w.AdminNote)
+                    .HasMaxLength(500);
+                e.HasOne(w => w.Technician)
+                    .WithMany()
+                    .HasForeignKey(w => w.TechnicianUserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasIndex(w => w.TechnicianUserId);
+                e.HasIndex(w => w.Status);
+            });
+
+            builder.Entity<PromoCode>(e =>
+            {
+                e.HasKey(p => p.PromoCodeId);
+                e.Property(p => p.Code)
+                    .HasMaxLength(50).IsRequired();
+                e.HasIndex(p => p.Code).IsUnique();
+                e.Property(p => p.DiscountValue)
+                    .HasColumnType("decimal(18,2)");
+                e.Property(p => p.MaxDiscount)
+                    .HasColumnType("decimal(18,2)");
+                e.Property(p => p.MinimumAmount)
+                    .HasColumnType("decimal(18,2)");
+                e.Property(p => p.DiscountType)
+                    .HasMaxLength(20);
+                e.Property(p => p.Description)
+                    .HasMaxLength(300);
+            });
+
+            builder.Entity<PromoUsage>(e =>
+            {
+                e.HasKey(p => p.PromoUsageId);
+                e.Property(p => p.DiscountApplied)
+                    .HasColumnType("decimal(18,2)");
+                e.HasOne(p => p.PromoCode)
+                    .WithMany(c => c.Usages)
+                    .HasForeignKey(p => p.PromoCodeId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(p => p.Customer)
+                    .WithMany()
+                    .HasForeignKey(p => p.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                e.HasIndex(p => new { p.CustomerId, p.PromoCodeId });
+            });
+
+            builder.Entity<LoyaltyLedger>(e =>
+            {
+                e.HasKey(l => l.LedgerId);
+                e.Property(l => l.TransactionType).HasMaxLength(30);
+                e.Property(l => l.Note).HasMaxLength(300);
+                e.HasOne(l => l.Customer)
+                    .WithMany()
+                    .HasForeignKey(l => l.CustomerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasIndex(l => l.CustomerId);
+                e.HasIndex(l => l.ExpiresAt);
+            });
+
+            builder.Entity<ReferralCode>(e =>
+            {
+                e.HasKey(r => r.ReferralCodeId);
+                e.Property(r => r.Code).HasMaxLength(20).IsRequired();
+                e.HasIndex(r => r.Code).IsUnique();
+                e.HasOne(r => r.Owner)
+                    .WithMany()
+                    .HasForeignKey(r => r.OwnerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<Dispute>(e =>
+            {
+                e.HasKey(d => d.DisputeId);
+                e.Property(d => d.Reason)
+                    .HasMaxLength(50).IsRequired();
+                e.Property(d => d.Description)
+                    .HasMaxLength(2000).IsRequired();
+                e.Property(d => d.Status)
+                    .HasMaxLength(20).HasDefaultValue("Open");
+                e.Property(d => d.Resolution)
+                    .HasMaxLength(30);
+                e.Property(d => d.AdminNote)
+                    .HasMaxLength(1000);
+                e.Property(d => d.RefundAmount)
+                    .HasColumnType("decimal(18,2)");
+                e.Property(d => d.RazorpayRefundId)
+                    .HasMaxLength(100);
+
+                e.HasOne(d => d.ServiceRequest)
+                    .WithMany()
+                    .HasForeignKey(d => d.RequestId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(d => d.RaisedBy)
+                    .WithMany()
+                    .HasForeignKey(d => d.RaisedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasIndex(d => d.Status);
+                e.HasIndex(d => d.RaisedAt);
+            });
         }
 
         // =============================================================

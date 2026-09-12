@@ -84,6 +84,19 @@
                         View details
                     </a>
 
+                    @* Track technician — only when job is InProgress *@
+                    @if (r.Status == RequestStatus.InProgress)
+                    {
+                        <a asp-area="Customer"
+                           asp-controller="Tracking"
+                           asp-action="Map"
+                           asp-route-requestId="@r.RequestId"
+                           class="btn-primary btn-sm"
+                           style="background:#059669; border-color:#059669">
+                            📍 Track technician
+                        </a>
+                    }
+
                     @* Pay now — only when technician has created bill *@
                     @if (r.Status == RequestStatus.Billed)
                     {

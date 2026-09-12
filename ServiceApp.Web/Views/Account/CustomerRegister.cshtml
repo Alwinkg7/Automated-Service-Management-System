@@ -66,6 +66,24 @@
             <span asp-validation-for="ConfirmPassword" class="field-error"></span>
         </div>
 
+        <div class="form-group">
+            <label asp-for="ReferralCode">
+                Referral code
+                <span style="font-size:11px; font-weight:400;
+                             color:var(--text-muted)">(optional)</span>
+            </label>
+            <input asp-for="ReferralCode"
+                   class="form-control"
+                   placeholder="e.g. REFABC123"
+                   style="max-width:220px;
+                          text-transform:uppercase;
+                          font-family:monospace" />
+            <span class="form-hint">
+                Got a referral code from a friend?
+                Enter it here to get 100 bonus points.
+            </span>
+        </div>
+
         <button type="submit" class="btn-submit">
             Create customer account
         </button>

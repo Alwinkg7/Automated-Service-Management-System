@@ -1,0 +1,389 @@
+﻿@model ServiceApp.Web.Areas.Technician.Models.EarningsViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "My wallet";
+    var monthLabels  = JsonSerializer.Serialize(Model.MonthLabels);
+    var grossValues  = JsonSerializer.Serialize(Model.GrossValues);
+    var netValues    = JsonSerializer.Serialize(Model.NetValues);
+    var dayLabels    = JsonSerializer.Serialize(Model.DayLabels);
+    var dayValues    = JsonSerializer.Serialize(Model.DayValues);
+}
+
+<div class="page-header">
+    <h2>My wallet</h2>
+    <a asp-action="Withdraw"
+       class="btn-primary"
+       style="@(Model.AvailableToWithdraw <= 0
+           ? "opacity:.5;pointer-events:none" : "")">
+        Request withdrawal
+    </a>
+</div>
+
+@* ── Summary stat cards ───────────────────────────────────────── *@
+<div style="display:grid; grid-template-columns:repeat(4,1fr);
+            gap:12px; margin-bottom:24px">
+
+    <div class="stat-card">
+        <span class="stat-label">Net earnings (all time)</span>
+        <span class="stat-value" style="color:var(--success)">
+            ₹@(Model.NetEarningsAllTime.ToString("N2"))
+        </span>
+        <span style="font-size:11px; color:var(--text-muted)">
+            Gross: ₹@(Model.GrossEarningsAllTime.ToString("N2"))
+        </span>
+    </div>
+
+    <div class="stat-card">
+        <span class="stat-label">This month</span>
+        <span class="stat-value" style="color:var(--primary)">
+            ₹@(Model.NetEarningsThisMonth.ToString("N2"))
+        </span>
+        <span style="font-size:11px; color:var(--text-muted)">
+            Net after @((Model.CommissionRate * 100).ToString("0"))% commission
+        </span>
+    </div>
+
+    <div class="stat-card">
+        <span class="stat-label">This week</span>
+        <span class="stat-value">
+            ₹@(Model.NetEarningsThisWeek.ToString("N2"))
+        </span>
+    </div>
+
+    <div class="stat-card"
+         style="border-color:var(--primary);
+                background:var(--primary-light)">
+        <span class="stat-label" style="color:var(--primary)">
+            Available to withdraw
+        </span>
+        <span class="stat-value" style="color:var(--primary)">
+            ₹@(Model.AvailableToWithdraw.ToString("N2"))
+        </span>
+        @if (Model.PendingWithdrawal > 0)
+        {
+            <span style="font-size:11px; color:var(--text-secondary)">
+                ₹@(Model.PendingWithdrawal.ToString("N2")) pending
+            </span>
+        }
+    </div>
+</div>
+
+@* ── Commission info strip ────────────────────────────────────── *@
+<div style="background:#FEF9C3; border:1px solid #FDE68A;
+            border-radius:var(--radius); padding:12px 16px;
+            margin-bottom:20px; display:flex;
+            align-items:center; gap:12px">
+    <span style="font-size:20px">💡</span>
+    <div>
+        <p style="font-size:13px; font-weight:500; color:#92400E">
+            Commission structure
+        </p>
+        <p style="font-size:12px; color:#78350F">
+            Standard plan: <strong>12% commission</strong> per job.
+            Upgrade to Pro (₹499/month) for
+            <strong>8% commission</strong> and priority matching.
+            Payouts processed within 24 hours of approval.
+        </p>
+    </div>
+</div>
+
+@* ── Charts row ───────────────────────────────────────────────── *@
+<div style="display:grid; grid-template-columns:1fr 1fr;
+            gap:16px; margin-bottom:20px">
+
+    <div class="table-card" style="padding:18px">
+        <h3 style="font-size:14px; font-weight:600;
+                   margin-bottom:14px">
+            Earnings — last 6 months
+        </h3>
+        <div style="position:relative; height:220px">
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+
+    <div class="table-card" style="padding:18px">
+        <h3 style="font-size:14px; font-weight:600;
+                   margin-bottom:14px">
+            Daily earnings — last 30 days
+        </h3>
+        <div style="position:relative; height:220px">
+            <canvas id="dailyChart"></canvas>
+        </div>
+    </div>
+</div>
+
+@* ── Payout history ───────────────────────────────────────────── *@
+<div style="margin-bottom:20px">
+    <div class="table-card">
+        <div class="table-card-header">
+            <h3>
+                Payout history
+                <span style="font-size:12px; font-weight:400;
+                             color:var(--text-muted); margin-left:6px">
+                    @Model.PayoutHistory.Count completed jobs
+                </span>
+            </h3>
+        </div>
+
+        @if (!Model.PayoutHistory.Any())
+        {
+            <div class="empty-state"
+                 style="border:none; padding:30px">
+                <p>No completed jobs yet.</p>
+            </div>
+        }
+        else
+        {
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Job</th>
+                        <th>Customer</th>
+                        <th>Category</th>
+                        <th>Gross</th>
+                        <th>Commission (@((Model.CommissionRate*100).ToString("0"))%)</th>
+                        <th>Net earned</th>
+                        <th>Method</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.PayoutHistory)
+                    {
+                        <tr>
+                            <td style="font-size:12px;
+                                       color:var(--text-muted)">
+                                #@p.RequestId
+                            </td>
+                            <td style="font-size:13px;
+                                       font-weight:500">
+                                @p.CustomerName
+                            </td>
+                            <td>
+                                <span class="category-badge">
+                                    @p.Category
+                                </span>
+                            </td>
+                            <td style="color:var(--text-secondary)">
+                                ₹@(p.GrossAmount.ToString("N2"))
+                            </td>
+                            <td style="color:var(--danger)">
+                                -₹@(p.Commission.ToString("N2"))
+                            </td>
+                            <td style="font-weight:600;
+                                       color:var(--success)">
+                                ₹@(p.NetAmount.ToString("N2"))
+                            </td>
+                            <td style="font-size:12px;
+                                       color:var(--text-secondary)">
+                                @p.PaymentMethod
+                            </td>
+                            <td style="font-size:12px;
+                                       color:var(--text-secondary)">
+                                @(p.PaidAt.ToString("dd MMM yyyy"))
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="background:var(--bg-page)">
+                        <td colspan="3"
+                            style="padding:10px 12px;
+                                   font-weight:600; font-size:13px">
+                            Total
+                        </td>
+                        <td style="padding:10px 12px;
+                                   font-weight:500;
+                                   color:var(--text-secondary)">
+                            ₹@(Model.GrossEarningsAllTime.ToString("N2"))
+                        </td>
+                        <td style="padding:10px 12px;
+                                   font-weight:500; color:var(--danger)">
+                            -₹@(Model.CommissionAllTime.ToString("N2"))
+                        </td>
+                        <td style="padding:10px 12px;
+                                   font-weight:700; color:var(--success);
+                                   font-size:15px">
+                            ₹@(Model.NetEarningsAllTime.ToString("N2"))
+                        </td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        }
+    </div>
+</div>
+
+@* ── Withdrawal requests ──────────────────────────────────────── *@
+@if (Model.WithdrawalRequests.Any())
+{
+    <div class="table-card">
+        <div class="table-card-header">
+            <h3>Withdrawal history</h3>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Amount</th>
+                    <th>UPI ID</th>
+                    <th>Status</th>
+                    <th>Admin note</th>
+                    <th>Requested</th>
+                    <th>Processed</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var w in Model.WithdrawalRequests)
+                {
+                    <tr>
+                        <td style="color:var(--text-muted)">
+                            #@w.Id
+                        </td>
+                        <td style="font-weight:600">
+                            ₹@(w.Amount.ToString("N2"))
+                        </td>
+                        <td style="font-size:12px;
+                                   font-family:monospace">
+                            @w.UpiId
+                        </td>
+                        <td>
+                            @{
+                                var wClass = w.Status switch
+                                {
+                                    "Paid"     => "status-completed",
+                                    "Rejected" => "status-cancelled",
+                                    "Approved" => "status-assigned",
+                                    _          => "status-pending"
+                                };
+                            }
+                            <span class="status-badge @wClass">
+                                @w.Status
+                            </span>
+                        </td>
+                        <td style="font-size:12px;
+                                   color:var(--text-secondary)">
+                            @(w.AdminNote ?? "—")
+                        </td>
+                        <td style="font-size:12px;
+                                   color:var(--text-secondary)">
+                            @(w.RequestedAt.ToString("dd MMM yyyy"))
+                        </td>
+                        <td style="font-size:12px;
+                                   color:var(--text-secondary)">
+                            @(w.ProcessedAt.HasValue
+                                ? w.ProcessedAt.Value
+                                    .ToString("dd MMM yyyy")
+                                : "—")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+    var monthLabels = @Html.Raw(monthLabels);
+    var grossValues = @Html.Raw(grossValues);
+    var netValues   = @Html.Raw(netValues);
+    var dayLabels   = @Html.Raw(dayLabels);
+    var dayValues   = @Html.Raw(dayValues);
+
+    Chart.defaults.font.family =
+        '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+    Chart.defaults.font.size  = 12;
+    Chart.defaults.color      = '#6B7280';
+
+    // Monthly earnings chart — grouped bars (gross vs net)
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'bar',
+        data: {
+            labels:   monthLabels,
+            datasets: [
+                {
+                    label:           'Gross (₹)',
+                    data:            grossValues,
+                    backgroundColor: 'rgba(79,70,229,0.3)',
+                    borderColor:     '#4F46E5',
+                    borderWidth:     1.5,
+                    borderRadius:    4
+                },
+                {
+                    label:           'Net after commission (₹)',
+                    data:            netValues,
+                    backgroundColor: 'rgba(5,150,105,0.7)',
+                    borderRadius:    4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { boxWidth: 12, padding: 10 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: ctx =>
+                            ' ₹' + ctx.parsed.y.toLocaleString('en-IN')
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: {
+                        callback: v =>
+                            '₹' + v.toLocaleString('en-IN')
+                    }
+                }
+            }
+        }
+    });
+
+    // Daily earnings chart — line
+    new Chart(document.getElementById('dailyChart'), {
+        type: 'line',
+        data: {
+            labels:   dayLabels,
+            datasets: [{
+                label:           'Daily gross (₹)',
+                data:            dayValues,
+                borderColor:     '#4F46E5',
+                backgroundColor: 'rgba(79,70,229,0.08)',
+                borderWidth:     2,
+                fill:            true,
+                tension:         0.4,
+                pointRadius:     2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        maxTicksLimit: 8,
+                        maxRotation:   0
+                    }
+                },
+                y: {
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: {
+                        callback: v =>
+                            '₹' + v.toLocaleString('en-IN')
+                    }
+                }
+            }
+        }
+    });
+</script>
+}

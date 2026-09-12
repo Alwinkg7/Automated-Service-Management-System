@@ -1,0 +1,162 @@
+﻿@model ServiceApp.Core.Entities.Dispute
+@{
+    ViewData["Title"] = $"Dispute #{Model.DisputeId}";
+}
+
+<div class="page-header">
+    <div>
+        <h2>Dispute #@Model.DisputeId</h2>
+        <span style="font-size:13px; color:var(--text-secondary)">
+            Request #@Model.RequestId
+        </span>
+    </div>
+    <a asp-action="MyDisputes" class="btn-outline">
+        ← My disputes
+    </a>
+</div>
+
+<div style="max-width:640px">
+    <div class="form-card">
+
+        @* Status timeline *@
+        <div style="display:flex; gap:0; margin-bottom:20px;
+                    padding-bottom:20px;
+                    border-bottom:0.5px solid var(--border)">
+            @foreach (var (step, active) in new[]
+            {
+                ("Raised",       true),
+                ("Under review", Model.Status is "UnderReview" or "Resolved"),
+                ("Resolved",     Model.Status == "Resolved")
+            })
+            {
+                <div style="flex:1; text-align:center; position:relative">
+                    <div style="width:28px; height:28px; border-radius:50%;
+                                margin:0 auto 6px;
+                                display:flex; align-items:center;
+                                justify-content:center; font-size:12px;
+                                @(active
+                                  ? "background:var(--primary);color:#fff"
+                                  : "background:var(--border);color:var(--text-muted)")">
+                        ✓
+                    </div>
+                    <p style="font-size:11px;
+                              @(active
+                                ? "color:var(--primary);font-weight:600"
+                                : "color:var(--text-muted)")">
+                        @step
+                    </p>
+                </div>
+            }
+        </div>
+
+        @* Details *@
+        <div style="display:flex; flex-direction:column; gap:14px">
+            <div>
+                <p style="font-size:11px; font-weight:600;
+                          color:var(--text-secondary);
+                          text-transform:uppercase;
+                          letter-spacing:.5px; margin-bottom:3px">
+                    Reason
+                </p>
+                <span class="category-badge">
+                    @Model.Reason.Replace("_", " ")
+                </span>
+            </div>
+
+            <div>
+                <p style="font-size:11px; font-weight:600;
+                          color:var(--text-secondary);
+                          text-transform:uppercase;
+                          letter-spacing:.5px; margin-bottom:3px">
+                    Your description
+                </p>
+                <p style="font-size:13px; line-height:1.7;
+                          color:var(--text-primary)">
+                    @Model.Description
+                </p>
+            </div>
+
+            <div style="display:grid;
+                        grid-template-columns:1fr 1fr; gap:12px">
+                <div>
+                    <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:.5px; margin-bottom:3px">
+                        Raised
+                    </p>
+                    <p style="font-size:13px">
+                        @(Model.RaisedAt.ToString("dd MMM yyyy, hh:mm tt"))
+                    </p>
+                </div>
+                <div>
+                    <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:.5px; margin-bottom:3px">
+                        SLA deadline
+                    </p>
+                    <p style="font-size:13px;
+                              @(Model.IsSlaBreached
+                                ? "color:var(--danger)"
+                                : "color:var(--text-primary)")">
+                        @(Model.SlaDeadline.ToString("dd MMM yyyy, hh:mm tt"))
+                        @if (Model.IsSlaBreached)
+                        {
+                            <span> — ⚠ Breached</span>
+                        }
+                    </p>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.AdminNote))
+            {
+                <div style="background:var(--bg-page);
+                            border-radius:8px; padding:12px 14px">
+                    <p style="font-size:11px; font-weight:600;
+                              color:var(--text-secondary);
+                              text-transform:uppercase;
+                              letter-spacing:.5px; margin-bottom:4px">
+                        Admin response
+                    </p>
+                    <p style="font-size:13px; line-height:1.6">
+                        @Model.AdminNote
+                    </p>
+                </div>
+            }
+
+            @if (Model.RefundIssued)
+            {
+                <div style="background:#D1FAE5;
+                            border:1px solid #6EE7B7;
+                            border-radius:8px; padding:14px 16px">
+                    <p style="font-size:14px; font-weight:600;
+                              color:#065F46; margin-bottom:6px">
+                        ✓ Refund issued
+                    </p>
+                    <div style="display:flex; flex-direction:column;
+                                gap:4px">
+                        <p style="font-size:13px; color:#047857">
+                            Amount:
+                            <strong>
+                                ₹@(Model.RefundAmount?.ToString("N2"))
+                            </strong>
+                        </p>
+                        <p style="font-size:12px; color:#047857">
+                            Razorpay Ref: @Model.RazorpayRefundId
+                        </p>
+                        <p style="font-size:12px; color:#047857">
+                            Processed:
+                            @(Model.ResolvedAt?.ToString("dd MMM yyyy"))
+                        </p>
+                        <p style="font-size:11px; color:#065F46;
+                                  margin-top:4px">
+                            Refunds typically appear in 5–7 business days
+                            depending on your bank.
+                        </p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

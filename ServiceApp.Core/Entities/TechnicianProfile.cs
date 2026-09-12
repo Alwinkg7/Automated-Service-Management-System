@@ -71,5 +71,8 @@ namespace ServiceApp.Core.Entities
         // All bills this technician has created
         public virtual ICollection<Bill> Bills { get; set; }
             = new List<Bill>();
+
+        public int? ServiceZoneId { get; set; }
+        public ServiceZone? ServiceZone { get; set; }
     }
 }

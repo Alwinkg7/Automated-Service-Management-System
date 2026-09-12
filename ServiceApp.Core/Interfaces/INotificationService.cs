@@ -76,5 +76,13 @@ namespace ServiceApp.Core.Interfaces
         Task NotifyAdminStatusChangedAsync(
             int requestId,
             string newStatus);
+
+        // Push a location update from server side
+        // (for cases where location comes via API not direct hub call)
+        Task PushLocationUpdateAsync(
+            string customerId,
+            int requestId,
+            double lat,
+            double lng);
     }
 }

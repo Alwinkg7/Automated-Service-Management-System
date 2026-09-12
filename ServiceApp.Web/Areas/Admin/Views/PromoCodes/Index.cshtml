@@ -1,0 +1,118 @@
+﻿@model IEnumerable<ServiceApp.Core.Entities.PromoCode>
+@{
+    ViewData["Title"] = "Promo codes";
+}
+
+<div class="page-header">
+    <h2>Promo codes</h2>
+    <a asp-action="Create" class="btn-primary">+ Create code</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <span class="empty-icon">🎟</span>
+        <h3>No promo codes</h3>
+        <p>Create discount codes for your customers.</p>
+        <a asp-action="Create" class="btn-primary">
+            Create first code
+        </a>
+    </div>
+}
+else
+{
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Type</th>
+                    <th>Discount</th>
+                    <th>Min amount</th>
+                    <th>Used</th>
+                    <th>Expires</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model)
+                {
+                    <tr style="@(!c.IsActive ? "opacity:.55" : "")">
+                        <td>
+                            <span style="font-family:monospace;
+                                         font-weight:700;
+                                         font-size:14px;
+                                         color:var(--primary)">
+                                @c.Code
+                            </span>
+                        </td>
+                        <td>
+                            <span class="category-badge">
+                                @c.DiscountType
+                            </span>
+                        </td>
+                        <td style="font-weight:500">
+                            @if (c.DiscountType == "Percentage")
+                            {
+                                <span>@c.DiscountValue%</span>
+                                @if (c.MaxDiscount.HasValue)
+                                {
+                                    <span style="font-size:11px;
+                                                 color:var(--text-muted)">
+                                        (max ₹@c.MaxDiscount)
+                                    </span>
+                                }
+                            }
+                            else
+                            {
+                                <span>₹@(c.DiscountValue.ToString("N0"))</span>
+                            }
+                        </td>
+                        <td style="color:var(--text-secondary)">
+                            ₹@(c.MinimumAmount.ToString("N0"))
+                        </td>
+                        <td>
+                            @c.UsedCount
+                            @if (c.MaxUses.HasValue)
+                            {
+                                <span style="color:var(--text-muted);
+                                             font-size:12px">
+                                    / @c.MaxUses
+                                </span>
+                            }
+                        </td>
+                        <td style="font-size:12px;
+                                   color:var(--text-secondary)">
+                            @(c.ExpiresAt.HasValue
+                                ? c.ExpiresAt.Value.ToString("dd MMM yyyy")
+                                : "Never")
+                        </td>
+                        <td>
+                            <span style="font-size:11px;
+                                         padding:2px 8px;
+                                         border-radius:20px;
+                                         font-weight:600;
+                                         @(c.IsActive
+                                           ? "background:var(--success-light);color:var(--success)"
+                                           : "background:#FEE2E2;color:var(--danger)")">
+                                @(c.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </td>
+                        <td>
+                            <form asp-action="Toggle"
+                                  asp-route-id="@c.PromoCodeId"
+                                  method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit"
+                                        class="btn-outline btn-sm">
+                                    @(c.IsActive ? "Deactivate" : "Activate")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -40,5 +40,8 @@ namespace ServiceApp.Web.ViewModels.Auth
         [DataType(DataType.Password)]
         [Display(Name = "Confirm password")]
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        [Display(Name = "Referral code (optional)")]
+        public string? ReferralCode { get; set; }
     }
 }

@@ -100,5 +100,56 @@ namespace ServiceApp.Web.Hubs
 
             await base.OnDisconnectedAsync(exception);
         }
+
+        // =============================================================
+        //  LOCATION SHARING
+        //  Technician calls this every 30 seconds after accepting a job.
+        //  Server broadcasts the location to the customer's group.
+        //
+        //  requestId: identifies which job this location belongs to
+        //  lat/lng:   GPS coordinates from browser Geolocation API
+        // =============================================================
+        public async Task ShareLocation(
+            int requestId,
+            double lat,
+            double lng,
+            string customerId)
+        {
+            var customerGroup = $"customer-{customerId}";
+
+            var payload = new
+            {
+                requestId,
+                lat,
+                lng,
+                timestamp = DateTime.UtcNow
+            };
+
+            // Push location to the customer watching this request
+            await Clients.Group(customerGroup)
+                .SendAsync("LocationUpdate", payload);
+
+            _logger.LogDebug(
+                "Location update for request #{RequestId}: " +
+                "{Lat}, {Lng} → customer {CustomerId}",
+                requestId, lat, lng, customerId);
+        }
+
+        // =============================================================
+        //  STOP SHARING LOCATION
+        //  Called when technician marks job as billed/complete.
+        //  Sends a final signal so customer map stops updating.
+        // =============================================================
+        public async Task StopSharing(int requestId, string customerId)
+        {
+            var customerGroup = $"customer-{customerId}";
+
+            await Clients.Group(customerGroup)
+                .SendAsync("LocationStopped", new { requestId });
+
+            _logger.LogInformation(
+                "Location sharing stopped for request #{RequestId}",
+                requestId);
+        }
     }
 }

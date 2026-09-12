@@ -1,0 +1,68 @@
+﻿@model ServiceApp.Core.Entities.ServiceZone
+@{
+    // For Create.cshtml: ViewData["Title"] = "Create zone";
+    // For Edit.cshtml:   ViewData["Title"] = "Edit zone";
+    bool isEdit = Model.ZoneId > 0;
+    ViewData["Title"] = isEdit ? "Edit zone" : "Create zone";
+}
+
+<div class="page-header">
+    <h2>@ViewData["Title"]</h2>
+    <a asp-action="Index" class="btn-outline">← All zones</a>
+</div>
+
+<div style="max-width:600px">
+    <div class="form-card">
+        <form asp-action="@(isEdit ? "Edit" : "Create")"
+              asp-route-id="@(isEdit ? Model.ZoneId : 0)"
+              method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="form-group">
+                <label>Zone name</label>
+                <input name="ZoneName" value="@Model.ZoneName"
+                       class="form-control"
+                       placeholder="e.g. Thrissur Central" />
+                <span class="form-hint">
+                    Unique name for this service zone
+                </span>
+            </div>
+
+            <div style="display:grid;
+                grid-template-columns:1fr 1fr; gap:14px">
+                <div class="form-group">
+                    <label>City</label>
+                    <input name="City" value="@Model.City"
+                           class="form-control"
+                           placeholder="e.g. Thrissur" />
+                </div>
+                <div class="form-group">
+                    <label>State</label>
+                    <input name="State" value="@Model.State"
+                           class="form-control"
+                           placeholder="e.g. Kerala" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Pin codes</label>
+                <textarea name="PinCodes"
+                          class="form-control"
+                          rows="5"
+                          placeholder="One per line or comma-separated:&#10;680001&#10;680002&#10;680003">@Model.PinCodes.Replace(",", "\n")</textarea>
+                <span class="form-hint">
+                    Enter one pin code per line, or separate by commas.
+                    Requests from these pin codes will be matched to
+                    technicians in this zone.
+                </span>
+            </div>
+
+            <div style="display:flex; gap:10px">
+                <button type="submit" class="btn-primary">
+                    @(isEdit ? "Save changes" : "Create zone")
+                </button>
+                <a asp-action="Index" class="btn-outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

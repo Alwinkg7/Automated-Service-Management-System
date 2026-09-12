@@ -273,7 +273,19 @@
                        margin-bottom:12px">
                 Actions
             </h4>
-
+            @if (Model.Status == RequestStatus.InProgress)
+            {
+                <a asp-area="Customer"
+                    asp-controller="Tracking"
+                    asp-action="Map"
+                    asp-route-requestId="@Model.RequestId"
+                    class="btn-primary"
+                    style="display:block; text-align:center;
+                            margin-bottom:8px;
+                            background:#059669; border-color:#059669">
+                    📍 Track technician live
+                </a>
+            }
             @if (Model.Status == RequestStatus.Billed)
             {
                 <a asp-area="Customer"
@@ -311,6 +323,23 @@
                    style="display:block; text-align:center">
                     Book again
                 </a>
+            }
+
+            @if (Model.Status == RequestStatus.Completed)
+            {
+                @* Check if dispute already exists — pass via ViewBag from controller *@
+                <div style="padding-top:10px;
+                            border-top:0.5px solid var(--border);
+                            margin-top:10px">
+                    <a asp-area="Customer"
+                       asp-controller="Disputes"
+                       asp-action="Raise"
+                       asp-route-requestId="@Model.RequestId"
+                       style="font-size:12px; color:var(--danger);
+                              text-decoration:underline">
+                        Issue with this service? Raise a dispute
+                    </a>
+                </div>
             }
             @if (Model.Status == RequestStatus.Completed && Model.Bill != null)
             {

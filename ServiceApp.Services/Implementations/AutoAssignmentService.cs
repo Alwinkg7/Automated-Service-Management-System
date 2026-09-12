@@ -105,29 +105,19 @@ namespace ServiceApp.Services.Implementations
         // =============================================================
         public async Task<bool> TryAssignRequestAsync(int requestId)
         {
-            // Reload fresh — status may have changed since the batch load
             var request = await _uow.ServiceRequests
                 .GetWithDetailsAsync(requestId);
 
-            if (request == null)
-            {
-                _logger.LogWarning(
-                    "Auto-assign: request #{RequestId} not found", requestId);
+            if (request == null || request.Status != RequestStatus.Pending)
                 return false;
-            }
 
-            // Skip if already assigned (admin may have manually assigned)
-            if (request.Status != RequestStatus.Pending)
-            {
-                _logger.LogDebug(
-                    "Auto-assign: skipping #{RequestId} — status is {Status}",
-                    requestId, request.Status);
-                return false;
-            }
+            // Find which zone the request's pin code belongs to
+            var requestZone = await _uow.ServiceZones
+                .GetByPinCodeAsync(request.PinCode);
 
-            // Find available technicians matching the skill
-            var candidates = await _uow.TechnicianProfiles
-                .GetAvailableBySkillAsync(request.Category);
+            // Get available technicians matching the skill
+            var candidates = (await _uow.TechnicianProfiles
+                .GetAvailableBySkillAsync(request.Category)).ToList();
 
             if (!candidates.Any())
             {
@@ -138,25 +128,67 @@ namespace ServiceApp.Services.Implementations
                 return false;
             }
 
-            // ── Pick the best technician ───────────────────────────
+            // ── Geo-filter ─────────────────────────────────────────────
+            // If request has a known zone, prefer technicians in that zone
+            // Falls back to any available tech if no zone match found
+            List<TechnicianProfile> zoneMatched;
+
+            if (requestZone != null)
+            {
+                // First try: technicians in the same zone
+                zoneMatched = candidates
+                    .Where(t => t.ServiceZoneId == requestZone.ZoneId ||
+                                t.ServiceZoneId == null) // null = serves all zones
+                    .ToList();
+
+                // Also check if technician's ServiceAreaPinCode matches
+                if (!zoneMatched.Any())
+                {
+                    zoneMatched = candidates
+                        .Where(t => !string.IsNullOrEmpty(t.ServiceAreaPinCode)
+                                 && requestZone.ContainsPinCode(
+                                     t.ServiceAreaPinCode))
+                        .ToList();
+                }
+
+                // Last resort: any available tech (zone override)
+                if (!zoneMatched.Any())
+                {
+                    _logger.LogWarning(
+                        "Auto-assign: no zone-matched technician for " +
+                        "request #{RequestId} in zone {Zone}. " +
+                        "Falling back to any available tech.",
+                        requestId, requestZone.ZoneName);
+                    zoneMatched = candidates;
+                }
+            }
+            else
+            {
+                // No zone configured — use all available techs
+                zoneMatched = candidates;
+            }
+
+            // ── Pick best technician ───────────────────────────────────
             // Priority 1: highest rating
-            // Priority 2: fewest total jobs (spread the work fairly)
-            var bestTech = candidates
+            // Priority 2: fewest total jobs (fairness)
+            var bestTech = zoneMatched
                 .OrderByDescending(t => t.Rating)
                 .ThenBy(t => t.TotalJobsCompleted)
                 .First();
 
-            // ── Assign atomically ──────────────────────────────────
+            // ── Assign atomically ──────────────────────────────────────
             await _uow.BeginTransactionAsync();
             try
             {
-                // Update request
                 request.AssignedTechnicianProfileId = bestTech.TechnicianProfileId;
                 request.Status = RequestStatus.Assigned;
                 request.UpdatedAt = DateTime.UtcNow;
                 _uow.ServiceRequests.Update(request);
 
-                // Log history — note it was auto-assigned
+                var zoneNote = requestZone != null
+                    ? $" (Zone: {requestZone.ZoneName})"
+                    : "";
+
                 var history = new ServiceHistory
                 {
                     RequestId = requestId,
@@ -164,7 +196,7 @@ namespace ServiceApp.Services.Implementations
                     ChangedByUserId = "SYSTEM",
                     Note = $"Auto-assigned to {bestTech.User.FullName} " +
                            $"(Rating: {bestTech.Rating:F1}, " +
-                           $"Skill: {bestTech.Skill}) " +
+                           $"Skill: {bestTech.Skill}){zoneNote} " +
                            $"by the auto-assignment engine.",
                     ChangedAt = DateTime.UtcNow
                 };
@@ -174,11 +206,10 @@ namespace ServiceApp.Services.Implementations
 
                 _logger.LogInformation(
                     "Auto-assigned request #{RequestId} ({Category}) " +
-                    "to technician {TechName} (Rating: {Rating})",
-                    requestId,
-                    request.Category,
+                    "to {TechName} in zone {Zone}",
+                    requestId, request.Category,
                     bestTech.User.FullName,
-                    bestTech.Rating);
+                    requestZone?.ZoneName ?? "unzoned");
             }
             catch (Exception ex)
             {
@@ -188,34 +219,23 @@ namespace ServiceApp.Services.Implementations
                 return false;
             }
 
-            // ── Notify via SignalR (after transaction commits) ─────
-            // Fire-and-forget — notification failure must not
-            // affect the assignment result
+            // ── Notify ────────────────────────────────────────────────
             try
             {
                 await _notifications.NotifyTechnicianAssignedAsync(
-                    bestTech.UserId,
-                    requestId,
+                    bestTech.UserId, requestId,
                     request.Category.ToString(),
                     request.Customer?.FullName ?? "Customer",
                     request.Address ?? "");
 
                 await _notifications.NotifyAdminStatusChangedAsync(
                     requestId, "Assigned");
-
-                // Notify the customer their request was picked up
-                await _notifications.NotifyCustomerJobAcceptedAsync(
-                    request.CustomerId,
-                    requestId,
-                    bestTech.User.FullName,
-                    bestTech.User.Phone);
             }
             catch (Exception ex)
             {
-                // Log but don't fail the assignment
                 _logger.LogWarning(ex,
-                    "SignalR notification failed after auto-assign " +
-                    "for request #{RequestId}", requestId);
+                    "Notification failed after auto-assign #{RequestId}",
+                    requestId);
             }
 
             return true;

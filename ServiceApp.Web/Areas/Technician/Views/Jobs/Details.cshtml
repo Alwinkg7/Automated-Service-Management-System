@@ -286,6 +286,49 @@
                 </div>
             }
 
+           @* ── Location sharing — shown only for InProgress jobs ───────── *@
+            @if (Model.Request.Status == RequestStatus.InProgress)
+            {
+                <div style="background:#EEF2FF; border:1px solid #C7D2FE;
+                            border-radius:8px; padding:12px; margin-bottom:12px">
+                    <p style="font-size:12px; font-weight:600;
+                                color:#3730A3; margin-bottom:6px">
+                        📍 Live location sharing
+                    </p>
+                    <p style="font-size:11px; color:#4338CA; margin-bottom:10px">
+                        Share your location so the customer can track you.
+                        Updates every 30 seconds.
+                    </p>
+                    <button id="track-btn"
+                            type="button"
+                            onclick="startTracking()"
+                            class="btn-primary"
+                            style="width:100%; margin-bottom:6px">
+                        Share my location
+                    </button>
+
+                    <div id="track-status" style="display:none">
+                        <div style="display:flex; align-items:center;
+                                    gap:8px; font-size:12px; color:#065F46">
+                            <div style="width:8px; height:8px; border-radius:50%;
+                                        background:var(--success);
+                                        animation:ping 1.5s infinite"></div>
+                            Sharing ·
+                            Last sent: <span id="last-shared">—</span>
+                        </div>
+                        <button type="button"
+                                onclick="stopTracking()"
+                                class="btn-outline btn-sm"
+                                style="width:100%; margin-top:6px">
+                            Stop sharing
+                        </button>
+                    </div>
+
+                    @* Hidden CSRF token for the fetch POST *@
+                    @Html.AntiForgeryToken()
+                </div>
+            }
+
             @* CREATE BILL — for InProgress jobs *@
             @if (Model.CanCreateBill)
             {
@@ -401,3 +444,153 @@
         </div>
     </div>
 </div>
+
+                @section Scripts {
+    @if (Model.Request.Status == RequestStatus.InProgress)
+    {
+        <script>
+            // =========================================================
+            // TECHNICIAN LOCATION SHARING
+            // =========================================================
+
+            var REQUEST_ID = @Model.Request.RequestId;
+            var CUSTOMER_ID = '@Model.Request.CustomerId';
+            var TRACKING_ON = false;
+            var trackInterval = null;
+
+            function startTracking() {
+                if (!navigator.geolocation) {
+                    alert('Location sharing is not supported on this device.');
+                    return;
+                }
+
+                if (TRACKING_ON) return;
+
+                TRACKING_ON = true;
+
+                var btn = document.getElementById('track-btn');
+                var status = document.getElementById('track-status');
+
+                if (btn) {
+                    btn.textContent = '📍 Sharing location...';
+                    btn.style.background = 'var(--success)';
+                }
+
+                if (status) {
+                    status.style.display = 'block';
+                }
+
+                // Send immediately
+                sendLocation();
+
+                // Then every 30 seconds
+                trackInterval = setInterval(sendLocation, 30000);
+            }
+
+            function stopTracking() {
+                TRACKING_ON = false;
+
+                if (trackInterval) {
+                    clearInterval(trackInterval);
+                    trackInterval = null;
+                }
+
+                // Notify customer
+                if (typeof connection !== 'undefined') {
+                    connection.invoke(
+                        'StopSharing',
+                        REQUEST_ID,
+                        CUSTOMER_ID
+                    ).catch(function (e) {
+                        console.warn(e);
+                    });
+                }
+
+                var btn = document.getElementById('track-btn');
+                var status = document.getElementById('track-status');
+
+                if (btn) {
+                    btn.textContent = 'Share my location';
+                    btn.style.background = '';
+                }
+
+                if (status) {
+                    status.style.display = 'none';
+                }
+            }
+
+            function sendLocation() {
+                if (!TRACKING_ON) return;
+
+                navigator.geolocation.getCurrentPosition(
+                    function (pos) {
+
+                        var lat = pos.coords.latitude;
+                        var lng = pos.coords.longitude;
+
+                        var token = document.querySelector(
+                            'input[name="__RequestVerificationToken"]'
+                        );
+
+                        fetch('/Customer/Tracking/UpdateLocation', {
+                            method: 'POST',
+
+                            headers: {
+                                'Content-Type':
+                                    'application/x-www-form-urlencoded',
+
+                                'RequestVerificationToken':
+                                    token ? token.value : ''
+                            },
+
+                            body:
+                                'requestId=' + encodeURIComponent(REQUEST_ID) +
+                                '&lat=' + encodeURIComponent(lat) +
+                                '&lng=' + encodeURIComponent(lng)
+                        })
+                        .then(function (response) {
+                            return response.json();
+                        })
+                        .then(function (data) {
+
+                            if (data.success) {
+
+                                var el =
+                                    document.getElementById('last-shared');
+
+                                if (el) {
+                                    el.textContent =
+                                        new Date().toLocaleTimeString();
+                                }
+                            }
+                        })
+                        .catch(function (error) {
+                            console.warn(
+                                'Location send failed:',
+                                error
+                            );
+                        });
+                    },
+
+                    function (error) {
+                        console.warn(
+                            'Geolocation error:',
+                            error
+                        );
+                    },
+
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000
+                    }
+                );
+            }
+
+            // Stop tracking when leaving the page
+            window.addEventListener(
+                'beforeunload',
+                stopTracking
+            );
+        </script>
+    }
+}

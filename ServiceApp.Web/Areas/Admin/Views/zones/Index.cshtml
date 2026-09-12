@@ -1,0 +1,114 @@
+﻿@model IEnumerable<ServiceApp.Core.Entities.ServiceZone>
+@{
+    ViewData["Title"] = "Service zones";
+}
+
+<div class="page-header">
+    <h2>Service zones</h2>
+    <a asp-action="Create" class="btn-primary">+ Add zone</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <span class="empty-icon">🗺</span>
+        <h3>No zones configured</h3>
+        <p>
+            Create zones to enable geo-matched auto-assignment.
+            Each zone maps a city to a set of pin codes.
+        </p>
+        <a asp-action="Create" class="btn-primary">
+            Create first zone
+        </a>
+    </div>
+}
+else
+{
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Zone name</th>
+                    <th>City</th>
+                    <th>State</th>
+                    <th>Pin codes</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var z in Model)
+                {
+                    <tr>
+                        <td style="font-weight:500">@z.ZoneName</td>
+                        <td>@z.City</td>
+                        <td style="color:var(--text-secondary)">
+                            @z.State
+                        </td>
+                        <td>
+                            <div style="display:flex; flex-wrap:wrap;
+                                gap:4px; max-width:300px">
+                                @foreach (var pin in z.GetPinCodeList()
+                                    .Take(8))
+                                {
+                                    <span style="font-size:11px;
+                                        padding:1px 7px;
+                                        border-radius:20px;
+                                        background:var(--bg-page);
+                                        border:0.5px solid
+                                        var(--border);
+                                        font-family:monospace">
+                                        @pin
+                                    </span>
+                                }
+                                @if (z.GetPinCodeList().Count > 8)
+                                {
+                                    <span style="font-size:11px;
+                                        color:var(--text-muted)">
+                                        +@(z.GetPinCodeList().Count - 8)
+                                        more
+                                    </span>
+                                }
+                            </div>
+                            <p style="font-size:11px;
+                                color:var(--text-muted);
+                                margin-top:4px">
+                                @z.GetPinCodeList().Count pin code(s)
+                            </p>
+                        </td>
+                        <td>
+                            <span style="font-size:11px; padding:2px 8px;
+                                border-radius:20px;
+                                font-weight:600;
+                                @(z.IsActive
+                                  ? "background:var(--success-light);color:var(--success)"
+                                  : "background:#FEE2E2;color:var(--danger)")">
+                                @(z.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display:flex; gap:6px">
+                                <a asp-action="Edit"
+                                   asp-route-id="@z.ZoneId"
+                                   class="btn-outline btn-sm">
+                                    Edit
+                                </a>
+                                <form asp-action="Toggle"
+                                      asp-route-id="@z.ZoneId"
+                                      method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit"
+                                            class="btn-outline btn-sm">
+                                        @(z.IsActive
+                                            ? "Deactivate"
+                                            : "Activate")
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -93,10 +93,38 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a asp-area="Admin"
+                           asp-controller="Withdrawals"
+                           asp-action="Index">
+                            Withdrawals
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Admin"
+                           asp-controller="PromoCodes"
+                           asp-action="Index">
+                            Promo codes
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="/hangfire" target="_blank">
                             ⚙ Job scheduler
                         </a>
                     </li>  
+                    <li class="nav-item">
+                        <a asp-area="Admin"
+                           asp-controller="Zones"
+                           asp-action="Index">
+                            Service zones
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Admin"
+                           asp-controller="Disputes"
+                           asp-action="Index">
+                            Disputes
+                        </a>
+                    </li>
                 }
 
                 @if (User.IsInRole("Customer"))
@@ -131,6 +159,20 @@
                     </li>
                     <li class="nav-item">
                         <a asp-area="Customer"
+                           asp-controller="Promotions"
+                           asp-action="Index">
+                            Rewards
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Customer"
+                           asp-controller="Disputes"
+                           asp-action="MyDisputes">
+                            My disputes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Customer"
                            asp-controller="Profile"
                            asp-action="Index">
                             My profile
@@ -152,6 +194,13 @@
                            asp-controller="Jobs"
                            asp-action="Index">
                             My jobs
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-area="Technician"
+                           asp-controller="Wallet"
+                           asp-action="Index">
+                            My wallet
                         </a>
                     </li>
                     <li class="nav-item">

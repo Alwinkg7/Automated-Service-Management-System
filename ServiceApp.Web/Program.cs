@@ -35,6 +35,7 @@ using Serilog.Events;
 using ServiceApp.Core.Common;
 using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
+using ServiceApp.Core;
 using ServiceApp.Core.Interfaces;
 using ServiceApp.Data;
 using ServiceApp.Data.Context;
@@ -307,7 +308,10 @@ try
     builder.Services.AddScoped<IBillPdfService, BillPdfService>();
     // Auto-assignment service
     builder.Services.AddScoped<IAutoAssignmentService, AutoAssignmentService>();
-
+    // Promotion service
+    builder.Services.AddScoped<IPromotionService, PromotionService>();
+    // Dispute service
+    builder.Services.AddScoped<IDisputeService, DisputeService>();
 
     // ── BUILD the WebApplication ──────────────────────────────────
     var app = builder.Build();

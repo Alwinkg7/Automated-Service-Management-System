@@ -35,14 +35,16 @@ namespace ServiceApp.Services.Implementations
         private readonly IRazorpayService _razorpay;
         private readonly INotificationService _notifications;
         private readonly IEmailService _email;
+        private readonly IPromotionService _promotions;
 
-        public PaymentService(IUnitOfWork uow, ILogger<PaymentService> logger, IRazorpayService razorpay, INotificationService notifications, IEmailService email)
+        public PaymentService(IUnitOfWork uow, ILogger<PaymentService> logger, IRazorpayService razorpay, INotificationService notifications, IEmailService email, IPromotionService promotions)
         {
             _uow = uow;
             _logger = logger;
             _razorpay = razorpay;
             _notifications = notifications;
             _email = email;
+            _promotions = promotions;
         }
 
         // =============================================================
@@ -192,6 +194,11 @@ namespace ServiceApp.Services.Implementations
 
                 // ── Commit all 5 steps together ─────────────────────
                 await _uow.CommitTransactionAsync();
+
+                _ = _promotions.AwardPointsAsync(
+                    request.CustomerId,
+                    bill.ServiceRequestId,
+                    bill.TotalAmount);
 
                 // Load customer and technician info for emails
                 var customerUser = await _uow.Users.GetByIdAsync(request.CustomerId);
@@ -441,6 +448,11 @@ namespace ServiceApp.Services.Implementations
                 await _uow.ServiceHistories.AddAsync(history);
 
                 await _uow.CommitTransactionAsync();
+
+                _ = _promotions.AwardPointsAsync(
+                    request.CustomerId,
+                    bill.ServiceRequestId,
+                    bill.TotalAmount);
 
                 // Load customer and technician info for emails
                 var customerUser = await _uow.Users.GetByIdAsync(request.CustomerId);

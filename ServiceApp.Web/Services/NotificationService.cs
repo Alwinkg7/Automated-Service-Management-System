@@ -209,5 +209,22 @@ namespace ServiceApp.Web.Services
             await _hub.Clients.Group("admin")
                 .SendAsync("StatusChanged", payload);
         }
+
+        public async Task PushLocationUpdateAsync(
+            string customerId,
+            int requestId,
+            double lat,
+            double lng)
+        {
+            var group = $"customer-{customerId}";
+
+            await _hub.Clients.Group(group).SendAsync("LocationUpdate", new
+            {
+                requestId,
+                lat,
+                lng,
+                timestamp = DateTime.UtcNow
+            });
+        }
     }
 }

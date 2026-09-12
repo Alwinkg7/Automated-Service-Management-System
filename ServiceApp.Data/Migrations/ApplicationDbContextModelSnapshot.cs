@@ -17,7 +17,7 @@ namespace ServiceApp.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.29")
+                .HasAnnotation("ProductVersion", "8.0.30")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -403,6 +403,120 @@ namespace ServiceApp.Data.Migrations
                     b.ToTable("CustomerProfiles");
                 });
 
+            modelBuilder.Entity("ServiceApp.Core.Entities.Dispute", b =>
+                {
+                    b.Property<int>("DisputeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DisputeId"));
+
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("RaisedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RaisedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("RazorpayRefundId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal?>("RefundAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("RefundIssued")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("RequestId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Resolution")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("SlaDeadline")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Open");
+
+                    b.HasKey("DisputeId");
+
+                    b.HasIndex("RaisedAt");
+
+                    b.HasIndex("RaisedByUserId");
+
+                    b.HasIndex("RequestId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("Disputes");
+                });
+
+            modelBuilder.Entity("ServiceApp.Core.Entities.LoyaltyLedger", b =>
+                {
+                    b.Property<int>("LedgerId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LedgerId"));
+
+                    b.Property<string>("CustomerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RequestId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("TransactedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("LedgerId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("LoyaltyLedger");
+                });
+
             modelBuilder.Entity("ServiceApp.Core.Entities.Payment", b =>
                 {
                     b.Property<int>("PaymentId")
@@ -445,6 +559,130 @@ namespace ServiceApp.Data.Migrations
                     b.ToTable("Payments");
                 });
 
+            modelBuilder.Entity("ServiceApp.Core.Entities.PromoCode", b =>
+                {
+                    b.Property<int>("PromoCodeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PromoCodeId"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("DiscountType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("MaxDiscount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("MaxUses")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MinimumAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("UsedCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("PromoCodeId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("PromoCodes");
+                });
+
+            modelBuilder.Entity("ServiceApp.Core.Entities.PromoUsage", b =>
+                {
+                    b.Property<int>("PromoUsageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PromoUsageId"));
+
+                    b.Property<string>("CustomerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("DiscountApplied")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("PromoCodeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RequestId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("PromoUsageId");
+
+                    b.HasIndex("PromoCodeId");
+
+                    b.HasIndex("CustomerId", "PromoCodeId");
+
+                    b.ToTable("PromoUsages");
+                });
+
+            modelBuilder.Entity("ServiceApp.Core.Entities.ReferralCode", b =>
+                {
+                    b.Property<int>("ReferralCodeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReferralCodeId"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("TimesUsed")
+                        .HasColumnType("int");
+
+                    b.HasKey("ReferralCodeId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("ReferralCodes");
+                });
+
             modelBuilder.Entity("ServiceApp.Core.Entities.ServiceHistory", b =>
                 {
                     b.Property<int>("HistoryId")
@@ -457,7 +695,8 @@ namespace ServiceApp.Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ChangedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ChangedByUserId")
                         .IsRequired()
@@ -471,9 +710,6 @@ namespace ServiceApp.Data.Migrations
                     b.Property<int>("RequestId")
                         .HasColumnType("int");
 
-                    b.Property<int>("ServiceRequestId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -482,8 +718,6 @@ namespace ServiceApp.Data.Migrations
                     b.HasKey("HistoryId");
 
                     b.HasIndex("RequestId");
-
-                    b.HasIndex("ServiceRequestId");
 
                     b.ToTable("ServiceHistories");
                 });
@@ -559,31 +793,46 @@ namespace ServiceApp.Data.Migrations
                     b.ToTable("ServiceRequests");
                 });
 
-            modelBuilder.Entity("ServiceApp.Core.Entities.StatusHistory", b =>
+            modelBuilder.Entity("ServiceApp.Core.Entities.ServiceZone", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("ZoneId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ZoneId"));
 
-                    b.Property<DateTime>("ChangedAt")
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("ChangedById")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
-                    b.Property<string>("Note")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("PinCodes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
-                    b.Property<int>("ServiceRequestId")
-                        .HasColumnType("int");
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.HasKey("Id");
+                    b.Property<string>("ZoneName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.HasIndex("ServiceRequestId");
+                    b.HasKey("ZoneId");
 
-                    b.ToTable("StatusHistories");
+                    b.HasIndex("ZoneName")
+                        .IsUnique();
+
+                    b.ToTable("ServiceZones");
                 });
 
             modelBuilder.Entity("ServiceApp.Core.Entities.TechnicianProfile", b =>
@@ -612,6 +861,9 @@ namespace ServiceApp.Data.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
+                    b.Property<int?>("ServiceZoneId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Skill")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -634,6 +886,8 @@ namespace ServiceApp.Data.Migrations
 
                     b.HasKey("TechnicianProfileId");
 
+                    b.HasIndex("ServiceZoneId");
+
                     b.HasIndex("Skill");
 
                     b.HasIndex("Status");
@@ -642,6 +896,52 @@ namespace ServiceApp.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("TechnicianProfiles");
+                });
+
+            modelBuilder.Entity("ServiceApp.Core.Entities.TechnicianWithdrawal", b =>
+                {
+                    b.Property<int>("WithdrawalId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("WithdrawalId"));
+
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<string>("TechnicianUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("UpiId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("WithdrawalId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TechnicianUserId");
+
+                    b.ToTable("TechnicianWithdrawals");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -747,6 +1047,36 @@ namespace ServiceApp.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ServiceApp.Core.Entities.Dispute", b =>
+                {
+                    b.HasOne("ServiceApp.Core.Entities.ApplicationUser", "RaisedBy")
+                        .WithMany()
+                        .HasForeignKey("RaisedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ServiceApp.Core.Entities.ServiceRequest", "ServiceRequest")
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RaisedBy");
+
+                    b.Navigation("ServiceRequest");
+                });
+
+            modelBuilder.Entity("ServiceApp.Core.Entities.LoyaltyLedger", b =>
+                {
+                    b.HasOne("ServiceApp.Core.Entities.ApplicationUser", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
             modelBuilder.Entity("ServiceApp.Core.Entities.Payment", b =>
                 {
                     b.HasOne("ServiceApp.Core.Entities.Bill", "Bill")
@@ -758,6 +1088,36 @@ namespace ServiceApp.Data.Migrations
                     b.Navigation("Bill");
                 });
 
+            modelBuilder.Entity("ServiceApp.Core.Entities.PromoUsage", b =>
+                {
+                    b.HasOne("ServiceApp.Core.Entities.ApplicationUser", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ServiceApp.Core.Entities.PromoCode", "PromoCode")
+                        .WithMany("Usages")
+                        .HasForeignKey("PromoCodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("PromoCode");
+                });
+
+            modelBuilder.Entity("ServiceApp.Core.Entities.ReferralCode", b =>
+                {
+                    b.HasOne("ServiceApp.Core.Entities.ApplicationUser", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
             modelBuilder.Entity("ServiceApp.Core.Entities.ServiceHistory", b =>
                 {
                     b.HasOne("ServiceApp.Core.Entities.ServiceRequest", "Request")
@@ -766,15 +1126,7 @@ namespace ServiceApp.Data.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.HasOne("ServiceApp.Core.Entities.ServiceRequest", "ServiceRequest")
-                        .WithMany()
-                        .HasForeignKey("ServiceRequestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Request");
-
-                    b.Navigation("ServiceRequest");
                 });
 
             modelBuilder.Entity("ServiceApp.Core.Entities.ServiceRequest", b =>
@@ -795,26 +1147,32 @@ namespace ServiceApp.Data.Migrations
                     b.Navigation("Customer");
                 });
 
-            modelBuilder.Entity("ServiceApp.Core.Entities.StatusHistory", b =>
-                {
-                    b.HasOne("ServiceApp.Core.Entities.ServiceRequest", "ServiceRequest")
-                        .WithMany()
-                        .HasForeignKey("ServiceRequestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ServiceRequest");
-                });
-
             modelBuilder.Entity("ServiceApp.Core.Entities.TechnicianProfile", b =>
                 {
+                    b.HasOne("ServiceApp.Core.Entities.ServiceZone", "ServiceZone")
+                        .WithMany()
+                        .HasForeignKey("ServiceZoneId");
+
                     b.HasOne("ServiceApp.Core.Entities.ApplicationUser", "User")
                         .WithOne("TechnicianProfile")
                         .HasForeignKey("ServiceApp.Core.Entities.TechnicianProfile", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("ServiceZone");
+
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ServiceApp.Core.Entities.TechnicianWithdrawal", b =>
+                {
+                    b.HasOne("ServiceApp.Core.Entities.ApplicationUser", "Technician")
+                        .WithMany()
+                        .HasForeignKey("TechnicianUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Technician");
                 });
 
             modelBuilder.Entity("ServiceApp.Core.Entities.ApplicationUser", b =>
@@ -833,6 +1191,11 @@ namespace ServiceApp.Data.Migrations
                     b.Navigation("BillItems");
 
                     b.Navigation("Payment");
+                });
+
+            modelBuilder.Entity("ServiceApp.Core.Entities.PromoCode", b =>
+                {
+                    b.Navigation("Usages");
                 });
 
             modelBuilder.Entity("ServiceApp.Core.Entities.ServiceRequest", b =>

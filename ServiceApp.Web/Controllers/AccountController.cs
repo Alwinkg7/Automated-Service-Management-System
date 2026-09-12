@@ -41,6 +41,8 @@ namespace ServiceApp.Web.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IUnitOfWork _uow;
         private readonly ILogger<AccountController> _logger;
+        private readonly IPromotionService _promotions;
+
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
@@ -127,8 +129,16 @@ namespace ServiceApp.Web.Controllers
                     // Address, City etc. filled later on profile page
                 };
 
+                var referralCode = Request.Cookies["referral_code"]
+                    ?? Request.Form["referralCode"].ToString();
+
+                if (!string.IsNullOrEmpty(referralCode))
+                {
+                    _ = _promotions.ApplyReferralCodeAsync(user.Id, referralCode);
+                }
                 await _uow.CustomerProfiles.AddAsync(profile);
                 await _uow.CommitTransactionAsync();
+                _ = _promotions.GetOrCreateReferralCodeAsync(user.Id);
 
                 _logger.LogInformation(
                     "New customer registered: {Email}", user.Email);

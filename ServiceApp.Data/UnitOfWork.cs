@@ -35,6 +35,12 @@ namespace ServiceApp.Data
         private IServiceHistoryRepository? _serviceHistories;
         private IBillRepository? _bills;
         private IPaymentRepository? _payments;
+        private IServiceZoneRepository? _serviceZones;
+        private IWithdrawalRepository? _withdrawals;
+        private IPromoCodeRepository? _promoCodes;
+        private ILoyaltyRepository? _loyalty;
+        private IReferralRepository? _referrals;
+        private IDisputeRepository? _disputes;
 
         public UnitOfWork(ApplicationDbContext context)
         {
@@ -66,6 +72,12 @@ namespace ServiceApp.Data
 
         public IPaymentRepository Payments =>
             _payments ??= new PaymentRepository(_context);
+
+        public IWithdrawalRepository Withdrawals =>
+            _withdrawals ??= new WithdrawalRepository(_context);
+
+        public IDisputeRepository Disputes =>
+            _disputes ??= new DisputeRepository(_context);
 
         // Flush all pending changes to the database
         // Returns number of rows affected
@@ -108,5 +120,13 @@ namespace ServiceApp.Data
             _transaction?.Dispose();
             _context.Dispose();
         }
+        public IServiceZoneRepository ServiceZones =>
+            _serviceZones ??= new ServiceZoneRepository(_context);
+        public IPromoCodeRepository PromoCodes =>
+            _promoCodes ??= new PromoCodeRepository(_context);
+        public ILoyaltyRepository Loyalty =>
+            _loyalty ??= new LoyaltyRepository(_context);
+        public IReferralRepository Referrals =>
+            _referrals ??= new ReferralRepository(_context);
     }
 }

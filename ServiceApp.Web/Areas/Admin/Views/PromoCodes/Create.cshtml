@@ -1,0 +1,124 @@
+﻿@model ServiceApp.Core.Entities.PromoCode
+@{
+    ViewData["Title"] = "Create promo code";
+}
+
+<div class="page-header">
+    <h2>Create promo code</h2>
+    <a asp-action="Index" class="btn-outline">← All codes</a>
+</div>
+
+<div style="max-width:520px">
+    <div class="form-card">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="form-group">
+                <label>Code</label>
+                <input name="Code" class="form-control"
+                       placeholder="e.g. SAVE100"
+                       style="text-transform:uppercase;
+                              max-width:220px;
+                              font-family:monospace;
+                              font-size:16px" />
+                <span class="form-hint">
+                    Uppercase letters and numbers only.
+                    Customers enter this at checkout.
+                </span>
+            </div>
+
+            <div class="form-group">
+                <label>Description</label>
+                <input name="Description" class="form-control"
+                       placeholder="e.g. Flat ₹100 off for new users" />
+            </div>
+
+            <div class="form-group">
+                <label>Discount type</label>
+                <select name="DiscountType" class="form-control"
+                        style="max-width:200px"
+                        onchange="toggleFields(this.value)">
+                    <option value="Flat">Flat (₹ off)</option>
+                    <option value="Percentage">Percentage (% off)</option>
+                    <option value="FirstOnly">First booking only</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label id="valueLabel">Discount value (₹)</label>
+                <input name="DiscountValue" type="number"
+                       step="0.01" min="1"
+                       class="form-control"
+                       style="max-width:160px" />
+                <span class="form-hint" id="valueHint">
+                    Amount to deduct from the bill
+                </span>
+            </div>
+
+            <div class="form-group" id="maxDiscountGroup"
+                 style="display:none">
+                <label>Max discount cap (₹)</label>
+                <input name="MaxDiscount" type="number"
+                       step="0.01" min="0"
+                       class="form-control"
+                       placeholder="e.g. 500"
+                       style="max-width:160px" />
+                <span class="form-hint">
+                    Maximum discount for percentage codes
+                </span>
+            </div>
+
+            <div class="form-group">
+                <label>Minimum bill amount (₹)</label>
+                <input name="MinimumAmount" type="number"
+                       step="0.01" min="0"
+                       value="200"
+                       class="form-control"
+                       style="max-width:160px" />
+            </div>
+
+            <div style="display:grid;
+                        grid-template-columns:1fr 1fr;
+                        gap:14px">
+                <div class="form-group">
+                    <label>Max uses (blank = unlimited)</label>
+                    <input name="MaxUses" type="number"
+                           min="1" class="form-control"
+                           placeholder="e.g. 100" />
+                </div>
+                <div class="form-group">
+                    <label>Expires at (blank = never)</label>
+                    <input name="ExpiresAt" type="date"
+                           class="form-control" />
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:8px">
+                <button type="submit" class="btn-primary">
+                    Create code
+                </button>
+                <a asp-action="Index" class="btn-outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function toggleFields(type) {
+        var label    = document.getElementById('valueLabel');
+        var hint     = document.getElementById('valueHint');
+        var maxGroup = document.getElementById('maxDiscountGroup');
+
+        if (type === 'Percentage') {
+            label.textContent = 'Discount percentage (%)';
+            hint.textContent  = 'e.g. 10 = 10% off the bill';
+            maxGroup.style.display = 'block';
+        } else {
+            label.textContent = 'Discount value (₹)';
+            hint.textContent  = 'Amount to deduct from the bill';
+            maxGroup.style.display = 'none';
+        }
+    }
+</script>
+}

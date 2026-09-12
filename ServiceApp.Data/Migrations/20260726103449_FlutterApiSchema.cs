@@ -153,13 +153,13 @@ namespace ServiceApp.Data.Migrations
                 principalTable: "ServiceRequests",
                 principalColumn: "RequestId");
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_ServiceHistories_ServiceRequests_ServiceRequestId",
-                table: "ServiceHistories",
-                column: "ServiceRequestId",
-                principalTable: "ServiceRequests",
-                principalColumn: "RequestId",
-                onDelete: ReferentialAction.NoAction);
+            //migrationBuilder.AddForeignKey(
+            //    name: "FK_ServiceHistories_ServiceRequests_ServiceRequestId",
+            //    table: "ServiceHistories",
+            //    column: "ServiceRequestId",
+            //    principalTable: "ServiceRequests",
+            //    principalColumn: "RequestId",
+            //    onDelete: ReferentialAction.NoAction);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_ServiceRequests_TechnicianProfiles_AssignedTechnicianProfileId",

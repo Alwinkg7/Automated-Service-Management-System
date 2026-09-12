@@ -1,0 +1,134 @@
+﻿@model IEnumerable<ServiceApp.Core.Entities.TechnicianWithdrawal>
+@{
+    ViewData["Title"] = "Withdrawal requests";
+}
+
+<div class="page-header">
+    <h2>Withdrawal requests</h2>
+    <span style="font-size:13px; color:var(--text-secondary)">
+        @Model.Count() pending
+    </span>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <span class="empty-icon">✓</span>
+        <h3>No pending withdrawals</h3>
+        <p>All technician withdrawal requests have been processed.</p>
+    </div>
+}
+else
+{
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Technician</th>
+                    <th>Amount</th>
+                    <th>UPI ID</th>
+                    <th>Status</th>
+                    <th>Requested</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var w in Model)
+                {
+                    <tr>
+                        <td style="color:var(--text-muted)">
+                            #@w.WithdrawalId
+                        </td>
+                        <td>
+                            <p style="font-weight:500; font-size:13px">
+                                @w.Technician.FullName
+                            </p>
+                            <p style="font-size:11px;
+                                      color:var(--text-muted)">
+                                @w.Technician.Phone
+                            </p>
+                        </td>
+                        <td style="font-weight:600; font-size:15px">
+                            ₹@(w.Amount.ToString("N2"))
+                        </td>
+                        <td style="font-family:monospace; font-size:12px">
+                            @w.UpiId
+                        </td>
+                        <td>
+                            <span class="status-badge
+                                @(w.Status == "Approved"
+                                    ? "status-assigned"
+                                    : "status-pending")">
+                                @w.Status
+                            </span>
+                        </td>
+                        <td style="font-size:12px;
+                                   color:var(--text-secondary)">
+                            @(w.RequestedAt.ToString("dd MMM yyyy"))
+                        </td>
+                        <td>
+                            <div style="display:flex; gap:6px;
+                                        flex-wrap:wrap">
+                                @if (w.Status == "Pending")
+                                {
+                                    <form asp-action="Approve"
+                                          asp-route-id="@w.WithdrawalId"
+                                          method="post">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit"
+                                                class="btn-outline btn-sm">
+                                            Approve
+                                        </button>
+                                    </form>
+                                }
+
+                                @if (w.Status == "Pending" ||
+                                     w.Status == "Approved")
+                                {
+                                    <form asp-action="Pay"
+                                          asp-route-id="@w.WithdrawalId"
+                                          method="post"
+                                          onsubmit="return confirm(
+                                              'Mark ₹@w.Amount as paid to @w.UpiId?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit"
+                                                class="btn-primary btn-sm">
+                                            Mark paid
+                                        </button>
+                                    </form>
+
+                                    <form asp-action="Reject"
+                                          asp-route-id="@w.WithdrawalId"
+                                          method="post"
+                                          id="reject-@w.WithdrawalId">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden"
+                                               name="adminNote"
+                                               id="note-@w.WithdrawalId" />
+                                        <button type="button"
+                                                class="btn-danger btn-sm"
+                                                onclick="rejectWithNote(@w.WithdrawalId)">
+                                            Reject
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@section Scripts {
+<script>
+    function rejectWithNote(id) {
+        var note = prompt('Reason for rejection (optional):');
+        if (note === null) return; // cancelled
+        document.getElementById('note-' + id).value = note;
+        document.getElementById('reject-' + id).submit();
+    }
+</script>
+}

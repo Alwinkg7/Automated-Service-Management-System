@@ -1,0 +1,176 @@
+﻿@model IEnumerable<ServiceApp.Core.Entities.Dispute>
+@{
+    ViewData["Title"] = "Disputes";
+    var breached = (int)(ViewBag.SlaBreached ?? 0);
+}
+
+<div class="page-header">
+    <h2>Disputes</h2>
+    @if (breached > 0)
+    {
+        <span style="background:#FEE2E2; color:var(--danger);
+                     font-size:12px; padding:5px 12px;
+                     border-radius:20px; font-weight:600">
+            ⚠ @breached SLA breached
+        </span>
+    }
+</div>
+
+@* Stat cards *@
+<div style="display:grid; grid-template-columns:repeat(4,1fr);
+            gap:12px; margin-bottom:20px">
+    @{
+        var statCards = new[]
+        {
+            ("Open",         (int)(ViewBag.OpenCount ?? 0),    "#D97706"),
+            ("Under review", (int)(ViewBag.ReviewCount ?? 0),  "#7C3AED"),
+            ("Resolved",     (int)(ViewBag.ResolvedCount ?? 0),"#059669"),
+            ("SLA breached", breached,                          "#DC2626"),
+        };
+    }
+    @foreach (var (label, count, color) in statCards)
+    {
+        <div class="stat-card"
+             style="border-left:3px solid @color">
+            <span class="stat-label">@label</span>
+            <span class="stat-value" style="color:@color">@count</span>
+        </div>
+    }
+</div>
+
+@* Filter tabs *@
+<div style="display:flex; gap:6px; margin-bottom:16px">
+    @foreach (var tab in new[]
+    {
+        (label:"All",          value:(string?)null),
+        (label:"Open",         value:"Open"),
+        (label:"Under review", value:"UnderReview"),
+        (label:"Resolved",     value:"Resolved"),
+    })
+    {
+        var isActive = tab.value == null
+            ? ViewBag.CurrentFilter == null
+            : tab.value == ViewBag.CurrentFilter;
+
+        <a asp-action="Index"
+           asp-route-status="@tab.value"
+           style="padding:6px 14px; border-radius:20px;
+                  font-size:12.5px; font-weight:500;
+                  text-decoration:none; border:1px solid;
+                  @(isActive
+                    ? "background:var(--primary);color:#fff;border-color:var(--primary)"
+                    : "background:var(--bg-white);color:var(--text-secondary);border-color:var(--border)")">
+            @tab.label
+        </a>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <span class="empty-icon">✓</span>
+        <h3>No disputes found</h3>
+        <p>All good — no disputes at the moment.</p>
+    </div>
+}
+else
+{
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Request</th>
+                    <th>Raised by</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>SLA</th>
+                    <th>Raised</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in Model)
+                {
+                    <tr style="@(d.IsSlaBreached ? "background:#FFF5F5" : "")">
+                        <td style="color:var(--text-muted)">
+                            #@d.DisputeId
+                        </td>
+                        <td>
+                            <p style="font-size:13px; font-weight:500">
+                                Request #@d.RequestId
+                            </p>
+                            <p style="font-size:11px;
+                                      color:var(--text-muted)">
+                                @d.ServiceRequest?.Category
+                            </p>
+                        </td>
+                        <td>
+                            <p style="font-size:13px">
+                                @d.RaisedBy?.FullName
+                            </p>
+                            <p style="font-size:11px;
+                                      color:var(--text-muted)">
+                                @d.RaisedBy?.Email
+                            </p>
+                        </td>
+                        <td>
+                            <span class="category-badge"
+                                  style="font-size:11px">
+                                @d.Reason.Replace("_"," ")
+                            </span>
+                        </td>
+                        <td>
+                            @{
+                                var sc = d.Status switch
+                                {
+                                    "Resolved"    => "status-completed",
+                                    "UnderReview" => "status-inprogress",
+                                    _             => "status-pending"
+                                };
+                            }
+                            <span class="status-badge @sc">
+                                @d.Status
+                            </span>
+                        </td>
+                        <td>
+                            @if (d.Status == "Resolved")
+                            {
+                                <span style="font-size:12px;
+                                             color:var(--success)">
+                                    ✓ Done
+                                </span>
+                            }
+                            else if (d.IsSlaBreached)
+                            {
+                                <span style="font-size:12px;
+                                             color:var(--danger);
+                                             font-weight:600">
+                                    ⚠ Breached
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="font-size:12px;
+                                             color:var(--text-secondary)">
+                                    @(d.HoursUntilSla.ToString("F0"))h left
+                                </span>
+                            }
+                        </td>
+                        <td style="font-size:12px;
+                                   color:var(--text-secondary)">
+                            @(d.RaisedAt.ToString("dd MMM, hh:mm tt"))
+                        </td>
+                        <td>
+                            <a asp-action="Details"
+                               asp-route-id="@d.DisputeId"
+                               class="btn-outline btn-sm">
+                                Review
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -1,0 +1,150 @@
+﻿@model ServiceApp.Web.Areas.Technician.Models.WithdrawViewModel
+@{
+    ViewData["Title"] = "Request withdrawal";
+}
+
+<div class="page-header">
+    <div>
+        <h2>Request withdrawal</h2>
+        <span style="font-size:13px; color:var(--text-secondary)">
+            Available: ₹@(Model.AvailableAmount.ToString("N2"))
+        </span>
+    </div>
+    <a asp-action="Index" class="btn-outline">← My wallet</a>
+</div>
+
+<div style="max-width:520px">
+    <div class="form-card">
+
+        @* Available balance banner *@
+        <div style="background:var(--primary-light);
+                    border:1px solid var(--primary);
+                    border-radius:var(--radius);
+                    padding:14px 16px; margin-bottom:20px;
+                    display:flex; justify-content:space-between;
+                    align-items:center">
+            <span style="font-size:13px; color:var(--primary);
+                         font-weight:500">
+                Available to withdraw
+            </span>
+            <span style="font-size:22px; font-weight:700;
+                         color:var(--primary)">
+                ₹@(Model.AvailableAmount.ToString("N2"))
+            </span>
+        </div>
+
+        @if (Model.AvailableAmount <= 0)
+        {
+            <div style="text-align:center; padding:20px;
+                        color:var(--text-secondary)">
+                <p style="font-size:14px; margin-bottom:8px">
+                    No balance available to withdraw.
+                </p>
+                <p style="font-size:12px">
+                    Complete more jobs and wait for customer payments
+                    to build your wallet balance.
+                </p>
+                <a asp-action="Index"
+                   class="btn-outline"
+                   style="display:inline-block; margin-top:12px">
+                    Back to wallet
+                </a>
+            </div>
+        }
+        else
+        {
+            <form asp-action="Withdraw" method="post">
+                @Html.AntiForgeryToken()
+
+                <input type="hidden"
+                       name="AvailableAmount"
+                       value="@Model.AvailableAmount" />
+
+                <div asp-validation-summary="ModelOnly"
+                     class="toast toast-error"
+                     style="margin-bottom:14px"></div>
+
+                @* Amount *@
+                <div class="form-group">
+                    <label>Withdrawal amount (₹)</label>
+                    <input name="RequestAmount"
+                           type="number"
+                           step="0.01"
+                           min="100"
+                           max="@Model.AvailableAmount"
+                           class="form-control"
+                           placeholder="e.g. 500"
+                           style="max-width:220px" />
+                    <span class="form-hint">
+                        Minimum: ₹100 ·
+                        Maximum: ₹@(Model.AvailableAmount.ToString("N2"))
+                    </span>
+                </div>
+
+                @* Quick fill buttons *@
+                <div style="display:flex; gap:8px;
+                            margin-bottom:16px; flex-wrap:wrap">
+                    <span style="font-size:12px;
+                                 color:var(--text-secondary);
+                                 align-self:center">
+                        Quick fill:
+                    </span>
+                    @foreach (var pct in new[] { 25, 50, 75, 100 })
+                    {
+                        var amt = Math.Floor(
+                            Model.AvailableAmount * pct / 100);
+                        <button type="button"
+                                onclick="setAmount(@amt)"
+                                class="btn-outline btn-sm">
+                            @pct% (₹@amt)
+                        </button>
+                    }
+                </div>
+
+                @* UPI ID *@
+                <div class="form-group">
+                    <label>UPI ID</label>
+                    <input name="UpiId"
+                           class="form-control"
+                           placeholder="yourname@upi"
+                           style="max-width:320px" />
+                    <span class="form-hint">
+                        Payment will be sent to this UPI ID within 24 hours
+                        of admin approval.
+                    </span>
+                </div>
+
+                @* Info box *@
+                <div style="background:#F0FDF4;
+                            border:1px solid #BBF7D0;
+                            border-radius:var(--radius);
+                            padding:12px 14px; margin-bottom:18px">
+                    <p style="font-size:12px; color:#166534;
+                              line-height:1.6">
+                        ✓ Your request will be reviewed by admin.<br />
+                        ✓ Payouts are processed within 24 hours.<br />
+                        ✓ You will receive an email confirmation.
+                    </p>
+                </div>
+
+                <div style="display:flex; gap:10px">
+                    <button type="submit" class="btn-primary">
+                        Submit withdrawal request
+                    </button>
+                    <a asp-action="Index" class="btn-outline">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function setAmount(amount) {
+        document.querySelector('input[name="RequestAmount"]')
+            .value = amount;
+    }
+</script>
+}

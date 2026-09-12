@@ -34,7 +34,15 @@ namespace ServiceApp.Core.Interfaces
             string orderId,
             string paymentId,
             string signature);
+
+        // Returns the Razorpay refund ID (e.g. "rfnd_ABCxyz123")
+        // Throws on failure — caller handles the exception
+        Task<string> RefundPaymentAsync(
+            string paymentId,
+            decimal amount,
+            string reason);
     }
+
 
     // Result from CreateOrderAsync
     public class RazorpayOrderResult
