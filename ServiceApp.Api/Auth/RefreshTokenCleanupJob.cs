@@ -57,7 +57,7 @@ public class RefreshTokenCleanupJob
     }
 
     /// <summary>Malformed values are treated as expired.</summary>
-    internal static bool IsExpired(string? value, long nowTicks)
+    public static bool IsExpired(string? value, long nowTicks)
     {
         var separator = value?.IndexOf('|') ?? -1;
         return separator <= 0 || !long.TryParse(value![..separator], out var ticks) || ticks <= nowTicks;
