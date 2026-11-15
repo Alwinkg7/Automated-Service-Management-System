@@ -1,0 +1,1906 @@
+{
+ "api": "http://localhost:5090",
+ "web": "http://localhost:5091",
+ "run": "db1711",
+ "passed": 262,
+ "failed": 9,
+ "results": [
+  {
+   "id": "SMOKE-001",
+   "title": "API /health Healthy",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "SMOKE-002",
+   "title": "Web /health Healthy",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "SMOKE-003",
+   "title": "MVC login page loads",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "SMOKE-004",
+   "title": "Swagger served by API in Development",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "SMOKE-005",
+   "title": "Categories are anonymous",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "HF-001",
+   "title": "API /hangfire refuses anonymous",
+   "ok": true,
+   "detail": "401",
+   "bug": null
+  },
+  {
+   "id": "HF-002",
+   "title": "MVC host does not serve /hangfire",
+   "ok": true,
+   "detail": "404",
+   "bug": null
+  },
+  {
+   "id": "HF-003",
+   "title": "Hangfire server starts in the API only",
+   "ok": true,
+   "detail": "api=True web=False",
+   "bug": null
+  },
+  {
+   "id": "HF-004",
+   "title": "Recurring jobs auto-assign + refresh-token-cleanup registered by the API",
+   "ok": true,
+   "detail": "2",
+   "bug": null
+  },
+  {
+   "id": "SEC-020",
+   "title": "CORS rejects foreign origin",
+   "ok": true,
+   "detail": "None",
+   "bug": null
+  },
+  {
+   "id": "SEC-021",
+   "title": "CORS allows configured frontend origin",
+   "ok": true,
+   "detail": "http://localhost:3000",
+   "bug": null
+  },
+  {
+   "id": "API-010",
+   "title": "Anonymous -> 401 ProblemDetails (no redirect)",
+   "ok": true,
+   "detail": "401 application/problem+json",
+   "bug": "BUG-21"
+  },
+  {
+   "id": "API-011",
+   "title": "Tampered JWT -> 401",
+   "ok": true,
+   "detail": "401",
+   "bug": null
+  },
+  {
+   "id": "AUTH-001",
+   "title": "Customer self-registration via MVC creates a usable account",
+   "ok": true,
+   "detail": "final=/Customer login=200",
+   "bug": "BUG-01"
+  },
+  {
+   "id": "AUTH-001b",
+   "title": "MVC customer registration lands on Customer dashboard",
+   "ok": true,
+   "detail": "/Customer",
+   "bug": null
+  },
+  {
+   "id": "AUTH-040",
+   "title": "API register/customer -> 201 AuthResponse",
+   "ok": true,
+   "detail": "201 {\"success\":true,\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3YjgxYTEwYi0yYjM3LTQwZWYtYTNkNC0wMzZhMzU4N2M2Mj",
+   "bug": null
+  },
+  {
+   "id": "AUTH-041",
+   "title": "Duplicate email -> 409 ProblemDetails",
+   "ok": true,
+   "detail": "409",
+   "bug": null
+  },
+  {
+   "id": "AUTH-042",
+   "title": "Invalid registration -> 400 with errors map",
+   "ok": true,
+   "detail": "400",
+   "bug": null
+  },
+  {
+   "id": "AUTH-002",
+   "title": "Technician MVC registration lands on Technician dashboard",
+   "ok": true,
+   "detail": "/Technician",
+   "bug": "BUG-03"
+  },
+  {
+   "id": "AUTH-043",
+   "title": "API register/technician -> 201",
+   "ok": true,
+   "detail": "201",
+   "bug": null
+  },
+  {
+   "id": "AUTH-003",
+   "title": "Seeded admin API login (Seed:AdminPassword)",
+   "ok": true,
+   "detail": "200",
+   "bug": null
+  },
+  {
+   "id": "AUTH-044",
+   "title": "/api/auth/me returns caller",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"userId\":\"db0646dd-757a-4dbc-bff8-6b7e06193484\",\"name\":\"QA Customer One\",\"email\":\"qa.c1.db1711@e",
+   "bug": null
+  },
+  {
+   "id": "AUTH-008",
+   "title": "Admin MVC login lands on Admin dashboard",
+   "ok": true,
+   "detail": "/Admin",
+   "bug": null
+  },
+  {
+   "id": "AUTH-016",
+   "title": "Customer MVC login lands on Customer dashboard",
+   "ok": true,
+   "detail": "/Customer",
+   "bug": null
+  },
+  {
+   "id": "API-012",
+   "title": "Customer on admin API -> 403 ProblemDetails",
+   "ok": true,
+   "detail": "403 application/problem+json",
+   "bug": "BUG-21"
+  },
+  {
+   "id": "AUTH-014",
+   "title": "Technician on customer API -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "AUTH-015",
+   "title": "Customer cookie on Admin MVC -> AccessDenied",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "API-013",
+   "title": "Non-numeric route id -> 404",
+   "ok": true,
+   "detail": "404",
+   "bug": null
+  },
+  {
+   "id": "API-014",
+   "title": "Wrong Content-Type -> 415",
+   "ok": true,
+   "detail": "415",
+   "bug": null
+  },
+  {
+   "id": "BOOK-002",
+   "title": "Create request -> 200 + requestId",
+   "ok": true,
+   "detail": "{\"success\":true,\"requestId\":1}",
+   "bug": null
+  },
+  {
+   "id": "BOOK-003",
+   "title": "Duplicate submit within 30s returns same request",
+   "ok": true,
+   "detail": "{\"success\":true,\"requestId\":1}",
+   "bug": null
+  },
+  {
+   "id": "BOOK-004",
+   "title": "Invalid category -> 400",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "BOOK-005",
+   "title": "Past preferred date -> 400",
+   "ok": true,
+   "detail": "400 {\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.1\",\"title\":\"Bad Reques",
+   "bug": "BUG-10"
+  },
+  {
+   "id": "BOOK-006",
+   "title": "Empty description -> 400",
+   "ok": true,
+   "detail": "400 {\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.1\",\"title\":\"One or mor",
+   "bug": "BUG-10"
+  },
+  {
+   "id": "BOOK-007",
+   "title": "Missing address -> 400",
+   "ok": true,
+   "detail": "400",
+   "bug": "BUG-10"
+  },
+  {
+   "id": "IDEM-001",
+   "title": "Idempotency-Key replay returns same requestId + Idempotent-Replayed header",
+   "ok": true,
+   "detail": "2 vs 2 hdr=true",
+   "bug": null
+  },
+  {
+   "id": "IDEM-002",
+   "title": "Same key from another user is not replayed",
+   "ok": true,
+   "detail": "{\"success\":true,\"requestId\":3}",
+   "bug": null
+  },
+  {
+   "id": "IDEM-003",
+   "title": "Error responses are not stored (corrected retry with same key succeeds)",
+   "ok": true,
+   "detail": "400/200",
+   "bug": null
+  },
+  {
+   "id": "IDEM-004",
+   "title": "Same key with a DIFFERENT body is rejected (not silently replayed)",
+   "ok": false,
+   "detail": "200 replayed=true id=2",
+   "bug": "NEW-03"
+  },
+  {
+   "id": "IDEM-005",
+   "title": "Over-long Idempotency-Key -> 400 ProblemDetails",
+   "ok": false,
+   "detail": "400 {\"success\":false,\"error\":\"Idempotency-Key must be at most 100 characters.\"}",
+   "bug": "NEW-02"
+  },
+  {
+   "id": "SEC-010",
+   "title": "Customer B GET A's request -> 403 ProblemDetails",
+   "ok": true,
+   "detail": "403",
+   "bug": "BUG-21"
+  },
+  {
+   "id": "SEC-011",
+   "title": "Customer B cancel A's request -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "SEC-012",
+   "title": "Customer B cannot open A's request in MVC",
+   "ok": true,
+   "detail": "/Customer/Requests/Index",
+   "bug": null
+  },
+  {
+   "id": "XHOST-001",
+   "title": "Request created in MVC is visible in the API",
+   "ok": true,
+   "detail": "/Customer/Requests/Index",
+   "bug": null
+  },
+  {
+   "id": "XHOST-002",
+   "title": "Request created in the API is visible in MVC",
+   "ok": true,
+   "detail": "200",
+   "bug": null
+  },
+  {
+   "id": "ADMIN-002",
+   "title": "Available Plumbing technicians listed",
+   "ok": true,
+   "detail": "[{'id': 1, 'name': 'QA Tech One db1711', 'phone': '9876500001', 'rating': 0.0, 'totalJobs': 0, 'skills': 'Plumbing', 'status': 'Available'}, {'id': 2, 'name': 'QA Tech Two db1711', 'phone': '9876500000', 'rating': 0.0, 'totalJobs': 0, 'skills': 'Plumbing', 'status': 'Available'}]",
+   "bug": null
+  },
+  {
+   "id": "ASSIGN-001",
+   "title": "Admin assigns Pending request",
+   "ok": true,
+   "detail": "{\"success\":true}",
+   "bug": null
+  },
+  {
+   "id": "ASSIGN-002",
+   "title": "Re-assign non-Pending -> 409",
+   "ok": true,
+   "detail": "409",
+   "bug": null
+  },
+  {
+   "id": "ASSIGN-003",
+   "title": "Technician with an active assignment cannot get a 2nd job",
+   "ok": true,
+   "detail": "409",
+   "bug": "BUG-12"
+  },
+  {
+   "id": "ASSIGN-004",
+   "title": "Assign unknown technician -> 404",
+   "ok": true,
+   "detail": "404",
+   "bug": null
+  },
+  {
+   "id": "ASSIGN-005",
+   "title": "Admin detail shows Assigned + technician",
+   "ok": true,
+   "detail": "Assigned",
+   "bug": null
+  },
+  {
+   "id": "JOB-001",
+   "title": "Other technician accept -> 403",
+   "ok": true,
+   "detail": "403",
+   "bug": null
+  },
+  {
+   "id": "SEC-013",
+   "title": "Other technician job detail -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "JOB-002",
+   "title": "Assigned technician accepts -> InProgress",
+   "ok": true,
+   "detail": "{\"success\":true}",
+   "bug": null
+  },
+  {
+   "id": "JOB-003",
+   "title": "Accept twice -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "JOB-004",
+   "title": "Toggle availability blocked while Busy",
+   "ok": true,
+   "detail": "409",
+   "bug": null
+  },
+  {
+   "id": "JOB-004b",
+   "title": "Toggle-while-Busy status matches docs/API.md (400)",
+   "ok": false,
+   "detail": "409 (docs say 400)",
+   "bug": "NEW-04"
+  },
+  {
+   "id": "JOB-005",
+   "title": "/complete by non-assigned tech -> 403",
+   "ok": true,
+   "detail": "403 {\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.4\",\"title\":\"Forbidden\"",
+   "bug": "BUG-07"
+  },
+  {
+   "id": "JOB-006",
+   "title": "/complete before Billed -> 409",
+   "ok": true,
+   "detail": "409",
+   "bug": "BUG-07"
+  },
+  {
+   "id": "BOOK-008",
+   "title": "Cancel InProgress -> 400/409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "TRACK-010",
+   "title": "API location push for own InProgress job",
+   "ok": true,
+   "detail": "200",
+   "bug": null
+  },
+  {
+   "id": "TRACK-011",
+   "title": "API location push by other tech -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "BILL-001",
+   "title": "Bill an Assigned job -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "BILL-002",
+   "title": "Other tech bills job -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "BILL-003",
+   "title": "Zero bill -> 400",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "BILL-004",
+   "title": "Assigned tech creates bill -> Billed",
+   "ok": true,
+   "detail": "{\"success\":true,\"billId\":1}",
+   "bug": null
+  },
+  {
+   "id": "BILL-005",
+   "title": "Second bill -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "BILL-006",
+   "title": "Bill total = labor + material",
+   "ok": true,
+   "detail": "750.56",
+   "bug": null
+  },
+  {
+   "id": "BILL-007",
+   "title": "laborCost/materialCost exposed",
+   "ok": true,
+   "detail": "labor=500.0 material=250.56",
+   "bug": "BUG-06"
+  },
+  {
+   "id": "BILL-008",
+   "title": "History rows per transition",
+   "ok": true,
+   "detail": "['Pending', 'Assigned', 'InProgress', 'Billed']",
+   "bug": null
+  },
+  {
+   "id": "BILL-009",
+   "title": "Customer list shows hasBill/billAmount",
+   "ok": true,
+   "detail": "{'id': 1, 'category': 'Plumbing', 'status': 'Billed', 'description': 'Kitchen sink leaking badly under the cabinet', 'scheduledDate': '16 Nov 2026', 'createdAt': '15 Nov 2026', 'technicianName': 'QA Tech One db1711', 'hasBill': True, 'billPaid': False, 'billAmount': 750.56}",
+   "bug": "BUG-05"
+  },
+  {
+   "id": "BILL-010",
+   "title": "Technician job list shows hasBill",
+   "ok": true,
+   "detail": "{'id': 1, 'category': 'Plumbing', 'status': 'Billed', 'description': 'Kitchen sink leaking badly under the cabinet', 'address': '12 QA Street, Thrissur', 'scheduledDate': '16 Nov 2026, 10:00 AM', 'customerName': 'QA Customer One', 'customerPhone': '9876543210', 'hasBill': True, 'billPaid': False}",
+   "bug": "BUG-05"
+  },
+  {
+   "id": "BILL-011",
+   "title": "Customer bill PDF (API)",
+   "ok": true,
+   "detail": "200 application/pdf",
+   "bug": null
+  },
+  {
+   "id": "SEC-014",
+   "title": "Other customer bill PDF (API) -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "BILL-012",
+   "title": "Technician own bill PDF (API)",
+   "ok": true,
+   "detail": "200",
+   "bug": null
+  },
+  {
+   "id": "SEC-018",
+   "title": "Other technician bill PDF (API) -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "BILL-013",
+   "title": "Customer bill PDF (MVC)",
+   "ok": true,
+   "detail": "200",
+   "bug": null
+  },
+  {
+   "id": "BILL-014",
+   "title": "Owner technician opens bill details (MVC) -> 200",
+   "ok": false,
+   "detail": "500 /Technician/Bills/Details?requestId=1",
+   "bug": "NEW-06"
+  },
+  {
+   "id": "SEC-015",
+   "title": "Other technician cannot view bill details (MVC)",
+   "ok": true,
+   "detail": "/Technician/Jobs/Index",
+   "bug": "BUG-15"
+  },
+  {
+   "id": "PAY-002",
+   "title": "POST /bills/{id}/pay -> 410 Gone, request stays Billed",
+   "ok": true,
+   "detail": "410 Billed",
+   "bug": "BUG-02"
+  },
+  {
+   "id": "PROMO-001",
+   "title": "Admin creates promo code (API) -> 201",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"id\":1,\"code\":\"QADB1711\",\"description\":\"QA flat 50\",\"discountType\":\"Flat\",\"discountValue\":50,\"ma",
+   "bug": null
+  },
+  {
+   "id": "PROMO-011",
+   "title": "Duplicate promo code -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "PROMO-012",
+   "title": "Percentage > 100 -> 400",
+   "ok": true,
+   "detail": "400",
+   "bug": null
+  },
+  {
+   "id": "PROMO-013",
+   "title": "Past expiry -> 400",
+   "ok": true,
+   "detail": "400",
+   "bug": null
+  },
+  {
+   "id": "PROMO-003",
+   "title": "Validate promo -> discount 50",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"discount\":50.00,\"message\":\"Valid! You save \u20b950.00.\"}}",
+   "bug": null
+  },
+  {
+   "id": "PROMO-004",
+   "title": "Unknown promo -> 400",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "PROMO-006",
+   "title": "Below minimum -> 400",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "PROMO-020",
+   "title": "Quote before discount: payable = subtotal",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"billId\":1,\"subtotal\":750.56,\"discount\":0.00,\"payable\":750.56,\"promoCode\":null,\"pointsRedeemed\":0}}",
+   "bug": null
+  },
+  {
+   "id": "PROMO-021",
+   "title": "Promo preview shows discount, records nothing",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"billId\":1,\"subtotal\":750.56,\"discount\":50.00,\"payable\":700.56,\"promoCode\":\"QADB1711\",\"pointsRedeemed\":0}}",
+   "bug": null
+  },
+  {
+   "id": "PROMO-022",
+   "title": "Other customer cannot apply promo to A's bill -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "PROMO-005",
+   "title": "Apply promo to bill -> payable = subtotal - 50",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"billId\":1,\"subtotal\":750.56,\"discount\":50.00,\"payable\":700.56,\"promoCode\":\"QADB1711\",\"pointsRedeemed\":0}}",
+   "bug": "BUG-11"
+  },
+  {
+   "id": "PROMO-023",
+   "title": "Second promo on same bill -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "PROMO-024",
+   "title": "Redeem points with zero balance -> 422",
+   "ok": true,
+   "detail": "422",
+   "bug": null
+  },
+  {
+   "id": "PROMO-025",
+   "title": "Points not a multiple of 100 -> 400/422",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "PAY-020",
+   "title": "razorpay/order with fake gateway keys -> 502 ProblemDetails (no crash)",
+   "ok": true,
+   "detail": "502 {\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.6.3\",\"title\":\"Bad Gateway\",\"status\":502,\"det",
+   "bug": null
+  },
+  {
+   "id": "PAY-021",
+   "title": "Other customer razorpay/order -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "PAY-022",
+   "title": "Bad signature -> 400, stays Billed",
+   "ok": true,
+   "detail": "400",
+   "bug": null
+  },
+  {
+   "id": "PAY-023",
+   "title": "Valid signature for an order NOT bound to this bill -> 400",
+   "ok": true,
+   "detail": "400 Billed",
+   "bug": "BUG-08"
+  },
+  {
+   "id": "PAY-024",
+   "title": "Other customer verify -> 403",
+   "ok": true,
+   "detail": "403",
+   "bug": null
+  },
+  {
+   "id": "PAY-025",
+   "title": "Verify bound order -> 200, Completed, amount = discounted payable",
+   "ok": true,
+   "detail": "200 {\"success\":true,\"data\":{\"paymentId\":1,\"billId\":1,\"amount\":700.56,\"method\":\"Razorpay\",\"transactionId\":\"pay_QAdb1711\",\"paidAt\":\"2026-11-15T16:28:12.8823",
+   "bug": "BUG-09"
+  },
+  {
+   "id": "PAY-026",
+   "title": "Verify replay is idempotent (same paymentId)",
+   "ok": true,
+   "detail": "200 {\"success\":true,\"data\":{\"paymentId\":1,\"billId\":1,\"amount\":700.56,\"method\":\"Razorpay\",\"transactionId\"",
+   "bug": null
+  },
+  {
+   "id": "PAY-027",
+   "title": "Exactly one Payment row",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "PAY-028",
+   "title": "Order on a paid bill -> 409",
+   "ok": true,
+   "detail": "409",
+   "bug": null
+  },
+  {
+   "id": "PROMO-010",
+   "title": "Loyalty points awarded (floor(payable/10))",
+   "ok": true,
+   "detail": "points=70 payable=700.56",
+   "bug": "BUG-09"
+  },
+  {
+   "id": "PAY-004",
+   "title": "Paid bill reports isPaid=true",
+   "ok": true,
+   "detail": "{'id': 1, 'amount': 750.56, 'laborCost': 500.0, 'materialCost': 250.56, 'description': 'Labour charges, PVC pipe', 'isPaid': True, 'createdAt': '15 Nov 2026', 'paidAt': '2026-11-15T16:28:12.8823861', 'discount': 50.0, 'payable': 700.56, 'promoCode': 'QADB1711', 'pointsRedeemed': 0, 'preferredPaymentMethod': None, 'paymentMethod': 'Razorpay', 'items': [{'description': 'Labour charges', 'quantity': ",
+   "bug": "BUG-04"
+  },
+  {
+   "id": "PAY-005",
+   "title": "Admin dashboard revenue > 0",
+   "ok": true,
+   "detail": "{'totalRequests': 8, 'pending': 6, 'inProgress': 0, 'completed': 1, 'totalCustomers': 2, 'totalTechnicians': 4, 'revenue': 750.56}",
+   "bug": "BUG-04"
+  },
+  {
+   "id": "RATE-001",
+   "title": "Rating out of range -> 400",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "RATE-002",
+   "title": "Rate completed request",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "RATE-003",
+   "title": "Rate twice -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "WH-001",
+   "title": "Webhook bad signature -> 401",
+   "ok": true,
+   "detail": "401",
+   "bug": null
+  },
+  {
+   "id": "WH-002",
+   "title": "Webhook with wrong amount not applied",
+   "ok": true,
+   "detail": "{\"success\":true,\"handled\":false,\"reason\":\"Paid amount does not match the bill.\"}",
+   "bug": null
+  },
+  {
+   "id": "WH-003",
+   "title": "Webhook with matching amount completes request",
+   "ok": true,
+   "detail": "{\"success\":true,\"handled\":true}",
+   "bug": null
+  },
+  {
+   "id": "WH-004",
+   "title": "Webhook replay is a no-op",
+   "ok": true,
+   "detail": "{\"success\":true,\"handled\":true}",
+   "bug": null
+  },
+  {
+   "id": "ASSIGN-006",
+   "title": "Technician freed after payment can be assigned again",
+   "ok": true,
+   "detail": "{\"success\":true}",
+   "bug": null
+  },
+  {
+   "id": "CASH-001",
+   "title": "Customer chooses cash -> records choice only (still Billed)",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"billId\":3,\"preferredPaymentMethod\":\"Cash\",\"payable\":1200.00,\"message\":\"Pay the technician in ca",
+   "bug": null
+  },
+  {
+   "id": "CASH-002",
+   "title": "MVC 'Pay with cash' does not complete the job",
+   "ok": true,
+   "detail": "/Customer/Requests/Details/5",
+   "bug": null
+  },
+  {
+   "id": "CASH-003",
+   "title": "MVC technician 'Confirm cash' completes the job",
+   "ok": true,
+   "detail": "/Technician/Jobs/Details/5",
+   "bug": "BUG-09"
+  },
+  {
+   "id": "CASH-004",
+   "title": "API /complete on already-paid -> 409",
+   "ok": true,
+   "detail": "409",
+   "bug": null
+  },
+  {
+   "id": "CASH-005",
+   "title": "One Cash payment row",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "JOB-010",
+   "title": "TotalJobsCompleted counts both paid jobs",
+   "ok": true,
+   "detail": "TotalJobsCompleted=2",
+   "bug": "BUG-02"
+  },
+  {
+   "id": "SEC-016",
+   "title": "Other customer cannot open payment confirmation (MVC)",
+   "ok": true,
+   "detail": "/Customer/Requests/Index",
+   "bug": "BUG-14"
+  },
+  {
+   "id": "JOB-007",
+   "title": "API /complete (cash) by assigned tech on Billed -> paymentId + Completed",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"paymentId\":4}}",
+   "bug": "BUG-07"
+  },
+  {
+   "id": "HIST-010",
+   "title": "API history totals",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"totalJobs\":4,\"completedJobs\":4,\"cancelledJobs\":0,\"totalSpent\":4250.56,\"averageRating\":4,\"items\":[{\"id\":9,\"category\":\"Plumbing",
+   "bug": null
+  },
+  {
+   "id": "HIST-011",
+   "title": "API rebook completed request -> 201",
+   "ok": true,
+   "detail": "{\"success\":true,\"requestId\":10}",
+   "bug": null
+  },
+  {
+   "id": "HIST-012",
+   "title": "Other customer rebook -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "HIST-013",
+   "title": "Rebook with past date -> 400",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "HIST-014",
+   "title": "Rebook non-final request -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-002",
+   "title": "Customer raises dispute (API) -> 201",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"id\":1}}",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-003",
+   "title": "Second open dispute -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-004",
+   "title": "Other customer dispute on A's request -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-005",
+   "title": "Dispute on non-completed request -> 422",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-006",
+   "title": "Unknown/over-long reason -> 400 (no 500)",
+   "ok": true,
+   "detail": "400",
+   "bug": "BUG-16"
+  },
+  {
+   "id": "DISPUTE-013",
+   "title": "Short description -> 400",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-014",
+   "title": "MVC over-long reason handled (no 500)",
+   "ok": true,
+   "detail": "200",
+   "bug": "BUG-16"
+  },
+  {
+   "id": "DISPUTE-015",
+   "title": "Customer lists own disputes",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-016",
+   "title": "Other customer GET dispute -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-007",
+   "title": "Admin dispute list + counts",
+   "ok": true,
+   "detail": "200",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-008",
+   "title": "Admin review -> UnderReview",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-017",
+   "title": "Review twice -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-009",
+   "title": "Refund on cash-paid request -> 422",
+   "ok": true,
+   "detail": "422",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-018",
+   "title": "Resolve with invalid resolution -> 400",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-010",
+   "title": "Admin resolves (ClosedNoAction)",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-019",
+   "title": "Resolve twice -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-011",
+   "title": "Refund > paid amount -> 400",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DISPUTE-012",
+   "title": "Refund via fake gateway -> 502, dispute not marked refunded",
+   "ok": true,
+   "detail": "502",
+   "bug": null
+  },
+  {
+   "id": "WALLET-001",
+   "title": "Wallet gross earnings = sum of paid subtotals (750.56+1200+300)",
+   "ok": true,
+   "detail": "{'grossEarningsAllTime': 2250.56, 'netEarningsAllTime': 1980.49, 'availableToWithdraw': 1980.49}",
+   "bug": "BUG-05"
+  },
+  {
+   "id": "WALLET-007",
+   "title": "MVC wallet shows non-zero earnings",
+   "ok": true,
+   "detail": "200",
+   "bug": "BUG-05"
+  },
+  {
+   "id": "WALLET-003",
+   "title": "Withdraw more than available -> 422",
+   "ok": true,
+   "detail": "422",
+   "bug": "BUG-22"
+  },
+  {
+   "id": "WALLET-008",
+   "title": "MVC tampered AvailableAmount does not create withdrawal",
+   "ok": true,
+   "detail": "rows=0",
+   "bug": "BUG-22"
+  },
+  {
+   "id": "WALLET-009",
+   "title": "Withdraw amount <= 0 -> 400",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "WALLET-010",
+   "title": "Valid withdrawal -> 201",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"id\":1,\"withdrawal\":{\"id\":1,\"amount\":100,\"status\":\"Pending\",\"upiId\":\"qa@upi\",\"adminNote\":null,\"r",
+   "bug": null
+  },
+  {
+   "id": "WALLET-011",
+   "title": "Pending withdrawals reduce available balance",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "WALLET-012",
+   "title": "Pay a Pending withdrawal -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": "BUG-18"
+  },
+  {
+   "id": "WALLET-013",
+   "title": "Approve Pending -> Approved",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "WALLET-005",
+   "title": "Approved withdrawal visible in admin 'open' list",
+   "ok": true,
+   "detail": "",
+   "bug": "BUG-18"
+  },
+  {
+   "id": "WALLET-014",
+   "title": "Approved withdrawal visible in MVC admin list",
+   "ok": true,
+   "detail": "200",
+   "bug": "BUG-18"
+  },
+  {
+   "id": "WALLET-015",
+   "title": "Approve twice -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "WALLET-016",
+   "title": "Pay Approved -> Paid",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "WALLET-017",
+   "title": "Reject Paid -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "WALLET-018",
+   "title": "Reject Pending -> Rejected",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "WALLET-006",
+   "title": "Pay Rejected -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": "BUG-18"
+  },
+  {
+   "id": "WALLET-019",
+   "title": "Technician sees own withdrawals",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "WALLET-020",
+   "title": "Customer cannot call admin withdrawals -> 403",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "ZONE-001",
+   "title": "Create zone (API) -> 201, pinCodes array",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"id\":1,\"zoneName\":\"QA Zone db1711\",\"city\":\"Thrissur\",\"state\":\"Kerala\",\"isActive\":true,\"pinCodes\":[\"642171\",\"735171\"],\"technici",
+   "bug": null
+  },
+  {
+   "id": "ZONE-003",
+   "title": "Duplicate zone name -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "ZONE-004",
+   "title": "Pin already in another active zone -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "ZONE-005",
+   "title": "Non-6-digit pin -> 400",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "ZONE-006",
+   "title": "Update zone",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"id\":1,\"zoneName\":\"QA Zone db1711\",\"city\":\"Thrissur\",\"state\":\"Kerala\",\"isAct",
+   "bug": null
+  },
+  {
+   "id": "ZONE-007",
+   "title": "Toggle zone inactive",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "ZONE-002",
+   "title": "MVC zones page lists API-created zone",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "PROMO-030",
+   "title": "Toggle promo",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "PROMO-031",
+   "title": "Delete used promo -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "PROMO-032",
+   "title": "Delete unused promo -> 204",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "PROMO-033",
+   "title": "MVC promo list shows API code",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "ASSIGN-010",
+   "title": "API auto-assign cycle",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"assigned\":3,\"stillPending\":5}}",
+   "bug": null
+  },
+  {
+   "id": "ASSIGN-011",
+   "title": "Auto-assign Electrical -> QA Tech Three",
+   "ok": true,
+   "detail": "['QA Tech Three db1711', None]",
+   "bug": null
+  },
+  {
+   "id": "ASSIGN-012",
+   "title": "Auto-assign does not stack 2 jobs on one tech",
+   "ok": true,
+   "detail": "['QA Tech Three db1711', None]",
+   "bug": "BUG-12"
+  },
+  {
+   "id": "ASSIGN-013",
+   "title": "Busy technician skipped",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "ASSIGN-016",
+   "title": "MVC 'Run auto-assign' (enqueue/execute) works",
+   "ok": true,
+   "detail": "200",
+   "bug": null
+  },
+  {
+   "id": "TECH-001",
+   "title": "Admin technician search",
+   "ok": true,
+   "detail": "4 3",
+   "bug": null
+  },
+  {
+   "id": "TECH-002",
+   "title": "Paged technician list shape",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"items\":[{\"id\":1,\"userId\":\"ba791134-bd19-451f-b82d-5d08e2131dbc\",\"name\":\"QA Tech One db1711\",\"em",
+   "bug": null
+  },
+  {
+   "id": "TECH-003",
+   "title": "Technician detail",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "TECH-004",
+   "title": "Skill change blocked while tech has active job -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "TECH-005",
+   "title": "Skill change allowed when idle",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "TECH-006",
+   "title": "Admin status override",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "ADMIN-010",
+   "title": "Admin deactivates technician",
+   "ok": true,
+   "detail": "{\"success\":true,\"isActive\":false}",
+   "bug": null
+  },
+  {
+   "id": "AUTH-020",
+   "title": "Inactive user API login -> 401",
+   "ok": true,
+   "detail": "401",
+   "bug": null
+  },
+  {
+   "id": "AUTH-021",
+   "title": "Inactive user MVC login refused",
+   "ok": true,
+   "detail": "/Account/Login",
+   "bug": "BUG-13"
+  },
+  {
+   "id": "ASSIGN-014",
+   "title": "Deactivated technician never auto-assigned",
+   "ok": true,
+   "detail": "Pending None",
+   "bug": "BUG-13"
+  },
+  {
+   "id": "ASSIGN-015",
+   "title": "Deactivated technician not offered for assignment",
+   "ok": true,
+   "detail": "",
+   "bug": "BUG-13"
+  },
+  {
+   "id": "AUTH-022",
+   "title": "Deactivated user's existing JWT rejected (401) within ~30s",
+   "ok": true,
+   "detail": "401",
+   "bug": "BUG-13"
+  },
+  {
+   "id": "ADMIN-011",
+   "title": "Admin cannot deactivate self -> 409",
+   "ok": true,
+   "detail": "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.10\",\"title\":\"Conflict\"",
+   "bug": "BUG-17"
+  },
+  {
+   "id": "BOOK-010",
+   "title": "Cancel Pending",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "BOOK-011",
+   "title": "Cancel cancelled -> 409",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "ADMIN-012",
+   "title": "Admin cancels Pending request (API)",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "ADMIN-020",
+   "title": "Admin request search+status filter (legacy array)",
+   "ok": true,
+   "detail": "200",
+   "bug": null
+  },
+  {
+   "id": "ADMIN-027",
+   "title": "Admin requests paged shape",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"items\":[{\"id\":17,\"category\":\"General\",\"status\":\"Pending\",\"customerName\":\"QA",
+   "bug": null
+  },
+  {
+   "id": "ADMIN-028",
+   "title": "Admin list shows bill amount + paid for completed request",
+   "ok": true,
+   "detail": "{'id': 5, 'category': 'Plumbing', 'status': 'Completed', 'customerName': 'QA Customer One', 'technicianName': 'QA Tech One db1711', 'address': '8dd70d QA Road', 'pinCode': '680001', 'scheduledDate': '17 Nov 2026', 'createdAt': '15 Nov 2026', 'createdAtUtc': '2026-11-15T16:28:07.8520714', 'hasBill': True, 'billPaid': True, 'billAmount': 1200.0, 'paidAt': '2026-11-15T16:28:16.2684906', 'isUnassigned",
+   "bug": "BUG-05"
+  },
+  {
+   "id": "ADMIN-022",
+   "title": "API CSV export (text/csv, BOM)",
+   "ok": true,
+   "detail": "text/csv",
+   "bug": null
+  },
+  {
+   "id": "ADMIN-023",
+   "title": "CSV includes bill amount + payment status",
+   "ok": true,
+   "detail": "01,17 Nov 2026 10:00,QA Tech One db1711,Completed,15 Nov 2026 16:28,1200.00,Paid",
+   "bug": "BUG-05"
+  },
+  {
+   "id": "SEC-022",
+   "title": "CSV formula injection neutralised (no cell starts with = + - @)",
+   "ok": true,
+   "detail": "17,QA Customer Two,9876543211,General,\"'=HYPERLINK(\"\"http://evil.example\"\",\"\"x\"\") db1711\",\"'+SUM(1,2) QA Road\",680001,17 Nov 2026 10:00,,Pending,15 Nov 2026 16:",
+   "bug": null
+  },
+  {
+   "id": "SEC-023",
+   "title": "MVC CSV formula injection neutralised",
+   "ok": true,
+   "detail": "17,QA Customer Two,9876543211,General,\"'=HYPERLINK(\"\"http://evil.example\"\",\"\"x\"\") db1711\",\"'+SUM(1,2) QA Road\",680001,17 Nov 2026 10:00,,Pending,15 Nov 2026 16:",
+   "bug": null
+  },
+  {
+   "id": "ADMIN-024",
+   "title": "Analytics totals + revenueByDay",
+   "ok": true,
+   "detail": "{\"success\":true,\"data\":{\"totals\":{\"totalRequests\":17,\"completedRequests\":4,\"pendingRequests\":8,\"totalCustomers\":2,\"totalTechnicians\":4,\"totalRevenue\":4250.56,\"c",
+   "bug": null
+  },
+  {
+   "id": "ADMIN-025",
+   "title": "MVC analytics page",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "ADMIN-029",
+   "title": "Admin users filter",
+   "ok": true,
+   "detail": "200",
+   "bug": null
+  },
+  {
+   "id": "ADMIN-026",
+   "title": "MVC create admin -> can log in to API",
+   "ok": true,
+   "detail": "200",
+   "bug": null
+  },
+  {
+   "id": "AUTH-050",
+   "title": "Refresh returns a new pair (rotation)",
+   "ok": true,
+   "detail": "200",
+   "bug": null
+  },
+  {
+   "id": "AUTH-051",
+   "title": "Reusing a consumed refresh token -> 401 ProblemDetails",
+   "ok": true,
+   "detail": "401",
+   "bug": null
+  },
+  {
+   "id": "AUTH-052",
+   "title": "Refresh-token reuse revokes the rotated descendant (theft detection)",
+   "ok": false,
+   "detail": "descendant still usable after reuse of its parent: 200",
+   "bug": "NEW-HARDEN"
+  },
+  {
+   "id": "AUTH-053",
+   "title": "Logout -> 204",
+   "ok": true,
+   "detail": "204",
+   "bug": null
+  },
+  {
+   "id": "AUTH-054",
+   "title": "Refresh after logout -> 401",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "AUTH-055",
+   "title": "Garbage refresh token -> 401",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Home/Dashboard -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Home/Dashboard",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Requests/Index -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Requests/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Requests/Details/1 -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Requests/Details/1",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Requests/Assign/13 -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Requests/Assign/13",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Technicians/Index -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Technicians/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Technicians/Details/1 -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Technicians/Details/1",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Users/Index -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Users/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Users/Create -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Users/Create",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Withdrawals/Index -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Withdrawals/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Zones/Index -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Zones/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Zones/Create -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Zones/Create",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Zones/Edit/1 -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Zones/Edit/1",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/PromoCodes/Index -> 200",
+   "ok": true,
+   "detail": "200 /Admin/PromoCodes/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/PromoCodes/Create -> 200",
+   "ok": true,
+   "detail": "200 /Admin/PromoCodes/Create",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Disputes/Index -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Disputes/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Disputes/Details/1 -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Disputes/Details/1",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Analytics/Index -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Analytics/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Profile/Index -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Profile/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-admin",
+   "title": "GET /Admin/Home/GetCounts -> 200",
+   "ok": true,
+   "detail": "200 /Admin/Home/GetCounts",
+   "bug": null
+  },
+  {
+   "id": "UI-customer",
+   "title": "GET /Customer/Home/Dashboard -> 200",
+   "ok": true,
+   "detail": "200 /Customer/Home/Dashboard",
+   "bug": null
+  },
+  {
+   "id": "UI-customer",
+   "title": "GET /Customer/Requests/Index -> 200",
+   "ok": true,
+   "detail": "200 /Customer/Requests/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-customer",
+   "title": "GET /Customer/Requests/Create -> 200",
+   "ok": true,
+   "detail": "200 /Customer/Requests/Create",
+   "bug": null
+  },
+  {
+   "id": "UI-customer",
+   "title": "GET /Customer/Requests/Details/1 -> 200",
+   "ok": true,
+   "detail": "200 /Customer/Requests/Details/1",
+   "bug": null
+  },
+  {
+   "id": "UI-customer",
+   "title": "GET /Customer/Requests/History -> 200",
+   "ok": true,
+   "detail": "200 /Customer/Requests/History",
+   "bug": null
+  },
+  {
+   "id": "UI-customer",
+   "title": "GET /Customer/Requests/Rebook/5 -> 200",
+   "ok": true,
+   "detail": "200 /Customer/Requests/Rebook/5",
+   "bug": null
+  },
+  {
+   "id": "UI-customer",
+   "title": "GET /Customer/Profile/Index -> 200",
+   "ok": true,
+   "detail": "200 /Customer/Profile/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-customer",
+   "title": "GET /Customer/Promotions/Index -> 200",
+   "ok": true,
+   "detail": "200 /Customer/Promotions/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-customer",
+   "title": "GET /Customer/Disputes/MyDisputes -> 200",
+   "ok": true,
+   "detail": "200 /Customer/Disputes/MyDisputes",
+   "bug": null
+  },
+  {
+   "id": "UI-customer",
+   "title": "GET /Customer/Disputes/Details/1 -> 200",
+   "ok": true,
+   "detail": "200 /Customer/Disputes/Details/1",
+   "bug": null
+  },
+  {
+   "id": "UI-customer",
+   "title": "GET /Customer/Bills/Pay?requestId=1 -> 200",
+   "ok": true,
+   "detail": "200 /Customer/Requests/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-technician",
+   "title": "GET /Technician/Home/Dashboard -> 200",
+   "ok": true,
+   "detail": "200 /Technician/Home/Dashboard",
+   "bug": null
+  },
+  {
+   "id": "UI-technician",
+   "title": "GET /Technician/Jobs/Index -> 200",
+   "ok": true,
+   "detail": "200 /Technician/Jobs/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-technician",
+   "title": "GET /Technician/Jobs/Details/1 -> 200",
+   "ok": true,
+   "detail": "200 /Technician/Jobs/Details/1",
+   "bug": null
+  },
+  {
+   "id": "UI-technician",
+   "title": "GET /Technician/Profile/Index -> 200",
+   "ok": true,
+   "detail": "200 /Technician/Profile/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-technician",
+   "title": "GET /Technician/Wallet/Index -> 200",
+   "ok": true,
+   "detail": "200 /Technician/Wallet/Index",
+   "bug": null
+  },
+  {
+   "id": "UI-technician",
+   "title": "GET /Technician/Wallet/Withdraw -> 200",
+   "ok": true,
+   "detail": "200 /Technician/Wallet/Withdraw",
+   "bug": null
+  },
+  {
+   "id": "UI-technician",
+   "title": "GET /Technician/Bills/Details?requestId=1 -> 200",
+   "ok": false,
+   "detail": "500 /Technician/Bills/Details?requestId=1",
+   "bug": null
+  },
+  {
+   "id": "NOTIF-002",
+   "title": "API hub negotiate with JWT",
+   "ok": true,
+   "detail": "200",
+   "bug": "BUG-19"
+  },
+  {
+   "id": "NOTIF-003",
+   "title": "API hub negotiate anonymous -> 401 (no redirect)",
+   "ok": true,
+   "detail": "401",
+   "bug": "BUG-21"
+  },
+  {
+   "id": "NOTIF-001",
+   "title": "MVC hub negotiate with cookie",
+   "ok": true,
+   "detail": "200",
+   "bug": null
+  },
+  {
+   "id": "NOTIF-019",
+   "title": "Hub test job prepared (assigned + InProgress)",
+   "ok": true,
+   "detail": "200/200",
+   "bug": null
+  },
+  {
+   "id": "NOTIF-011",
+   "title": "WebSocket connect with JWT (accessTokenFactory) for all roles",
+   "ok": true,
+   "detail": "",
+   "bug": "BUG-23"
+  },
+  {
+   "id": "NOTIF-012",
+   "title": "Owner customer receives LocationUpdate from assigned technician",
+   "ok": true,
+   "detail": "a=true",
+   "bug": "BUG-23"
+  },
+  {
+   "id": "NOTIF-013",
+   "title": "JoinGroup spoof does not let customer B receive A's LocationUpdate",
+   "ok": true,
+   "detail": "b=false spoofErr=",
+   "bug": "BUG-23"
+  },
+  {
+   "id": "NOTIF-014",
+   "title": "Non-assigned technician cannot push location to the customer",
+   "ok": true,
+   "detail": "received=false",
+   "bug": "BUG-23"
+  },
+  {
+   "id": "NOTIF-015",
+   "title": "Customer invoking ShareLocation is rejected",
+   "ok": true,
+   "detail": "Failed to invoke 'ShareLocation' because user is unauthorized",
+   "bug": "BUG-23"
+  },
+  {
+   "id": "NOTIF-016",
+   "title": "Admin connection receives NewRequest",
+   "ok": true,
+   "detail": "admin=true id=19",
+   "bug": "BUG-23"
+  },
+  {
+   "id": "NOTIF-017",
+   "title": "Customer B (spoofed Admin JoinGroup) does not receive admin broadcasts",
+   "ok": true,
+   "detail": "b=false",
+   "bug": "BUG-23"
+  },
+  {
+   "id": "NOTIF-018",
+   "title": "Non-assigned technician cannot send LocationStopped",
+   "ok": true,
+   "detail": "",
+   "bug": "BUG-23"
+  },
+  {
+   "id": "AUTH-030",
+   "title": "API login locked after 5 failures (correct pw -> 401 'locked')",
+   "ok": true,
+   "detail": "401 Too many failed attempts. Account locked for 5 minutes.",
+   "bug": "BUG-20"
+  },
+  {
+   "id": "AUTH-031",
+   "title": "Lockout shared with MVC login",
+   "ok": true,
+   "detail": "/Account/Login",
+   "bug": null
+  },
+  {
+   "id": "RATE-010",
+   "title": "Auth endpoint rate-limited -> 429 ProblemDetails + Retry-After",
+   "ok": true,
+   "detail": "statuses=[401, 401, 401, 401, 429] retry-after=60",
+   "bug": null
+  },
+  {
+   "id": "RATE-011",
+   "title": "Health/hub not rate limited while auth is limited",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "API-015",
+   "title": "Every error body is served as application/problem+json",
+   "ok": false,
+   "detail": "{401: ['application/json', 'application/problem+json'], 409: ['application/json'], 400: ['application/json'], 403: ['application/json', 'application/problem+json'], 502: ['application/json']}",
+   "bug": "NEW-01"
+  },
+  {
+   "id": "DB-001",
+   "title": "History row for every request status change (no request without history)",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "DB-002",
+   "title": "Every Completed request with a bill has exactly one Payment",
+   "ok": true,
+   "detail": "",
+   "bug": null
+  },
+  {
+   "id": "LOG-EMAIL",
+   "title": "No email is sent to an empty recipient",
+   "ok": false,
+   "detail": "5 sends with empty 'to'",
+   "bug": "NEW-05"
+  },
+  {
+   "id": "LOG-API",
+   "title": "API log has no DbContext concurrency errors / 500s",
+   "ok": true,
+   "detail": "second-operation error",
+   "bug": "BUG-09"
+  },
+  {
+   "id": "LOG-WEB",
+   "title": "WEB log has no DbContext concurrency errors / 500s",
+   "ok": false,
+   "detail": "HTTP GET /Technician/Bills/Details responded 500",
+   "bug": "BUG-09"
+  }
+ ]
+}

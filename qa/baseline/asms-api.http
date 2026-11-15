@@ -1,0 +1,128 @@
+# ASMS JSON API - manual smoke requests (VS Code REST Client / Rider / VS .http)
+# 1) run "login" requests, copy tokens into the variables below.
+@base = http://localhost:5090
+@customerToken = PASTE
+@technicianToken = PASTE
+@adminToken = PASTE
+@requestId = 1
+@billId = 1
+@techProfileId = 1
+
+### Auth - login (repeat per role)
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "admin@serviceapp.com", "password": "Admin@1234" }
+
+### Auth - wrong password -> 401
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "admin@serviceapp.com", "password": "nope" }
+
+### Customer - dashboard
+GET {{base}}/api/customer/dashboard
+Authorization: Bearer {{customerToken}}
+
+### Customer - categories
+GET {{base}}/api/customer/categories
+Authorization: Bearer {{customerToken}}
+
+### Customer - create request
+POST {{base}}/api/customer/requests
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{ "category": "Plumbing", "description": "Kitchen sink leaking under the cabinet", "scheduledDate": "2026-12-01T10:00:00", "address": "12 QA Street", "pinCode": "680001" }
+
+### Customer - past date (expected 400; baseline returns 200 = BUG-10)
+POST {{base}}/api/customer/requests
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{ "category": "Plumbing", "description": "past date", "scheduledDate": "2020-01-01T10:00:00", "address": "past st", "pinCode": "680001" }
+
+### Customer - list / detail / cancel / rate
+GET {{base}}/api/customer/requests?status=Pending
+Authorization: Bearer {{customerToken}}
+
+###
+GET {{base}}/api/customer/requests/{{requestId}}
+Authorization: Bearer {{customerToken}}
+
+###
+POST {{base}}/api/customer/requests/{{requestId}}/cancel
+Authorization: Bearer {{customerToken}}
+
+###
+POST {{base}}/api/customer/requests/{{requestId}}/rate
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{ "stars": 4, "comment": "good" }
+
+### Customer - pay bill (baseline: completes WITHOUT any gateway payment = BUG-02)
+POST {{base}}/api/customer/bills/{{billId}}/pay
+Authorization: Bearer {{customerToken}}
+
+### Technician - dashboard / toggle / jobs
+GET {{base}}/api/technician/dashboard
+Authorization: Bearer {{technicianToken}}
+
+###
+POST {{base}}/api/technician/toggle-status
+Authorization: Bearer {{technicianToken}}
+
+###
+GET {{base}}/api/technician/jobs
+Authorization: Bearer {{technicianToken}}
+
+###
+GET {{base}}/api/technician/jobs/{{requestId}}
+Authorization: Bearer {{technicianToken}}
+
+###
+POST {{base}}/api/technician/jobs/{{requestId}}/accept
+Authorization: Bearer {{technicianToken}}
+
+### (baseline: no-op stub, always 200 = BUG-07)
+POST {{base}}/api/technician/jobs/{{requestId}}/complete
+Authorization: Bearer {{technicianToken}}
+
+###
+POST {{base}}/api/technician/jobs/{{requestId}}/bill
+Authorization: Bearer {{technicianToken}}
+Content-Type: application/json
+
+{ "laborCost": 500, "materialCost": 250.55, "description": "PVC pipe" }
+
+### Admin
+GET {{base}}/api/admin/dashboard
+Authorization: Bearer {{adminToken}}
+
+###
+GET {{base}}/api/admin/requests?status=Pending
+Authorization: Bearer {{adminToken}}
+
+###
+GET {{base}}/api/admin/requests/{{requestId}}
+Authorization: Bearer {{adminToken}}
+
+###
+GET {{base}}/api/admin/technicians/available?category=Plumbing
+Authorization: Bearer {{adminToken}}
+
+###
+POST {{base}}/api/admin/requests/{{requestId}}/assign
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "technicianProfileId": {{techProfileId}} }
+
+###
+GET {{base}}/api/admin/users?role=Technician
+Authorization: Bearer {{adminToken}}
+
+### SignalR negotiate with JWT (baseline: 302 to login = BUG-19)
+POST {{base}}/hubs/service/negotiate?negotiateVersion=1
+Authorization: Bearer {{customerToken}}
