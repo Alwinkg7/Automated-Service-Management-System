@@ -125,7 +125,7 @@ cd frontend && npm install && npm run dev                    # http://localhost:
 ```
 
 - **Hangfire.** The dashboard is at `https://localhost:7001/hangfire`. It accepts an Admin JWT, or the admin's MVC login cookie (same host name).
-- **Auto-assign.** The job runs only while the API is running.
+- **Background jobs.** Auto-assign (every 2 minutes) and the expired refresh-token cleanup (daily, 03:00 UTC) run only while the API is running.
 - **Health checks.** Both hosts expose `/health`.
 
 ## Tests
