@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Mvc;
 using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
 using ServiceApp.Core.Interfaces;
+using ServiceApp.Core.Models.Queries;
+using ServiceApp.Core.Models.Reports;
 using ServiceApp.Web.Areas.Admin.Models;
 
 namespace ServiceApp.Web.Areas.Admin.Controllers
@@ -36,169 +38,83 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
             _logger = logger;
         }
 
-        // =============================================================
-        //  GET /Admin/Technicians/Index
-        //  All technicians with optional skill + status filters.
-        // =============================================================
+        // GET /Admin/Technicians — filters and earnings computed in SQL.
         [HttpGet]
         public async Task<IActionResult> Index(
             string? skill = null,
-            string? status = null)
+            string? status = null,
+            [FromServices] ITechnicianQueries queries = null!)
         {
-            // Load all technicians with user info
-            var allTechs = (await _uow.TechnicianProfiles
-                .GetAllWithUsersAsync()).ToList();
+            ServiceCategory? skillFilter = Enum.TryParse<ServiceCategory>(skill, true, out var s) ? s : null;
+            TechnicianStatus? statusFilter = Enum.TryParse<TechnicianStatus>(status, true, out var st) ? st : null;
 
-            // Load all requests to calculate earnings per tech
-            var allRequests = (await _uow.ServiceRequests
-                .GetAllWithDetailsAsync()).ToList();
+            var counts = await queries.CountByStatusAsync();
+            var page = await queries.SearchAsync(new TechnicianSearchCriteria
+            {
+                Skill = skillFilter,
+                Status = statusFilter,
+                PageSize = 0
+            });
 
-            // Parse filters
-            ServiceCategory? skillFilter = null;
-            TechnicianStatus? statusFilter = null;
-
-            if (!string.IsNullOrEmpty(skill) &&
-                Enum.TryParse<ServiceCategory>(skill, out var parsedSkill))
-                skillFilter = parsedSkill;
-
-            if (!string.IsNullOrEmpty(status) &&
-                Enum.TryParse<TechnicianStatus>(status, out var parsedStatus))
-                statusFilter = parsedStatus;
-
-            // Build row items
-            var rows = allTechs.Select(t => BuildRowItem(t, allRequests)).ToList();
-
-            // Counts for tab badges (always based on full list)
             var vm = new TechnicianListViewModel
             {
                 SkillFilter = skill,
                 StatusFilter = statusFilter,
-                TotalCount = rows.Count,
-                AvailableCount = rows.Count(r =>
-                    r.Status == TechnicianStatus.Available),
-                BusyCount = rows.Count(r =>
-                    r.Status == TechnicianStatus.Busy),
-                OfflineCount = rows.Count(r =>
-                    r.Status == TechnicianStatus.Offline)
+                TotalCount = counts.Total,
+                AvailableCount = counts.Available,
+                BusyCount = counts.Busy,
+                OfflineCount = counts.Offline,
+                Technicians = page.Items.Select(ToRow).ToList()
             };
 
-            // Apply filters
-            var filtered = rows.AsEnumerable();
-            if (skillFilter.HasValue)
-                filtered = filtered.Where(r => r.Skill == skillFilter.Value);
-            if (statusFilter.HasValue)
-                filtered = filtered.Where(r => r.Status == statusFilter.Value);
-
-            vm.Technicians = filtered
-                .OrderByDescending(r => r.TotalJobsCompleted)
-                .ToList();
-
-            // Pass skill enum values to view for filter dropdown
-            ViewBag.Skills = Enum.GetValues<ServiceCategory>()
-                .Select(s => s.ToString())
-                .ToList();
-
+            ViewBag.Skills = Enum.GetValues<ServiceCategory>().Select(x => x.ToString()).ToList();
             return View(vm);
         }
 
-        // =============================================================
-        //  GET /Admin/Technicians/Details/{id}
-        //  One technician's profile + full job history + earnings chart.
-        // =============================================================
+        // GET /Admin/Technicians/Details/{id}
         [HttpGet]
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int id, [FromServices] ITechnicianQueries queries = null!)
         {
-            var tech = await _uow.TechnicianProfiles
-                .GetWithUserAsync(id);
-
-            if (tech == null)
+            var summary = await queries.GetSummaryAsync(id);
+            if (summary == null)
             {
                 TempData["Error"] = "Technician not found.";
                 return RedirectToAction(nameof(Index));
             }
 
-            // Load all their jobs
-            var jobs = (await _uow.ServiceRequests
-                .GetByTechnicianIdAsync(id)).ToList();
+            var jobs = await _uow.ServiceRequests.GetByTechnicianIdAsync(id);
+            var earnings = await queries.GetMonthlyEarningsAsync(id, 6);
 
-            // Earnings per month for last 6 months
-            var months = new List<string>();
-            var earnings = new List<decimal>();
-
-            for (int i = 5; i >= 0; i--)
+            return View(new TechnicianDetailViewModel
             {
-                var month = DateTime.UtcNow.AddMonths(-i);
-                var monthLabel = month.ToString("MMM yyyy");
-                var monthEarned = jobs
-                    .Where(j => j.Bill != null
-                             && j.Bill.PaymentStatus == PaymentStatus.Paid
-                             && j.Bill.PaidAt.HasValue
-                             && j.Bill.PaidAt.Value.Year == month.Year
-                             && j.Bill.PaidAt.Value.Month == month.Month)
-                    .Sum(j => j.Bill!.TotalAmount);
-
-                months.Add(monthLabel);
-                earnings.Add(monthEarned);
-            }
-
-            // Total earnings
-            var totalEarned = jobs
-                .Where(j => j.Bill != null
-                         && j.Bill.PaymentStatus == PaymentStatus.Paid)
-                .Sum(j => j.Bill!.TotalAmount);
-
-            // Get all requests for earnings calc
-            var allRequests = (await _uow.ServiceRequests
-                .GetAllWithDetailsAsync()).ToList();
-
-            var vm = new TechnicianDetailViewModel
-            {
-                Profile = BuildRowItem(tech, allRequests),
-                JobHistory = jobs
-                    .OrderByDescending(j => j.CreatedAt)
-                    .ToList(),
-                EarningsMonths = months,
-                EarningsValues = earnings
-            };
-
-            return View(vm);
+                Profile = ToRow(summary),
+                JobHistory = jobs.OrderByDescending(j => j.CreatedAt).ToList(),
+                EarningsMonths = earnings.Select(e => e.Label).ToList(),
+                EarningsValues = earnings.Select(e => e.Amount).ToList()
+            });
         }
 
-        // =============================================================
-        //  POST /Admin/Technicians/OverrideStatus
-        //  Admin forces a technician's status change.
-        //  Use case: tech is stuck as Busy after a cancelled job.
-        // =============================================================
+        // POST /Admin/Technicians/OverrideStatus/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> OverrideStatus(
-            int id, string newStatus)
+        public async Task<IActionResult> OverrideStatus(int id, string newStatus, [FromServices] ITechnicianService technicians = null!)
         {
-            var tech = await _uow.TechnicianProfiles.GetByIdAsync(id);
-            if (tech == null)
-            {
-                TempData["Error"] = "Technician not found.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            if (!Enum.TryParse<TechnicianStatus>(newStatus, out var parsed))
+            if (!Enum.TryParse<TechnicianStatus>(newStatus, true, out var parsed))
             {
                 TempData["Error"] = "Invalid status.";
                 return RedirectToAction(nameof(Details), new { id });
             }
 
-            var oldStatus = tech.Status;
-            tech.Status = parsed;
-            _uow.TechnicianProfiles.Update(tech);
-            await _uow.SaveChangesAsync();
-
-            _logger.LogInformation(
-                "Admin {Admin} overrode technician #{TechId} " +
-                "status from {Old} to {New}",
-                User.Identity?.Name, id, oldStatus, parsed);
-
-            TempData["Success"] =
-                $"Status updated from {oldStatus} to {parsed}.";
+            var result = await technicians.OverrideStatusAsync(id, parsed);
+            if (result.IsSuccess)
+            {
+                _logger.LogInformation("Admin {Admin} set technician #{TechId} status to {New}", User.Identity?.Name, id, parsed);
+                TempData["Success"] = $"Status updated to {parsed}.";
+            }
+            else
+            {
+                TempData["Error"] = result.ErrorMessage;
+            }
 
             return RedirectToAction(nameof(Details), new { id });
         }
@@ -238,45 +154,23 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // =============================================================
-        //  HELPER — build a flat TechnicianRowItem from the entity
-        // =============================================================
-        private static TechnicianRowItem BuildRowItem(
-            TechnicianProfile tech,
-            List<ServiceApp.Core.Entities.ServiceRequest> allRequests)
+        private static TechnicianRowItem ToRow(TechnicianSummary t) => new()
         {
-            var techJobs = allRequests
-                .Where(r => r.AssignedTechnicianProfileId
-                         == tech.TechnicianProfileId)
-                .ToList();
-
-            var totalEarned = techJobs
-                .Where(j => j.Bill != null
-                         && j.Bill.PaymentStatus == PaymentStatus.Paid)
-                .Sum(j => j.Bill!.TotalAmount);
-
-            var activeJobs = techJobs.Count(j =>
-                j.Status == RequestStatus.InProgress ||
-                j.Status == RequestStatus.Assigned);
-
-            return new TechnicianRowItem
-            {
-                TechnicianProfileId = tech.TechnicianProfileId,
-                UserId = tech.UserId,
-                FullName = tech.User.FullName,
-                Email = tech.User.Email ?? "",
-                Phone = tech.User.Phone ?? string.Empty,
-                Skill = tech.Skill,
-                Status = tech.Status,
-                Rating = tech.Rating,
-                TotalJobsCompleted = tech.TotalJobsCompleted,
-                TotalEarned = totalEarned,
-                Bio = tech.Bio,
-                YearsOfExperience = tech.YearsOfExperience,
-                ServiceAreaPinCode = tech.ServiceAreaPinCode,
-                IsActive = tech.User.IsActive,
-                ActiveJobCount = activeJobs
-            };
-        }
+            TechnicianProfileId = t.TechnicianProfileId,
+            UserId = t.UserId,
+            FullName = t.FullName,
+            Email = t.Email,
+            Phone = t.Phone,
+            Skill = t.Skill,
+            Status = t.Status,
+            Rating = t.Rating,
+            TotalJobsCompleted = t.TotalJobsCompleted,
+            TotalEarned = t.TotalEarned,
+            Bio = t.Bio,
+            YearsOfExperience = t.YearsOfExperience,
+            ServiceAreaPinCode = t.ServiceAreaPinCode,
+            IsActive = t.IsActive,
+            ActiveJobCount = t.ActiveJobCount
+        };
     }
 }

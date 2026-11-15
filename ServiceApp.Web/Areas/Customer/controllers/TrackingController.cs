@@ -102,59 +102,14 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
         public async Task<IActionResult> UpdateLocation(
             int requestId,
             double lat,
-            double lng)
+            double lng,
+            [FromServices] ITrackingService tracking = null!)
         {
-            var userId = _userManager.GetUserId(User)!;
-
-            // Verify the technician owns this job
-            var tech = await _uow.TechnicianProfiles
-                .GetByUserIdAsync(userId);
-
-            if (tech == null)
-                return Json(new
-                {
-                    success = false,
-                    error = "Profile not found."
-                });
-
-            var request = await _uow.ServiceRequests
-                .GetByIdAsync(requestId);
-
-            if (request == null)
-                return Json(new
-                {
-                    success = false,
-                    error = "Request not found."
-                });
-
-            if (request.AssignedTechnicianProfileId
-                != tech.TechnicianProfileId)
-                return Json(new
-                {
-                    success = false,
-                    error = "Not your job."
-                });
-
-            if (request.Status != RequestStatus.InProgress)
-                return Json(new
-                {
-                    success = false,
-                    error = "Job is not in progress."
-                });
-
-            // Push location to customer via SignalR
-            await _notifications.PushLocationUpdateAsync(
-                request.CustomerId,
-                requestId,
-                lat,
-                lng);
-
-            _logger.LogDebug(
-                "Location update for request #{RequestId}: " +
-                "{Lat},{Lng}",
-                requestId, lat, lng);
-
-            return Json(new { success = true });
+            // Assignment, InProgress and coordinate checks live in ITrackingService.
+            var result = await tracking.PushLocationAsync(_userManager.GetUserId(User)!, requestId, lat, lng);
+            return Json(result.IsSuccess
+                ? new { success = true, error = (string?)null }
+                : new { success = false, error = result.ErrorMessage });
         }
     }
 }

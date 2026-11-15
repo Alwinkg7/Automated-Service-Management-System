@@ -5,57 +5,37 @@ using ServiceApp.Core.Interfaces;
 
 namespace ServiceApp.Web.Areas.Admin.Controllers
 {
+    /// <summary>Promo-code admin screens. Rules live in <see cref="IPromoCodeService"/> (shared with the API).</summary>
     [Area("Admin")]
     [Authorize(Roles = "Admin")]
     public class PromoCodesController : Controller
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IPromoCodeService _codes;
 
-        public PromoCodesController(IUnitOfWork uow)
-            => _uow = uow;
-
-        [HttpGet]
-        public async Task<IActionResult> Index()
-        {
-            var codes = (await _uow.PromoCodes.GetAllAsync())
-                .OrderByDescending(p => p.CreatedAt)
-                .ToList();
-            return View(codes);
-        }
+        public PromoCodesController(IPromoCodeService codes) => _codes = codes;
 
         [HttpGet]
-        public IActionResult Create()
-            => View(new PromoCode
-            {
-                DiscountType = "Flat",
-                MinimumAmount = 200,
-                IsActive = true
-            });
+        public async Task<IActionResult> Index() => View(await _codes.GetAllAsync());
+
+        [HttpGet]
+        public IActionResult Create() =>
+            View(new PromoCode { DiscountType = "Flat", MinimumAmount = 200, IsActive = true });
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(PromoCode vm)
         {
-            // Check unique code
-            var existing = await _uow.PromoCodes
-                .GetByCodeAsync(vm.Code);
-            if (existing != null)
+            var result = await _codes.CreateAsync(new PromoCodeInput(
+                vm.Code, vm.Description, vm.DiscountType, vm.DiscountValue, vm.MaxDiscount,
+                vm.MinimumAmount, vm.MaxUses, vm.ExpiresAt, vm.IsActive));
+
+            if (!result.IsSuccess)
             {
-                ModelState.AddModelError(
-                    nameof(vm.Code),
-                    "This code already exists.");
+                ModelState.AddModelError(nameof(vm.Code), result.ErrorMessage!);
                 return View(vm);
             }
 
-            vm.Code = vm.Code.ToUpper().Trim();
-            vm.UsedCount = 0;
-            vm.CreatedAt = DateTime.UtcNow;
-
-            await _uow.PromoCodes.AddAsync(vm);
-            await _uow.SaveChangesAsync();
-
-            TempData["Success"] =
-                $"Promo code '{vm.Code}' created.";
+            TempData["Success"] = $"Promo code '{result.Data!.Code}' created.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -63,20 +43,10 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Toggle(int id)
         {
-            var code = await _uow.PromoCodes.GetByIdAsync(id);
-            if (code == null)
-            {
-                TempData["Error"] = "Code not found.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            code.IsActive = !code.IsActive;
-            _uow.PromoCodes.Update(code);
-            await _uow.SaveChangesAsync();
-
-            TempData["Success"] =
-                $"Code '{code.Code}' is now " +
-                $"{(code.IsActive ? "active" : "inactive")}.";
+            var result = await _codes.ToggleAsync(id);
+            TempData[result.IsSuccess ? "Success" : "Error"] = result.IsSuccess
+                ? $"Code '{result.Data!.Code}' is now {(result.Data.IsActive ? "active" : "inactive")}."
+                : result.ErrorMessage;
             return RedirectToAction(nameof(Index));
         }
     }

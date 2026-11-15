@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Mvc;
 using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
 using ServiceApp.Core.Interfaces;
+using ServiceApp.Core.Models.Queries;
 using ServiceApp.Web.Areas.Admin.Models;
 using System.Text;
 
@@ -48,10 +49,7 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
             _logger = logger;
         }
 
-        // =============================================================
-        //  GET /Admin/Requests/Index
-        //  All requests with search, date filter, status, pagination
-        // =============================================================
+        // GET /Admin/Requests — search, status and date filters plus paging run in SQL.
         [HttpGet]
         public async Task<IActionResult> Index(
             string? search = null,
@@ -59,187 +57,64 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
             string? dateRange = null,
             DateTime? dateFrom = null,
             DateTime? dateTo = null,
-            int page = 1)
+            int page = 1,
+            [FromServices] IRequestQueries queries = null!)
         {
-            // Load all requests with details (Customer + Technician)
-            var all = (await _uow.ServiceRequests
-                .GetAllWithDetailsAsync()).ToList();
-
-            // ── Tab counts (always from unfiltered full list) ───────
+            var (from, to) = RequestSearchCriteria.ResolveDateRange(dateRange, dateFrom, dateTo);
             var vm = new RequestSearchViewModel
             {
                 SearchTerm = search,
                 StatusFilter = status,
                 DateRange = dateRange,
-                DateFrom = dateFrom,
-                DateTo = dateTo,
-                CurrentPage = Math.Max(1, page),
-
-                AllCount = all.Count,
-                PendingCount = all.Count(r =>
-                    r.Status == RequestStatus.Pending),
-                AssignedCount = all.Count(r =>
-                    r.Status == RequestStatus.Assigned),
-                InProgressCount = all.Count(r =>
-                    r.Status == RequestStatus.InProgress),
-                BilledCount = all.Count(r =>
-                    r.Status == RequestStatus.Billed),
-                CompletedCount = all.Count(r =>
-                    r.Status == RequestStatus.Completed),
-                CancelledCount = all.Count(r =>
-                    r.Status == RequestStatus.Cancelled)
+                DateFrom = from,
+                DateTo = to,
+                CurrentPage = Math.Max(1, page)
             };
 
-            // ── Apply filters sequentially ─────────────────────────
+            var counts = await queries.CountByStatusAsync();
+            vm.AllCount = counts.Values.Sum();
+            vm.PendingCount = counts[RequestStatus.Pending];
+            vm.AssignedCount = counts[RequestStatus.Assigned];
+            vm.InProgressCount = counts[RequestStatus.InProgress];
+            vm.BilledCount = counts[RequestStatus.Billed];
+            vm.CompletedCount = counts[RequestStatus.Completed];
+            vm.CancelledCount = counts[RequestStatus.Cancelled];
 
-            var filtered = all.AsEnumerable();
-
-            // 1. Search — customer name, description, address
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim().ToLower();
-                filtered = filtered.Where(r =>
-                    (r.Customer?.FullName.ToLower()
-                        .Contains(term) ?? false) ||
-                    r.Description.ToLower()
-                        .Contains(term) ||
-                    r.Address.ToLower()
-                        .Contains(term) ||
-                    r.PinCode.Contains(term) ||
-                    r.RequestId.ToString() == term);
-            }
-
-            // 2. Status filter
-            if (!string.IsNullOrEmpty(status) &&
-                Enum.TryParse<RequestStatus>(status, out var parsedStatus))
-            {
-                filtered = filtered.Where(r => r.Status == parsedStatus);
-            }
-
-            // 3. Date range filter
-            (dateFrom, dateTo) = ResolveDateRange(
-                dateRange, dateFrom, dateTo);
-
-            if (dateFrom.HasValue)
-                filtered = filtered.Where(r =>
-                    r.CreatedAt.Date >= dateFrom.Value.Date);
-
-            if (dateTo.HasValue)
-                filtered = filtered.Where(r =>
-                    r.CreatedAt.Date <= dateTo.Value.Date);
-
-            // Sort: newest first
-            var sorted = filtered
-                .OrderByDescending(r => r.CreatedAt)
-                .ToList();
-
-            vm.TotalCount = sorted.Count;
-            vm.DateFrom = dateFrom;
-            vm.DateTo = dateTo;
-
-            // 4. Paginate
-            vm.Requests = sorted
-                .Skip((vm.CurrentPage - 1) * vm.PageSize)
-                .Take(vm.PageSize)
-                .ToList();
+            var result = await queries.SearchAsync(BuildCriteria(search, status, from, to, vm.CurrentPage, vm.PageSize));
+            vm.TotalCount = result.TotalCount;
+            vm.Requests = result.Items.ToList();
 
             return View(vm);
         }
 
-        // =============================================================
-        //  GET /Admin/Requests/ExportCsv
-        //  Downloads all matching results as a CSV file.
-        //  Same filter params as Index — no pagination limit.
-        // =============================================================
+        // GET /Admin/Requests/ExportCsv — same filters as Index, every matching row.
         [HttpGet]
         public async Task<IActionResult> ExportCsv(
             string? search = null,
             string? status = null,
             string? dateRange = null,
             DateTime? dateFrom = null,
-            DateTime? dateTo = null)
+            DateTime? dateTo = null,
+            [FromServices] IRequestExportService export = null!)
         {
-            var all = (await _uow.ServiceRequests
-                .GetAllWithDetailsAsync()).ToList();
+            var (from, to) = RequestSearchCriteria.ResolveDateRange(dateRange, dateFrom, dateTo);
+            var (content, rows) = await export.ExportCsvAsync(BuildCriteria(search, status, from, to, 1, 0));
 
-            var filtered = all.AsEnumerable();
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim().ToLower();
-                filtered = filtered.Where(r =>
-                    (r.Customer?.FullName.ToLower()
-                        .Contains(term) ?? false) ||
-                    r.Description.ToLower()
-                        .Contains(term) ||
-                    r.Address.ToLower().Contains(term));
-            }
-
-            if (!string.IsNullOrEmpty(status) &&
-                Enum.TryParse<RequestStatus>(status, out var parsedStatus))
-                filtered = filtered.Where(r => r.Status == parsedStatus);
-
-            (dateFrom, dateTo) = ResolveDateRange(
-                dateRange, dateFrom, dateTo);
-
-            if (dateFrom.HasValue)
-                filtered = filtered.Where(r =>
-                    r.CreatedAt.Date >= dateFrom.Value.Date);
-
-            if (dateTo.HasValue)
-                filtered = filtered.Where(r =>
-                    r.CreatedAt.Date <= dateTo.Value.Date);
-
-            var results = filtered
-                .OrderByDescending(r => r.CreatedAt)
-                .ToList();
-
-            // ── Build CSV ──────────────────────────────────────────
-            var csv = new StringBuilder();
-
-            // Header row
-            csv.AppendLine(
-                "Request ID,Customer,Phone,Category," +
-                "Description,Address,Pin Code," +
-                "Preferred Time,Technician,Status," +
-                "Created At,Bill Amount,Payment Status");
-
-            // Data rows
-            foreach (var r in results)
-            {
-                csv.AppendLine(string.Join(",",
-                    r.RequestId,
-                    CsvEscape(r.Customer?.FullName ?? ""),
-                    CsvEscape(r.Customer?.Phone ?? ""),
-                    r.Category,
-                    CsvEscape(r.Description),
-                    CsvEscape(r.Address),
-                    r.PinCode,
-                    r.PreferredDateTime.ToString("dd MMM yyyy HH:mm"),
-                    CsvEscape(r.AssignedTechnician?.User?.FullName ?? ""),
-                    r.Status,
-                    r.CreatedAt.ToString("dd MMM yyyy HH:mm"),
-                    r.Bill?.TotalAmount.ToString("F2") ?? "",
-                    r.Bill?.PaymentStatus.ToString() ?? ""
-                ));
-            }
-
-            var bytes = Encoding.UTF8.GetBytes(csv.ToString());
-            var fileName =
-                $"ServiceApp-Requests-" +
-                $"{DateTime.Now:yyyyMMdd-HHmm}.csv";
-
-            _logger.LogInformation(
-                "CSV exported by admin {Admin}: {Count} records",
-                User.Identity?.Name, results.Count);
-
-            // Return as downloadable file
-            // UTF-8 BOM ensures Excel opens it correctly
-            var bom = Encoding.UTF8.GetPreamble();
-            var output = bom.Concat(bytes).ToArray();
-
-            return File(output, "text/csv", fileName);
+            _logger.LogInformation("CSV exported by admin {Admin}: {Count} records", User.Identity?.Name, rows);
+            return File(content, "text/csv", $"ServiceApp-Requests-{DateTime.UtcNow:yyyyMMdd-HHmm}.csv");
         }
+
+        private static RequestSearchCriteria BuildCriteria(
+            string? search, string? status, DateTime? from, DateTime? to, int page, int pageSize) =>
+            new()
+            {
+                Search = search,
+                Statuses = Enum.TryParse<RequestStatus>(status, true, out var s) ? [s] : null,
+                CreatedFrom = from,
+                CreatedTo = to,
+                Page = page,
+                PageSize = pageSize
+            };
 
         // =============================================================
         //  GET /Admin/Requests/Details/{id}
@@ -358,40 +233,5 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // =============================================================
-        //  HELPER — resolve date range string to actual dates
-        // =============================================================
-        private static (DateTime? from, DateTime? to) ResolveDateRange(
-            string? dateRange,
-            DateTime? customFrom,
-            DateTime? customTo)
-        {
-            var today = DateTime.UtcNow.Date;
-
-            return dateRange switch
-            {
-                "today" => (today, today),
-                "week" => (today.AddDays(-6), today),
-                "month" => (today.AddDays(-29), today),
-                "custom" => (customFrom, customTo),
-                _ => (null, null)
-            };
-        }
-
-        // Escape a value for CSV — wrap in quotes if it has comma/quote/newline
-        // Values starting with = + - @ (or tab/CR) get a leading apostrophe so
-        // spreadsheet apps do not evaluate them as formulas (CSV injection).
-        private static string CsvEscape(string value)
-        {
-            if (value.Length > 0 && "=+-@\t\r".Contains(value[0]))
-                value = "'" + value;
-
-            if (value.Contains(',') ||
-                value.Contains('"') ||
-                value.Contains('\n') ||
-                value.Contains('\r'))
-                return $"\"{value.Replace("\"", "\"\"")}\"";
-            return value;
-        }
     }
 }

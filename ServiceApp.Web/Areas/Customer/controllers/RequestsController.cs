@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Mvc;
 using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
 using ServiceApp.Core.Interfaces;
+using ServiceApp.Core.Models.Queries;
 using ServiceApp.Web.Areas.Customer.Models;
 
 namespace ServiceApp.Web.Areas.Customer.Controllers
@@ -258,73 +259,37 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
         [HttpGet]
         public async Task<IActionResult> History(
             string? search = null,
-            string? category = null)
+            string? category = null,
+            [FromServices] IRequestQueries queries = null!)
         {
             var userId = _userManager.GetUserId(User)!;
+            ServiceCategory? catFilter = Enum.TryParse<ServiceCategory>(category, true, out var parsedCat)
+                ? parsedCat
+                : null;
 
-            var result = await _requestService
-                .GetCustomerRequestsAsync(userId);
-
-            if (!result.IsSuccess)
+            // Filtering and totals run in SQL.
+            var history = await queries.SearchAsync(new RequestSearchCriteria
             {
-                TempData["Error"] = result.ErrorMessage;
-                return RedirectToAction(nameof(Index));
-            }
-
-            // Only show terminal states on history page
-            var all = result.Data!
-                .Where(r => r.Status == RequestStatus.Completed
-                         || r.Status == RequestStatus.Cancelled)
-                .OrderByDescending(r => r.CreatedAt)
-                .ToList();
-
-            // Parse optional category filter
-            ServiceCategory? catFilter = null;
-            if (!string.IsNullOrEmpty(category) &&
-                Enum.TryParse<ServiceCategory>(category, out var parsedCat))
-                catFilter = parsedCat;
-
-            // Apply filters
-            var filtered = all.AsEnumerable();
-
-            if (catFilter.HasValue)
-                filtered = filtered.Where(r => r.Category == catFilter.Value);
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim().ToLower();
-                filtered = filtered.Where(r =>
-                    r.Description.ToLower().Contains(term) ||
-                    r.Address.ToLower().Contains(term) ||
-                    (r.AssignedTechnician?.User?.FullName
-                        .ToLower().Contains(term) ?? false));
-            }
-
-            var historyList = filtered.ToList();
-            var completed = all.Where(r =>
-                r.Status == RequestStatus.Completed).ToList();
+                CustomerId = userId,
+                Statuses = [RequestStatus.Completed, RequestStatus.Cancelled],
+                Category = catFilter,
+                Search = search,
+                PageSize = 0
+            });
+            var summary = await queries.GetCustomerHistorySummaryAsync(userId);
 
             var vm = new ServiceHistoryViewModel
             {
-                History = historyList,
-                TotalJobs = all.Count,
-                CompletedJobs = all.Count(r =>
-                    r.Status == RequestStatus.Completed),
-                CancelledJobs = all.Count(r =>
-                    r.Status == RequestStatus.Cancelled),
-                TotalSpent = completed
-                    .Where(r => r.Bill != null)
-                    .Sum(r => r.Bill!.TotalAmount),
-                AverageRating = completed
-                    .Where(r => r.CustomerRating.HasValue)
-                    .Select(r => (double)r.CustomerRating!.Value)
-                    .DefaultIfEmpty(0)
-                    .Average(),
+                History = history.Items.ToList(),
+                TotalJobs = summary.TotalJobs,
+                CompletedJobs = summary.CompletedJobs,
+                CancelledJobs = summary.CancelledJobs,
+                TotalSpent = summary.TotalSpent,
+                AverageRating = summary.AverageRating,
                 CategoryFilter = catFilter,
                 SearchTerm = search
             };
 
-            // Pass category enum list to view for filter dropdown
             ViewBag.Categories = Enum.GetValues<ServiceCategory>()
                 .Select(c => c.ToString())
                 .ToList();
@@ -406,13 +371,9 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
 
             var userId = _userManager.GetUserId(User)!;
 
-            var result = await _requestService.CreateRequestAsync(
-                customerId: userId,
-                description: vm.Description,
-                category: vm.Category,
-                address: vm.Address,
-                pinCode: vm.PinCode,
-                preferredDateTime: vm.PreferredDateTime);
+            // Ownership and the Completed/Cancelled rule are enforced by the service.
+            var result = await _requestService.RebookAsync(
+                vm.OriginalRequestId, userId, vm.PreferredDateTime, vm.Description, vm.Address);
 
             if (!result.IsSuccess)
             {

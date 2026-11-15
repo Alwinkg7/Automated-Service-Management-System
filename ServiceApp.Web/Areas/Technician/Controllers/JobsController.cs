@@ -210,5 +210,21 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
             // Go back to job list — this job no longer belongs to them
             return RedirectToAction(nameof(Index));
         }
+
+        // POST /Technician/Jobs/ConfirmCash/{id}
+        // The assigned technician confirms cash was collected; this records the
+        // payment and completes the job (the customer cannot self-declare cash).
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmCash(int id, [FromServices] IPaymentService payments)
+        {
+            var result = await payments.ConfirmCashCollectedAsync(id, _userManager.GetUserId(User)!);
+            if (result.IsSuccess)
+                TempData["Success"] = $"Cash payment of ₹{result.Data!.Amount:N2} recorded. Job completed.";
+            else
+                TempData["Error"] = result.ErrorMessage;
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
     }
 }

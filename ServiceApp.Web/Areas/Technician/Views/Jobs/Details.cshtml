@@ -386,9 +386,23 @@
                     </p>
                     <p style="font-size:12px; color:#92400E;
                                   margin-top:4px">
-                        Bill total:
-                        ₹@Model.Request.Bill?.TotalAmount.ToString("N0")
+                        Amount due:
+                        ₹@Model.Request.Bill?.PayableAmount.ToString("N0")
                     </p>
+                    @if (Model.Request.Bill?.PreferredPaymentMethod == "Cash")
+                    {
+                        <p style="font-size:12px; color:#92400E; margin-top:4px">
+                            Customer chose to pay in cash.
+                        </p>
+                    }
+                    <form asp-action="ConfirmCash" asp-route-id="@Model.Request.RequestId"
+                          method="post" style="margin-top:10px"
+                          onsubmit="return confirm('Confirm you collected the cash payment? This completes the job.');">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn-primary" style="width:100%">
+                            Confirm cash received
+                        </button>
+                    </form>
                 </div>
             }
         </div>

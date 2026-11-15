@@ -94,11 +94,7 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
         public async Task<IActionResult> MyDisputes()
         {
             var userId = _userManager.GetUserId(User)!;
-            var all = await _disputes.GetAllDisputesAsync();
-            var myDisputes = all
-                .Where(d => d.RaisedByUserId == userId)
-                .OrderByDescending(d => d.RaisedAt)
-                .ToList();
+            var myDisputes = (await _disputes.GetDisputesRaisedByAsync(userId)).ToList();
 
             return View(myDisputes);
         }

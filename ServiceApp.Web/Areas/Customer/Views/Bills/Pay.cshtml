@@ -153,7 +153,7 @@
                 Total to pay
             </p>
             <p style="font-size:36px; font-weight:700; line-height:1">
-                ₹@(Model.TotalAmount.ToString("N2"))
+                ₹@(Model.PayableAmount.ToString("N2"))
             </p>
         </div>
 
@@ -181,7 +181,7 @@
                     onclick="initiateRazorpay()"
                     class="btn-primary"
                     style="width:100%; font-size:15px; padding:12px">
-                Pay ₹@(Model.TotalAmount.ToString("N2")) online
+                Pay ₹@(Model.PayableAmount.ToString("N2")) online
             </button>
 
             @* Hidden form — submitted after successful Razorpay payment *@
@@ -209,8 +209,8 @@
             </h4>
             <p style="font-size:12px; color:var(--text-secondary);
                       margin-bottom:14px">
-                Already paid the technician in cash?
-                Confirm to close this request.
+                Prefer to pay the technician in cash?
+                Choose cash and your technician will confirm receipt to close this request.
             </p>
             <form asp-action="PayCash" method="post">
                 @Html.AntiForgeryToken()
@@ -220,8 +220,8 @@
                         class="btn-outline"
                         style="width:100%"
                         onclick="return confirm(
-                            'Confirm cash payment of ₹@(Model.TotalAmount.ToString("N2"))?')">
-                    Confirm cash payment
+                            'Pay ₹@(Model.PayableAmount.ToString("N2")) in cash to your technician? They will confirm receipt.')">
+                    I will pay in cash
                 </button>
             </form>
         </div>
@@ -249,7 +249,7 @@
         // Razorpay KeyId — public, safe to expose in JS
         var RAZORPAY_KEY_ID = '@razorpayKeyId';
         var BILL_ID         = @Model.Id;
-        var BILL_AMOUNT     = @Model.TotalAmount;
+        var BILL_AMOUNT     = @Model.PayableAmount;
 
         async function initiateRazorpay() {
             var btn     = document.getElementById('rzp-pay-btn');
