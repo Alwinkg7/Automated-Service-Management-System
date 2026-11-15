@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toCsv } from "./csv";
+import { BOM, toCsv } from "./csv";
 import { formatDate, parseApiDate } from "./format";
 
 describe("parseApiDate", () => {
@@ -32,6 +32,7 @@ describe("toCsv", () => {
         { header: "N", value: (r) => r.n },
       ],
     );
-    expect(csv).toBe('﻿Name,Note,N\r\n"Ann ""A"", Jr",\'=HYPERLINK(1),5');
+    expect(csv.startsWith(BOM)).toBe(true);
+    expect(csv.slice(BOM.length)).toBe('Name,Note,N\r\n"Ann ""A"", Jr",\'=HYPERLINK(1),5');
   });
 });

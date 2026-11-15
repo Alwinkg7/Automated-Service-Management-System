@@ -3,6 +3,9 @@
 
 export type CsvValue = string | number | boolean | null | undefined;
 
+/** UTF-8 byte order mark (written as a code point so formatters keep it visible). */
+export const BOM = String.fromCharCode(0xfeff);
+
 function cell(value: CsvValue): string {
   if (value === null || value === undefined) return "";
   let text = String(value);
@@ -17,5 +20,5 @@ export function toCsv<T>(
   const lines = [columns.map((c) => cell(c.header)).join(",")];
   for (const row of rows) lines.push(columns.map((c) => cell(c.value(row))).join(","));
   // CRLF + BOM so Excel opens UTF-8 (₹, names) correctly.
-  return `﻿${lines.join("\r\n")}`;
+  return BOM + lines.join("\r\n");
 }
