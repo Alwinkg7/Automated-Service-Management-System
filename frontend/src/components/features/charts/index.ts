@@ -6,6 +6,15 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 const loading = () => createElement(Skeleton, { className: "h-[260px] w-full" });
 
-export const LineSeriesChart = dynamic(() => import("./Charts").then((m) => m.LineSeriesChart), { ssr: false, loading });
-export const BarSeriesChart = dynamic(() => import("./Charts").then((m) => m.BarSeriesChart), { ssr: false, loading });
-export const DonutChart = dynamic(() => import("./Charts").then((m) => m.DonutChart), { ssr: false, loading });
+export const LineSeriesChart = dynamic(() => import("./Charts").then((m) => m.LineSeriesChart), {
+  ssr: false,
+  loading,
+});
+export const BarSeriesChart = dynamic(() => import("./Charts").then((m) => m.BarSeriesChart), {
+  ssr: false,
+  loading,
+});
+export const DonutChart = dynamic(() => import("./Charts").then((m) => m.DonutChart), {
+  ssr: false,
+  loading,
+});

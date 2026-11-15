@@ -45,12 +45,16 @@ export function customerEndpoints(api: ApiClient) {
     getDashboard: () => api.get("/api/customer/dashboard", { schema: customerDashboardSchema }),
 
     getRequests: (status?: RequestStatus) =>
-      api.get("/api/customer/requests", { query: { status }, schema: z.array(requestSummarySchema) }),
+      api.get("/api/customer/requests", {
+        query: { status },
+        schema: z.array(requestSummarySchema),
+      }),
 
     getRequest: (id: number) =>
       api.get(`/api/customer/requests/${id}`, { schema: customerRequestDetailSchema }),
 
-    getCategories: () => api.get("/api/customer/categories", { schema: z.array(categoryOptionSchema) }),
+    getCategories: () =>
+      api.get("/api/customer/categories", { schema: z.array(categoryOptionSchema) }),
 
     /** The idempotency key makes a double-submit return the same request instead of booking twice. */
     createRequest: (input: CreateRequestInput, idempotencyKey: string) =>
@@ -72,7 +76,9 @@ export function customerEndpoints(api: ApiClient) {
       }),
 
     verifyRazorpayPayment: (billId: number, input: RazorpayVerifyInput) =>
-      api.post(`/api/customer/bills/${billId}/razorpay/verify`, input, { schema: paymentResultSchema }),
+      api.post(`/api/customer/bills/${billId}/razorpay/verify`, input, {
+        schema: paymentResultSchema,
+      }),
 
     billPdfPath: (billId: number) => `/api/customer/bills/${billId}/pdf`,
 
@@ -80,7 +86,11 @@ export function customerEndpoints(api: ApiClient) {
     getPromotions: () => api.get("/api/customer/promotions", { schema: promotionsSchema }),
 
     validatePromo: (code: string, billAmount: number) =>
-      api.post("/api/customer/promotions/validate", { code, billAmount }, { schema: promoValidationSchema }),
+      api.post(
+        "/api/customer/promotions/validate",
+        { code, billAmount },
+        { schema: promoValidationSchema },
+      ),
 
     getDisputes: () => api.get("/api/customer/disputes", { schema: z.array(disputeSchema) }),
 

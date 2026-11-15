@@ -24,7 +24,11 @@ const sizes: Record<ButtonSize, string> = {
   lg: "h-12 px-6 text-base",
 };
 
-export function buttonClasses(variant: ButtonVariant = "primary", size: ButtonSize = "md", className?: string) {
+export function buttonClasses(
+  variant: ButtonVariant = "primary",
+  size: ButtonSize = "md",
+  className?: string,
+) {
   return cn(base, variants[variant], sizes[size], className);
 }
 
@@ -67,7 +71,14 @@ interface ButtonLinkProps extends ComponentProps<typeof Link> {
   icon?: ReactNode;
 }
 
-export function ButtonLink({ variant = "primary", size = "md", icon, className, children, ...props }: ButtonLinkProps) {
+export function ButtonLink({
+  variant = "primary",
+  size = "md",
+  icon,
+  className,
+  children,
+  ...props
+}: ButtonLinkProps) {
   return (
     <Link className={buttonClasses(variant, size, className)} {...props}>
       {icon}

@@ -11,10 +11,30 @@ export interface ServiceContent {
 }
 
 const COVERS: Record<ServiceCategory, string[]> = {
-  Plumbing: ["Leaking taps and pipes", "Blocked drains", "Toilet and flush repairs", "Water heater connections"],
-  Electrical: ["Switch and socket repairs", "Wiring faults", "Fan and light installation", "MCB / fuse issues"],
-  Carpentry: ["Door and hinge repairs", "Furniture assembly", "Cabinet and drawer fixes", "Custom woodwork"],
-  Cleaning: ["Deep home cleaning", "Kitchen and bathroom cleaning", "Sofa and carpet cleaning", "Pest control"],
+  Plumbing: [
+    "Leaking taps and pipes",
+    "Blocked drains",
+    "Toilet and flush repairs",
+    "Water heater connections",
+  ],
+  Electrical: [
+    "Switch and socket repairs",
+    "Wiring faults",
+    "Fan and light installation",
+    "MCB / fuse issues",
+  ],
+  Carpentry: [
+    "Door and hinge repairs",
+    "Furniture assembly",
+    "Cabinet and drawer fixes",
+    "Custom woodwork",
+  ],
+  Cleaning: [
+    "Deep home cleaning",
+    "Kitchen and bathroom cleaning",
+    "Sofa and carpet cleaning",
+    "Pest control",
+  ],
   AC_Repair: ["AC servicing", "Gas top-up", "Installation and uninstallation", "Cooling problems"],
   Appliance_Repair: ["Washing machines", "Refrigerators", "Microwaves", "Water purifiers"],
   Painting: ["Interior walls", "Exterior painting", "Touch-ups and texture", "Waterproofing"],

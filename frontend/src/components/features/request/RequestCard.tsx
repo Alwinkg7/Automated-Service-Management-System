@@ -10,25 +10,30 @@ export function RequestCard({ request }: { request: RequestSummary }) {
   return (
     <Link
       href={`/customer/requests/${request.id}`}
-      className="flex gap-4 rounded-card border border-border bg-surface p-4 transition-colors hover:border-primary/40"
+      className="rounded-card border-border bg-surface hover:border-primary/40 flex gap-4 border p-4 transition-colors"
     >
       <CategoryIcon category={request.category} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-medium">
-            {CATEGORY_INFO[request.category].label} <span className="text-fg-muted">#{request.id}</span>
+            {CATEGORY_INFO[request.category].label}{" "}
+            <span className="text-fg-muted">#{request.id}</span>
           </p>
           <StatusBadge status={request.status} />
           {request.hasBill && !request.billPaid ? <StatusBadge status="Unpaid" /> : null}
         </div>
-        {request.description ? <p className="mt-1 line-clamp-1 text-sm text-fg-muted">{request.description}</p> : null}
-        <p className="mt-1 text-xs text-fg-muted">
+        {request.description ? (
+          <p className="text-fg-muted mt-1 line-clamp-1 text-sm">{request.description}</p>
+        ) : null}
+        <p className="text-fg-muted mt-1 text-xs">
           Scheduled {formatDate(request.scheduledDate)}
           {request.technicianName ? ` · ${request.technicianName}` : ""}
         </p>
       </div>
       {request.billAmount ? (
-        <p className="hidden self-center text-sm font-medium tabular-nums sm:block">{formatMoney(request.billAmount)}</p>
+        <p className="hidden self-center text-sm font-medium tabular-nums sm:block">
+          {formatMoney(request.billAmount)}
+        </p>
       ) : null}
     </Link>
   );

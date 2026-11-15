@@ -38,7 +38,14 @@ export function LoginForm() {
       <FormError message={formError} />
       <Field label="Email" error={errors.email?.message} required>
         {({ id, describedBy, invalid }) => (
-          <Input id={id} type="email" autoComplete="email" aria-describedby={describedBy} aria-invalid={invalid} {...register("email")} />
+          <Input
+            id={id}
+            type="email"
+            autoComplete="email"
+            aria-describedby={describedBy}
+            aria-invalid={invalid}
+            {...register("email")}
+          />
         )}
       </Field>
       <Field label="Password" error={errors.password?.message} required>

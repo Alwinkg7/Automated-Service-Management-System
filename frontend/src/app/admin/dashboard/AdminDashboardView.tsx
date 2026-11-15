@@ -46,7 +46,12 @@ export function AdminDashboardView() {
               <StatCard label="Completed" value={d.stats.completed} icon="check" />
               <StatCard label="Customers" value={d.stats.totalCustomers} icon="users" />
               <StatCard label="Technicians" value={d.stats.totalTechnicians} icon="briefcase" />
-              <StatCard label="Revenue (paid bills)" value={formatMoney(d.stats.revenue)} icon="wallet" className="col-span-2" />
+              <StatCard
+                label="Revenue (paid bills)"
+                value={formatMoney(d.stats.revenue)}
+                icon="wallet"
+                className="col-span-2"
+              />
             </div>
             <Card>
               <CardHeader
@@ -60,7 +65,10 @@ export function AdminDashboardView() {
               />
               {d.pendingRequests.length === 0 ? (
                 <div className="p-4">
-                  <EmptyState title="Nothing pending" description="Every request has a technician." />
+                  <EmptyState
+                    title="Nothing pending"
+                    description="Every request has a technician."
+                  />
                 </div>
               ) : (
                 <div className="p-2 sm:p-4">
@@ -72,14 +80,21 @@ export function AdminDashboardView() {
                       {
                         header: "Request",
                         cell: (r) => (
-                          <Link href={`/admin/requests/${r.id}`} className="font-medium text-primary hover:underline">
+                          <Link
+                            href={`/admin/requests/${r.id}`}
+                            className="text-primary font-medium hover:underline"
+                          >
                             {CATEGORY_INFO[r.category].label} #{r.id}
                           </Link>
                         ),
                       },
                       { header: "Customer", cell: (r) => r.customerName ?? "—" },
                       { header: "Scheduled", cell: (r) => r.scheduledDate },
-                      { header: "Address", cell: (r) => <span className="line-clamp-1">{r.address}</span>, hideOnMobile: true },
+                      {
+                        header: "Address",
+                        cell: (r) => <span className="line-clamp-1">{r.address}</span>,
+                        hideOnMobile: true,
+                      },
                     ]}
                     rowAction={(r) => (
                       <ButtonLink href={`/admin/requests/${r.id}`} size="sm" variant="secondary">

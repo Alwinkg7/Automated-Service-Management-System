@@ -29,7 +29,10 @@ export function BillForm({ jobId }: { jobId: number }) {
     handleSubmit,
     control,
     formState: { errors },
-  } = useForm<BillValues>({ resolver: zodResolver(billSchema), defaultValues: { laborCost: 0, materialCost: 0, description: "" } });
+  } = useForm<BillValues>({
+    resolver: zodResolver(billSchema),
+    defaultValues: { laborCost: 0, materialCost: 0, description: "" },
+  });
   const [labor, material] = useWatch({ control, name: ["laborCost", "materialCost"] });
 
   const create = useAction({
@@ -40,27 +43,64 @@ export function BillForm({ jobId }: { jobId: number }) {
 
   return (
     <Card>
-      <CardHeader title="Create bill" description="The customer pays this amount online. Double-check before sending." />
+      <CardHeader
+        title="Create bill"
+        description="The customer pays this amount online. Double-check before sending."
+      />
       <CardBody>
-        <form onSubmit={handleSubmit((v) => create.mutate(v))} noValidate className="grid gap-4 sm:grid-cols-2">
+        <form
+          onSubmit={handleSubmit((v) => create.mutate(v))}
+          noValidate
+          className="grid gap-4 sm:grid-cols-2"
+        >
           <Field label="Labour (₹)" error={errors.laborCost?.message}>
             {({ id, describedBy, invalid }) => (
-              <Input id={id} type="number" min={0} step="0.01" aria-describedby={describedBy} aria-invalid={invalid} {...register("laborCost", { valueAsNumber: true })} />
+              <Input
+                id={id}
+                type="number"
+                min={0}
+                step="0.01"
+                aria-describedby={describedBy}
+                aria-invalid={invalid}
+                {...register("laborCost", { valueAsNumber: true })}
+              />
             )}
           </Field>
           <Field label="Materials & parts (₹)" error={errors.materialCost?.message}>
             {({ id, describedBy, invalid }) => (
-              <Input id={id} type="number" min={0} step="0.01" aria-describedby={describedBy} aria-invalid={invalid} {...register("materialCost", { valueAsNumber: true })} />
+              <Input
+                id={id}
+                type="number"
+                min={0}
+                step="0.01"
+                aria-describedby={describedBy}
+                aria-invalid={invalid}
+                {...register("materialCost", { valueAsNumber: true })}
+              />
             )}
           </Field>
-          <Field label="Materials description" error={errors.description?.message} className="sm:col-span-2">
+          <Field
+            label="Materials description"
+            error={errors.description?.message}
+            className="sm:col-span-2"
+          >
             {({ id, describedBy, invalid }) => (
-              <Textarea id={id} rows={2} placeholder="e.g. 2m copper wire, 1 switch" aria-describedby={describedBy} aria-invalid={invalid} {...register("description")} />
+              <Textarea
+                id={id}
+                rows={2}
+                placeholder="e.g. 2m copper wire, 1 switch"
+                aria-describedby={describedBy}
+                aria-invalid={invalid}
+                {...register("description")}
+              />
             )}
           </Field>
           <div className="flex items-center justify-between gap-3 sm:col-span-2">
             <p className="text-sm">
-              Total: <span className="font-semibold tabular-nums">{formatMoney((Number(labor) || 0) + (Number(material) || 0))}</span>
+              Total:{" "}
+              <span className="font-semibold tabular-nums">
+                {formatMoney((Number(labor) || 0) + (Number(material) || 0))}
+              </span>
             </p>
             <Button type="submit" loading={create.isPending}>
               Send bill

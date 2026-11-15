@@ -16,7 +16,12 @@ export function UserTable({ users, showRole = true }: { users: AdminUser[]; show
   const toggle = useAction({
     fn: (id: string) => adminApi.toggleUserActive(id),
     invalidate: [qk.admin.all],
-    success: (r) => (r?.isActive === undefined ? "Updated." : r.isActive ? "Account activated." : "Account deactivated."),
+    success: (r) =>
+      r?.isActive === undefined
+        ? "Updated."
+        : r.isActive
+          ? "Account activated."
+          : "Account deactivated.",
     onSuccess: () => setTarget(null),
   });
 
@@ -32,24 +37,37 @@ export function UserTable({ users, showRole = true }: { users: AdminUser[]; show
             cell: (u) => (
               <span>
                 <span className="block font-medium">{u.name ?? "—"}</span>
-                <span className="text-xs text-fg-muted">{u.email}</span>
+                <span className="text-fg-muted text-xs">{u.email}</span>
               </span>
             ),
           },
-          ...(showRole ? [{ header: "Role", cell: (u: AdminUser) => <Badge tone="primary">{u.role}</Badge> }] : []),
+          ...(showRole
+            ? [{ header: "Role", cell: (u: AdminUser) => <Badge tone="primary">{u.role}</Badge> }]
+            : []),
           { header: "Phone", cell: (u) => u.phone ?? "—", hideOnMobile: true },
           { header: "Joined", cell: (u) => formatDate(u.createdAt), hideOnMobile: true },
-          { header: "Status", cell: (u) => <StatusBadge status={u.isActive ? "Active" : "Inactive"} /> },
+          {
+            header: "Status",
+            cell: (u) => <StatusBadge status={u.isActive ? "Active" : "Inactive"} />,
+          },
         ]}
         rowAction={(u) => (
-          <Button size="sm" variant={u.isActive ? "outline" : "secondary"} onClick={() => setTarget(u)}>
+          <Button
+            size="sm"
+            variant={u.isActive ? "outline" : "secondary"}
+            onClick={() => setTarget(u)}
+          >
             {u.isActive ? "Deactivate" : "Activate"}
           </Button>
         )}
       />
       <ConfirmDialog
         open={!!target}
-        title={target?.isActive ? `Deactivate ${target?.name ?? "user"}?` : `Activate ${target?.name ?? "user"}?`}
+        title={
+          target?.isActive
+            ? `Deactivate ${target?.name ?? "user"}?`
+            : `Activate ${target?.name ?? "user"}?`
+        }
         description={
           target?.isActive
             ? "They will be signed out and can't sign in until reactivated."

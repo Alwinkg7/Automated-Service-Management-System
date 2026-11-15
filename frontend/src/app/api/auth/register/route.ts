@@ -8,13 +8,20 @@ import { registerSchema } from "@/lib/validation/auth";
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) {
-    return NextResponse.json({ success: false, error: "Cross-site request blocked." }, { status: 403 });
+    return NextResponse.json(
+      { success: false, error: "Cross-site request blocked." },
+      { status: 403 },
+    );
   }
 
   const parsed = registerSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
-      { success: false, error: "Please check the form.", errors: z.flattenError(parsed.error).fieldErrors },
+      {
+        success: false,
+        error: "Please check the form.",
+        errors: z.flattenError(parsed.error).fieldErrors,
+      },
       { status: 400 },
     );
   }
@@ -27,9 +34,15 @@ export async function POST(request: Request) {
     const body = await register(path, rest);
     const tokens = loginResponseSchema.safeParse(body);
     if (!tokens.success) {
-      return NextResponse.json({ success: true, data: { role, requiresLogin: true } }, { status: 201 });
+      return NextResponse.json(
+        { success: true, data: { role, requiresLogin: true } },
+        { status: 201 },
+      );
     }
-    const res = NextResponse.json({ success: true, data: { role: tokens.data.role } }, { status: 201 });
+    const res = NextResponse.json(
+      { success: true, data: { role: tokens.data.role } },
+      { status: 201 },
+    );
     setAuthCookies(res.cookies, tokens.data);
     return res;
   } catch (error) {

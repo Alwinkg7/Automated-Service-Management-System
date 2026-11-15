@@ -31,7 +31,10 @@ export function RaiseDisputeView() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<DisputeForm>({ resolver: zodResolver(disputeFormSchema), defaultValues: { reason: "", description: "" } });
+  } = useForm<DisputeForm>({
+    resolver: zodResolver(disputeFormSchema),
+    defaultValues: { reason: "", description: "" },
+  });
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
@@ -46,28 +49,45 @@ export function RaiseDisputeView() {
   });
 
   if (!requestId) {
-    return <EmptyState title="Choose a request first" description="Open a completed request and choose “Raise dispute”." action={<ButtonLink href="/customer/history">Go to history</ButtonLink>} />;
+    return (
+      <EmptyState
+        title="Choose a request first"
+        description="Open a completed request and choose “Raise dispute”."
+        action={<ButtonLink href="/customer/history">Go to history</ButtonLink>}
+      />
+    );
   }
 
   return (
     <>
-      <PageHeader back={{ href: `/customer/requests/${requestId}`, label: `Request #${requestId}` }} title="Raise a dispute" />
+      <PageHeader
+        back={{ href: `/customer/requests/${requestId}`, label: `Request #${requestId}` }}
+        title="Raise a dispute"
+      />
       <QueryView query={request}>
         {(r) =>
           r.status !== "Completed" ? (
-            <EmptyState title="Not available" description="Disputes can only be raised for completed requests." />
+            <EmptyState
+              title="Not available"
+              description="Disputes can only be raised for completed requests."
+            />
           ) : (
             <Card className="max-w-2xl">
               <CardBody>
                 <form onSubmit={onSubmit} noValidate className="space-y-4">
-                  <p className="text-sm text-fg-muted">
+                  <p className="text-fg-muted text-sm">
                     {CATEGORY_INFO[r.category].label} #{r.id}
                     {r.technician?.name ? ` · ${r.technician.name}` : ""}
                   </p>
                   <FormError message={formError} />
                   <Field label="Reason" error={errors.reason?.message} required>
                     {({ id, describedBy, invalid }) => (
-                      <Select id={id} aria-describedby={describedBy} aria-invalid={invalid} {...register("reason")}>
+                      <Select
+                        id={id}
+                        aria-describedby={describedBy}
+                        aria-invalid={invalid}
+                        {...register("reason")}
+                      >
                         <option value="" disabled>
                           Select a reason
                         </option>
@@ -79,9 +99,20 @@ export function RaiseDisputeView() {
                       </Select>
                     )}
                   </Field>
-                  <Field label="What happened?" error={errors.description?.message} hint="At least 20 characters." required>
+                  <Field
+                    label="What happened?"
+                    error={errors.description?.message}
+                    hint="At least 20 characters."
+                    required
+                  >
                     {({ id, describedBy, invalid }) => (
-                      <Textarea id={id} rows={5} aria-describedby={describedBy} aria-invalid={invalid} {...register("description")} />
+                      <Textarea
+                        id={id}
+                        rows={5}
+                        aria-describedby={describedBy}
+                        aria-invalid={invalid}
+                        {...register("description")}
+                      />
                     )}
                   </Field>
                   <div className="flex justify-end">

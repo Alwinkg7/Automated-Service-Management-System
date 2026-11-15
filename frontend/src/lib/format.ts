@@ -1,7 +1,11 @@
 // Display helpers. The API sometimes sends preformatted dates ("12 Nov 2026"),
 // sometimes ISO strings; both render sensibly.
 
-const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
+const inr = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 2,
+});
 
 export function formatMoney(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";

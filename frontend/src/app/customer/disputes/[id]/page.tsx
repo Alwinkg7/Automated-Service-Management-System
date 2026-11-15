@@ -9,11 +9,20 @@ import { qk } from "@/lib/queryKeys";
 
 export default function CustomerDisputePage({ params }: { params: Promise<{ id: string }> }) {
   const id = Number(use(params).id);
-  const query = useQuery({ queryKey: qk.customer.dispute(id), queryFn: () => customerApi.getDispute(id), enabled: id > 0 });
+  const query = useQuery({
+    queryKey: qk.customer.dispute(id),
+    queryFn: () => customerApi.getDispute(id),
+    enabled: id > 0,
+  });
   return (
     <>
-      <PageHeader back={{ href: "/customer/disputes", label: "My disputes" }} title={`Dispute #${id}`} />
-      <QueryView query={query} pendingEndpoint="GET /api/customer/disputes/{id}">{(d) => <DisputeDetailCard dispute={d} requestHref={`/customer/requests/${d.requestId}`} />}</QueryView>
+      <PageHeader
+        back={{ href: "/customer/disputes", label: "My disputes" }}
+        title={`Dispute #${id}`}
+      />
+      <QueryView query={query} pendingEndpoint="GET /api/customer/disputes/{id}">
+        {(d) => <DisputeDetailCard dispute={d} requestHref={`/customer/requests/${d.requestId}`} />}
+      </QueryView>
     </>
   );
 }

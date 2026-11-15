@@ -56,7 +56,8 @@ export function RegisterForm() {
     } catch (error) {
       if (isApiError(error)) {
         for (const [field, messages] of Object.entries(error.fieldErrors)) {
-          if (field && messages[0]) setError(field as keyof RegisterValues, { message: messages[0] });
+          if (field && messages[0])
+            setError(field as keyof RegisterValues, { message: messages[0] });
         }
       }
       setFormError(errorMessage(error));
@@ -78,24 +79,50 @@ export function RegisterForm() {
 
       <Field label="Full name" error={fieldErrors.fullName?.message} required>
         {({ id, describedBy, invalid }) => (
-          <Input id={id} autoComplete="name" aria-describedby={describedBy} aria-invalid={invalid} {...register("fullName")} />
+          <Input
+            id={id}
+            autoComplete="name"
+            aria-describedby={describedBy}
+            aria-invalid={invalid}
+            {...register("fullName")}
+          />
         )}
       </Field>
       <Field label="Email" error={fieldErrors.email?.message} required>
         {({ id, describedBy, invalid }) => (
-          <Input id={id} type="email" autoComplete="email" aria-describedby={describedBy} aria-invalid={invalid} {...register("email")} />
+          <Input
+            id={id}
+            type="email"
+            autoComplete="email"
+            aria-describedby={describedBy}
+            aria-invalid={invalid}
+            {...register("email")}
+          />
         )}
       </Field>
       <Field label="Phone number" error={fieldErrors.phone?.message} required>
         {({ id, describedBy, invalid }) => (
-          <Input id={id} type="tel" autoComplete="tel" aria-describedby={describedBy} aria-invalid={invalid} {...register("phone")} />
+          <Input
+            id={id}
+            type="tel"
+            autoComplete="tel"
+            aria-describedby={describedBy}
+            aria-invalid={invalid}
+            {...register("phone")}
+          />
         )}
       </Field>
 
       {role === "Technician" ? (
         <Field label="Your skill / trade" error={fieldErrors.skill?.message} required>
           {({ id, describedBy, invalid }) => (
-            <Select id={id} aria-describedby={describedBy} aria-invalid={invalid} defaultValue="" {...register("skill")}>
+            <Select
+              id={id}
+              aria-describedby={describedBy}
+              aria-invalid={invalid}
+              defaultValue=""
+              {...register("skill")}
+            >
               <option value="" disabled>
                 Select a skill
               </option>
@@ -110,12 +137,22 @@ export function RegisterForm() {
       ) : (
         <Field label="Referral code (optional)" error={fieldErrors.referralCode?.message}>
           {({ id, describedBy, invalid }) => (
-            <Input id={id} aria-describedby={describedBy} aria-invalid={invalid} {...register("referralCode")} />
+            <Input
+              id={id}
+              aria-describedby={describedBy}
+              aria-invalid={invalid}
+              {...register("referralCode")}
+            />
           )}
         </Field>
       )}
 
-      <Field label="Password" error={fieldErrors.password?.message} hint="At least 8 characters." required>
+      <Field
+        label="Password"
+        error={fieldErrors.password?.message}
+        hint="At least 8 characters."
+        required
+      >
         {({ id, describedBy, invalid }) => (
           <Input
             id={id}

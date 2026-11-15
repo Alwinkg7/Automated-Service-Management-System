@@ -22,10 +22,24 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { qk } from "@/lib/queryKeys";
 import { CATEGORY_INFO, type ServiceCategory } from "@/types/enums";
 
-function WithdrawModal({ open, onClose, available }: { open: boolean; onClose: () => void; available: number }) {
+function WithdrawModal({
+  open,
+  onClose,
+  available,
+}: {
+  open: boolean;
+  onClose: () => void;
+  available: number;
+}) {
   const schema = z.object({
-    amount: z.number("Enter an amount").positive("Enter an amount greater than zero.").max(available, `Maximum available: ${formatMoney(available)}`),
-    upiId: z.string().trim().regex(/^[\w.-]{2,}@[a-zA-Z]{2,}$/, "Enter a valid UPI ID (e.g. name@bank)"),
+    amount: z
+      .number("Enter an amount")
+      .positive("Enter an amount greater than zero.")
+      .max(available, `Maximum available: ${formatMoney(available)}`),
+    upiId: z
+      .string()
+      .trim()
+      .regex(/^[\w.-]{2,}@[a-zA-Z]{2,}$/, "Enter a valid UPI ID (e.g. name@bank)"),
   });
   type Values = z.infer<typeof schema>;
   const {
@@ -61,15 +75,35 @@ function WithdrawModal({ open, onClose, available }: { open: boolean; onClose: (
         </>
       }
     >
-      <form id="withdraw-form" onSubmit={handleSubmit((v) => withdraw.mutate(v))} noValidate className="space-y-4">
+      <form
+        id="withdraw-form"
+        onSubmit={handleSubmit((v) => withdraw.mutate(v))}
+        noValidate
+        className="space-y-4"
+      >
         <Field label="Amount (₹)" error={errors.amount?.message} required>
           {({ id, describedBy, invalid }) => (
-            <Input id={id} type="number" step="0.01" min={1} max={available} aria-describedby={describedBy} aria-invalid={invalid} {...register("amount", { valueAsNumber: true })} />
+            <Input
+              id={id}
+              type="number"
+              step="0.01"
+              min={1}
+              max={available}
+              aria-describedby={describedBy}
+              aria-invalid={invalid}
+              {...register("amount", { valueAsNumber: true })}
+            />
           )}
         </Field>
         <Field label="UPI ID" error={errors.upiId?.message} required>
           {({ id, describedBy, invalid }) => (
-            <Input id={id} placeholder="name@bank" aria-describedby={describedBy} aria-invalid={invalid} {...register("upiId")} />
+            <Input
+              id={id}
+              placeholder="name@bank"
+              aria-describedby={describedBy}
+              aria-invalid={invalid}
+              {...register("upiId")}
+            />
           )}
         </Field>
       </form>
@@ -82,7 +116,11 @@ export function WalletView() {
   const [open, setOpen] = useState(false);
 
   return (
-    <QueryView query={query} loading={<SkeletonStats />} pendingEndpoint="GET /api/technician/wallet">
+    <QueryView
+      query={query}
+      loading={<SkeletonStats />}
+      pendingEndpoint="GET /api/technician/wallet"
+    >
       {(w) => (
         <>
           <PageHeader
@@ -96,10 +134,26 @@ export function WalletView() {
           />
           <div className="space-y-6">
             <StatGrid>
-              <StatCard label="Available to withdraw" value={formatMoney(w.availableToWithdraw)} icon="wallet" hint={w.pendingWithdrawal ? `${formatMoney(w.pendingWithdrawal)} pending` : undefined} />
+              <StatCard
+                label="Available to withdraw"
+                value={formatMoney(w.availableToWithdraw)}
+                icon="wallet"
+                hint={
+                  w.pendingWithdrawal ? `${formatMoney(w.pendingWithdrawal)} pending` : undefined
+                }
+              />
               <StatCard label="This week" value={formatMoney(w.netEarningsThisWeek)} icon="chart" />
-              <StatCard label="This month" value={formatMoney(w.netEarningsThisMonth)} icon="chart" />
-              <StatCard label="All time (net)" value={formatMoney(w.netEarningsAllTime)} icon="check" hint={`${w.totalJobsCompleted} jobs · avg ${formatMoney(w.averagePerJob)}`} />
+              <StatCard
+                label="This month"
+                value={formatMoney(w.netEarningsThisMonth)}
+                icon="chart"
+              />
+              <StatCard
+                label="All time (net)"
+                value={formatMoney(w.netEarningsAllTime)}
+                icon="check"
+                hint={`${w.totalJobsCompleted} jobs · avg ${formatMoney(w.averagePerJob)}`}
+              />
             </StatGrid>
 
             <Card>
@@ -116,7 +170,7 @@ export function WalletView() {
                     format={(v) => `₹${Math.round(v).toLocaleString("en-IN")}`}
                   />
                 ) : (
-                  <p className="text-sm text-fg-muted">No earnings yet.</p>
+                  <p className="text-fg-muted text-sm">No earnings yet.</p>
                 )}
               </CardBody>
             </Card>
@@ -124,7 +178,10 @@ export function WalletView() {
             <section>
               <h2 className="mb-3 font-semibold">Payouts</h2>
               {w.payouts.length === 0 ? (
-                <EmptyState title="No paid jobs yet" description="Earnings appear here once customers pay their bills." />
+                <EmptyState
+                  title="No paid jobs yet"
+                  description="Earnings appear here once customers pay their bills."
+                />
               ) : (
                 <DataTable
                   caption="Payouts"
@@ -132,10 +189,22 @@ export function WalletView() {
                   rowKey={(p) => p.billId}
                   columns={[
                     { header: "Job", cell: (p) => `#${p.requestId}` },
-                    { header: "Service", cell: (p) => CATEGORY_INFO[p.category as ServiceCategory]?.label ?? p.category },
+                    {
+                      header: "Service",
+                      cell: (p) =>
+                        CATEGORY_INFO[p.category as ServiceCategory]?.label ?? p.category,
+                    },
                     { header: "Customer", cell: (p) => p.customerName ?? "—", hideOnMobile: true },
-                    { header: "Gross", cell: (p) => formatMoney(p.grossAmount), className: "tabular-nums" },
-                    { header: "Net", cell: (p) => <span className="font-medium">{formatMoney(p.netAmount)}</span>, className: "tabular-nums" },
+                    {
+                      header: "Gross",
+                      cell: (p) => formatMoney(p.grossAmount),
+                      className: "tabular-nums",
+                    },
+                    {
+                      header: "Net",
+                      cell: (p) => <span className="font-medium">{formatMoney(p.netAmount)}</span>,
+                      className: "tabular-nums",
+                    },
                     { header: "Paid", cell: (p) => formatDate(p.paidAt) },
                   ]}
                 />
@@ -145,7 +214,7 @@ export function WalletView() {
             <section>
               <h2 className="mb-3 font-semibold">Withdrawals</h2>
               {w.withdrawals.length === 0 ? (
-                <p className="text-sm text-fg-muted">No withdrawal requests yet.</p>
+                <p className="text-fg-muted text-sm">No withdrawal requests yet.</p>
               ) : (
                 <DataTable
                   caption="Withdrawals"
@@ -153,7 +222,11 @@ export function WalletView() {
                   rowKey={(x) => x.id}
                   columns={[
                     { header: "Requested", cell: (x) => formatDate(x.requestedAt) },
-                    { header: "Amount", cell: (x) => formatMoney(x.amount), className: "tabular-nums" },
+                    {
+                      header: "Amount",
+                      cell: (x) => formatMoney(x.amount),
+                      className: "tabular-nums",
+                    },
                     { header: "UPI", cell: (x) => x.upiId, hideOnMobile: true },
                     { header: "Status", cell: (x) => <StatusBadge status={x.status} /> },
                     { header: "Note", cell: (x) => x.adminNote ?? "—", hideOnMobile: true },
@@ -162,7 +235,11 @@ export function WalletView() {
               )}
             </section>
           </div>
-          <WithdrawModal open={open} onClose={() => setOpen(false)} available={w.availableToWithdraw} />
+          <WithdrawModal
+            open={open}
+            onClose={() => setOpen(false)}
+            available={w.availableToWithdraw}
+          />
         </>
       )}
     </QueryView>

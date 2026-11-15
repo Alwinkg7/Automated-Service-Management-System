@@ -28,6 +28,10 @@ export const rateSchema = z.object({
 
 export const disputeFormSchema = z.object({
   reason: z.string().min(1, "Choose a reason"),
-  description: z.string().trim().min(20, "Please provide at least 20 characters describing the issue.").max(2000),
+  description: z
+    .string()
+    .trim()
+    .min(20, "Please provide at least 20 characters describing the issue.")
+    .max(2000),
 });
 export type DisputeForm = z.infer<typeof disputeFormSchema>;

@@ -19,7 +19,8 @@ export function technicianEndpoints(api: ApiClient) {
   return {
     getDashboard: () => api.get("/api/technician/dashboard", { schema: technicianDashboardSchema }),
 
-    toggleStatus: () => api.post("/api/technician/toggle-status", undefined, { schema: toggleStatusSchema }),
+    toggleStatus: () =>
+      api.post("/api/technician/toggle-status", undefined, { schema: toggleStatusSchema }),
 
     getJobs: (status?: RequestStatus) =>
       api.get("/api/technician/jobs", { query: { status }, schema: z.array(jobSummarySchema) }),

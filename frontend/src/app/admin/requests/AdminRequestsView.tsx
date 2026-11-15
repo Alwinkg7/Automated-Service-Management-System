@@ -30,9 +30,13 @@ const PAGE_SIZE = 20;
 function matches(r: AdminRequestRow, term: string) {
   if (!term) return true;
   if (String(r.id) === term.replace("#", "")) return true;
-  return [r.customerName, r.technicianName, r.address, r.pinCode, CATEGORY_INFO[r.category].label].some((v) =>
-    v?.toLowerCase().includes(term),
-  );
+  return [
+    r.customerName,
+    r.technicianName,
+    r.address,
+    r.pinCode,
+    CATEGORY_INFO[r.category].label,
+  ].some((v) => v?.toLowerCase().includes(term));
 }
 
 export function AdminRequestsView() {
@@ -83,7 +87,10 @@ export function AdminRequestsView() {
       { header: "Bill amount", value: (r) => r.billAmount },
       { header: "Bill paid", value: (r) => (r.hasBill ? (r.billPaid ? "Yes" : "No") : "") },
     ]);
-    saveBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `asms-requests-${dayKey(new Date())}.csv`);
+    saveBlob(
+      new Blob([csv], { type: "text/csv;charset=utf-8" }),
+      `asms-requests-${dayKey(new Date())}.csv`,
+    );
   }
 
   return (
@@ -92,21 +99,42 @@ export function AdminRequestsView() {
         title="All requests"
         description="Search, filter and export every service request."
         actions={
-          <Button variant="outline" onClick={exportCsv} disabled={!filtered.length} icon={<Icon name="download" className="size-4" />}>
+          <Button
+            variant="outline"
+            onClick={exportCsv}
+            disabled={!filtered.length}
+            icon={<Icon name="download" className="size-4" />}
+          >
             Export CSV ({filtered.length})
           </Button>
         }
       />
       <div className="mb-4 space-y-3">
         <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
-          <SearchInput value={search} onChange={(q) => url.set({ q, page: undefined })} placeholder="Customer, technician, address, pin code or #id" />
+          <SearchInput
+            value={search}
+            onChange={(q) => url.set({ q, page: undefined })}
+            placeholder="Customer, technician, address, pin code or #id"
+          />
           <label className="flex items-center gap-2 text-sm">
             <span className="text-fg-muted">From</span>
-            <Input type="date" value={from} max={to || undefined} onChange={(e) => url.set({ from: e.target.value, page: undefined })} className="w-auto" />
+            <Input
+              type="date"
+              value={from}
+              max={to || undefined}
+              onChange={(e) => url.set({ from: e.target.value, page: undefined })}
+              className="w-auto"
+            />
           </label>
           <label className="flex items-center gap-2 text-sm">
             <span className="text-fg-muted">To</span>
-            <Input type="date" value={to} min={from || undefined} onChange={(e) => url.set({ to: e.target.value, page: undefined })} className="w-auto" />
+            <Input
+              type="date"
+              value={to}
+              min={from || undefined}
+              onChange={(e) => url.set({ to: e.target.value, page: undefined })}
+              className="w-auto"
+            />
           </label>
         </div>
         <FilterChips
@@ -115,14 +143,20 @@ export function AdminRequestsView() {
           onChange={(s) => url.set({ status: s, page: undefined })}
           options={[
             { value: "", label: "All", count: all.length },
-            ...REQUEST_STATUSES.map((s) => ({ value: s, label: humanize(s), count: counts[s] ?? 0 })),
+            ...REQUEST_STATUSES.map((s) => ({
+              value: s,
+              label: humanize(s),
+              count: counts[s] ?? 0,
+            })),
           ]}
         />
       </div>
       <QueryView
         query={query}
         isEmpty={() => filtered.length === 0}
-        empty={<EmptyState title="No matching requests" description="Adjust the search or filters." />}
+        empty={
+          <EmptyState title="No matching requests" description="Adjust the search or filters." />
+        }
       >
         {() => (
           <div className="space-y-3">
@@ -134,23 +168,39 @@ export function AdminRequestsView() {
                 {
                   header: "Request",
                   cell: (r) => (
-                    <Link href={`/admin/requests/${r.id}`} className="font-medium text-primary hover:underline">
+                    <Link
+                      href={`/admin/requests/${r.id}`}
+                      className="text-primary font-medium hover:underline"
+                    >
                       {CATEGORY_INFO[r.category].label} #{r.id}
                     </Link>
                   ),
                 },
                 { header: "Status", cell: (r) => <StatusBadge status={r.status} /> },
                 { header: "Customer", cell: (r) => r.customerName ?? "—" },
-                { header: "Technician", cell: (r) => r.technicianName ?? <span className="text-fg-muted">Unassigned</span>, hideOnMobile: true },
+                {
+                  header: "Technician",
+                  cell: (r) =>
+                    r.technicianName ?? <span className="text-fg-muted">Unassigned</span>,
+                  hideOnMobile: true,
+                },
                 { header: "Scheduled", cell: (r) => r.scheduledDate, hideOnMobile: true },
                 {
                   header: "Bill",
-                  cell: (r) => (r.hasBill ? `${formatMoney(r.billAmount)}${r.billPaid ? "" : " (unpaid)"}` : "—"),
+                  cell: (r) =>
+                    r.hasBill
+                      ? `${formatMoney(r.billAmount)}${r.billPaid ? "" : " (unpaid)"}`
+                      : "—",
                   className: "tabular-nums",
                 },
               ]}
             />
-            <Pagination page={page} pageSize={PAGE_SIZE} totalCount={filtered.length} onPageChange={(p) => url.set({ page: p })} />
+            <Pagination
+              page={page}
+              pageSize={PAGE_SIZE}
+              totalCount={filtered.length}
+              onPageChange={(p) => url.set({ page: p })}
+            />
           </div>
         )}
       </QueryView>

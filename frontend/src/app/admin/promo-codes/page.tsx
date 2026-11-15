@@ -19,11 +19,19 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { qk } from "@/lib/queryKeys";
 import { PROMO_TYPES } from "@/types/enums";
 
-const optionalNumber = z.preprocess((v) => (v === "" || v === null || Number.isNaN(v) ? undefined : v), z.number().positive().optional());
+const optionalNumber = z.preprocess(
+  (v) => (v === "" || v === null || Number.isNaN(v) ? undefined : v),
+  z.number().positive().optional(),
+);
 
 const promoSchema = z
   .object({
-    code: z.string().trim().min(3, "At least 3 characters").max(20).regex(/^[A-Za-z0-9]+$/, "Letters and numbers only"),
+    code: z
+      .string()
+      .trim()
+      .min(3, "At least 3 characters")
+      .max(20)
+      .regex(/^[A-Za-z0-9]+$/, "Letters and numbers only"),
     description: z.string().trim().min(3, "Add a short description").max(200),
     discountType: z.enum(PROMO_TYPES),
     discountValue: z.number("Enter a value").positive("Must be greater than 0"),
@@ -41,7 +49,8 @@ type PromoValues = z.input<typeof promoSchema>;
 type PromoOutput = z.output<typeof promoSchema>;
 
 function describeDiscount(p: PromoCode) {
-  if (p.discountType === "Percentage") return `${p.discountValue}%${p.maxDiscount ? ` (max ${formatMoney(p.maxDiscount)})` : ""}`;
+  if (p.discountType === "Percentage")
+    return `${p.discountValue}%${p.maxDiscount ? ` (max ${formatMoney(p.maxDiscount)})` : ""}`;
   return `${formatMoney(p.discountValue)}${p.discountType === "FirstOnly" ? " · first booking" : ""}`;
 }
 
@@ -53,7 +62,13 @@ function PromoForm({ onDone }: { onDone: () => void }) {
     formState: { errors },
   } = useForm<PromoValues, unknown, PromoOutput>({
     resolver: zodResolver(promoSchema),
-    defaultValues: { discountType: "Flat", minimumAmount: 0, isActive: true, code: "", description: "" },
+    defaultValues: {
+      discountType: "Flat",
+      minimumAmount: 0,
+      isActive: true,
+      code: "",
+      description: "",
+    },
   });
   const type = useWatch({ control, name: "discountType" });
   const create = useAction({
@@ -71,9 +86,21 @@ function PromoForm({ onDone }: { onDone: () => void }) {
   });
 
   return (
-    <form onSubmit={handleSubmit((v) => create.mutate(v))} noValidate className="grid gap-4 sm:grid-cols-2">
+    <form
+      onSubmit={handleSubmit((v) => create.mutate(v))}
+      noValidate
+      className="grid gap-4 sm:grid-cols-2"
+    >
       <Field label="Code" error={errors.code?.message} required>
-        {({ id, describedBy, invalid }) => <Input id={id} className="uppercase" aria-describedby={describedBy} aria-invalid={invalid} {...register("code")} />}
+        {({ id, describedBy, invalid }) => (
+          <Input
+            id={id}
+            className="uppercase"
+            aria-describedby={describedBy}
+            aria-invalid={invalid}
+            {...register("code")}
+          />
+        )}
       </Field>
       <Field label="Type" error={errors.discountType?.message} required>
         {({ id }) => (
@@ -84,28 +111,69 @@ function PromoForm({ onDone }: { onDone: () => void }) {
           </Select>
         )}
       </Field>
-      <Field label="Description" error={errors.description?.message} required className="sm:col-span-2">
-        {({ id, describedBy, invalid }) => <Input id={id} aria-describedby={describedBy} aria-invalid={invalid} {...register("description")} />}
+      <Field
+        label="Description"
+        error={errors.description?.message}
+        required
+        className="sm:col-span-2"
+      >
+        {({ id, describedBy, invalid }) => (
+          <Input
+            id={id}
+            aria-describedby={describedBy}
+            aria-invalid={invalid}
+            {...register("description")}
+          />
+        )}
       </Field>
-      <Field label={type === "Percentage" ? "Discount (%)" : "Discount (₹)"} error={errors.discountValue?.message} required>
-        {({ id, describedBy, invalid }) => <Input id={id} type="number" step="0.01" aria-describedby={describedBy} aria-invalid={invalid} {...register("discountValue", { valueAsNumber: true })} />}
+      <Field
+        label={type === "Percentage" ? "Discount (%)" : "Discount (₹)"}
+        error={errors.discountValue?.message}
+        required
+      >
+        {({ id, describedBy, invalid }) => (
+          <Input
+            id={id}
+            type="number"
+            step="0.01"
+            aria-describedby={describedBy}
+            aria-invalid={invalid}
+            {...register("discountValue", { valueAsNumber: true })}
+          />
+        )}
       </Field>
       {type === "Percentage" ? (
         <Field label="Max discount (₹)" error={errors.maxDiscount?.message}>
-          {({ id }) => <Input id={id} type="number" step="0.01" {...register("maxDiscount", { valueAsNumber: true })} />}
+          {({ id }) => (
+            <Input
+              id={id}
+              type="number"
+              step="0.01"
+              {...register("maxDiscount", { valueAsNumber: true })}
+            />
+          )}
         </Field>
       ) : null}
       <Field label="Minimum bill (₹)" error={errors.minimumAmount?.message} required>
-        {({ id }) => <Input id={id} type="number" step="0.01" {...register("minimumAmount", { valueAsNumber: true })} />}
+        {({ id }) => (
+          <Input
+            id={id}
+            type="number"
+            step="0.01"
+            {...register("minimumAmount", { valueAsNumber: true })}
+          />
+        )}
       </Field>
       <Field label="Max uses" error={errors.maxUses?.message} hint="Leave empty for unlimited">
-        {({ id }) => <Input id={id} type="number" {...register("maxUses", { valueAsNumber: true })} />}
+        {({ id }) => (
+          <Input id={id} type="number" {...register("maxUses", { valueAsNumber: true })} />
+        )}
       </Field>
       <Field label="Expires on" hint="Optional">
         {({ id }) => <Input id={id} type="date" {...register("expiresAt")} />}
       </Field>
       <label className="flex items-center gap-2 self-end pb-2 text-sm">
-        <input type="checkbox" className="size-4 accent-primary" {...register("isActive")} /> Active
+        <input type="checkbox" className="accent-primary size-4" {...register("isActive")} /> Active
       </label>
       <div className="flex justify-end gap-2 sm:col-span-2">
         <Button variant="outline" onClick={onDone}>
@@ -122,11 +190,19 @@ function PromoForm({ onDone }: { onDone: () => void }) {
 export default function PromoCodesPage() {
   const query = useQuery({ queryKey: qk.admin.promoCodes(), queryFn: adminApi.getPromoCodes });
   const [open, setOpen] = useState(false);
-  const toggle = useAction({ fn: (id: number) => adminApi.togglePromoCode(id), invalidate: [qk.admin.promoCodes()], success: "Promo code updated." });
+  const toggle = useAction({
+    fn: (id: number) => adminApi.togglePromoCode(id),
+    invalidate: [qk.admin.promoCodes()],
+    success: "Promo code updated.",
+  });
 
   return (
     <>
-      <PageHeader title="Promo codes" description="Discount codes customers can apply at payment." actions={<Button onClick={() => setOpen(true)}>New code</Button>} />
+      <PageHeader
+        title="Promo codes"
+        description="Discount codes customers can apply at payment."
+        actions={<Button onClick={() => setOpen(true)}>New code</Button>}
+      />
       <QueryView
         query={query}
         pendingEndpoint="GET /api/admin/promo-codes"
@@ -142,12 +218,28 @@ export default function PromoCodesPage() {
               { header: "Code", cell: (p) => <Badge tone="primary">{p.code}</Badge> },
               { header: "Discount", cell: (p) => describeDiscount(p) },
               { header: "Min bill", cell: (p) => formatMoney(p.minimumAmount), hideOnMobile: true },
-              { header: "Used", cell: (p) => `${p.usedCount}${p.maxUses ? ` / ${p.maxUses}` : ""}`, className: "tabular-nums" },
-              { header: "Expires", cell: (p) => (p.expiresAt ? formatDate(p.expiresAt) : "Never"), hideOnMobile: true },
-              { header: "Status", cell: (p) => <StatusBadge status={p.isActive ? "Active" : "Inactive"} /> },
+              {
+                header: "Used",
+                cell: (p) => `${p.usedCount}${p.maxUses ? ` / ${p.maxUses}` : ""}`,
+                className: "tabular-nums",
+              },
+              {
+                header: "Expires",
+                cell: (p) => (p.expiresAt ? formatDate(p.expiresAt) : "Never"),
+                hideOnMobile: true,
+              },
+              {
+                header: "Status",
+                cell: (p) => <StatusBadge status={p.isActive ? "Active" : "Inactive"} />,
+              },
             ]}
             rowAction={(p) => (
-              <Button size="sm" variant="outline" loading={toggle.isPending && toggle.variables === p.id} onClick={() => toggle.mutate(p.id)}>
+              <Button
+                size="sm"
+                variant="outline"
+                loading={toggle.isPending && toggle.variables === p.id}
+                onClick={() => toggle.mutate(p.id)}
+              >
                 {p.isActive ? "Deactivate" : "Activate"}
               </Button>
             )}

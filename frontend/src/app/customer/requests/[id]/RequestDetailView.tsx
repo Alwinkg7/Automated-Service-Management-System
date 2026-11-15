@@ -23,7 +23,10 @@ import { CATEGORY_INFO } from "@/types/enums";
 
 export function RequestDetailView({ id }: { id: number }) {
   // Realtime events invalidate the customer cache, so this refreshes live.
-  const query = useQuery({ queryKey: qk.customer.request(id), queryFn: () => customerApi.getRequest(id) });
+  const query = useQuery({
+    queryKey: qk.customer.request(id),
+    queryFn: () => customerApi.getRequest(id),
+  });
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [rateOpen, setRateOpen] = useState(false);
   const [stars, setStars] = useState(0);
@@ -62,12 +65,19 @@ export function RequestDetailView({ id }: { id: number }) {
               actions={
                 <>
                   {r.status === "InProgress" ? (
-                    <ButtonLink href={`/customer/requests/${r.id}/track`} icon={<Icon name="map" className="size-4" />}>
+                    <ButtonLink
+                      href={`/customer/requests/${r.id}/track`}
+                      icon={<Icon name="map" className="size-4" />}
+                    >
                       Track technician
                     </ButtonLink>
                   ) : null}
                   {r.status === "Completed" ? (
-                    <ButtonLink href={`/customer/disputes/new?requestId=${r.id}`} variant="outline" icon={<Icon name="flag" className="size-4" />}>
+                    <ButtonLink
+                      href={`/customer/disputes/new?requestId=${r.id}`}
+                      variant="outline"
+                      icon={<Icon name="flag" className="size-4" />}
+                    >
                       Raise dispute
                     </ButtonLink>
                   ) : null}
@@ -93,16 +103,29 @@ export function RequestDetailView({ id }: { id: number }) {
                     <InfoList
                       items={[
                         { label: "Scheduled for", value: formatDate(r.scheduledDate, true) },
-                        { label: "Address", value: [r.address, r.pinCode].filter(Boolean).join(" – ") },
+                        {
+                          label: "Address",
+                          value: [r.address, r.pinCode].filter(Boolean).join(" – "),
+                        },
                         { label: "Description", value: r.description },
                         {
                           label: "Your rating",
-                          value: r.rating ? <StarRating value={r.rating} /> : canRate ? "Not rated yet" : "—",
+                          value: r.rating ? (
+                            <StarRating value={r.rating} />
+                          ) : canRate ? (
+                            "Not rated yet"
+                          ) : (
+                            "—"
+                          ),
                         },
                       ]}
                     />
                     {canRate ? (
-                      <Button variant="secondary" onClick={() => setRateOpen(true)} icon={<Icon name="star" className="size-4" />}>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setRateOpen(true)}
+                        icon={<Icon name="star" className="size-4" />}
+                      >
                         Rate this service
                       </Button>
                     ) : null}
@@ -126,14 +149,20 @@ export function RequestDetailView({ id }: { id: number }) {
                         <p className="font-medium">{r.technician.name}</p>
                         <p className="text-fg-muted">{formatRating(r.technician.rating)}</p>
                         {r.technician.phone ? (
-                          <a href={`tel:${r.technician.phone}`} className="inline-flex items-center gap-1.5 text-primary hover:underline">
+                          <a
+                            href={`tel:${r.technician.phone}`}
+                            className="text-primary inline-flex items-center gap-1.5 hover:underline"
+                          >
                             <Icon name="phone" className="size-4" />
                             {r.technician.phone}
                           </a>
                         ) : null}
                       </div>
                     ) : (
-                      <p className="text-sm text-fg-muted">We&apos;re finding a technician for you. You&apos;ll be notified as soon as one is assigned.</p>
+                      <p className="text-fg-muted text-sm">
+                        We&apos;re finding a technician for you. You&apos;ll be notified as soon as
+                        one is assigned.
+                      </p>
                     )}
                   </CardBody>
                 </Card>
@@ -145,7 +174,11 @@ export function RequestDetailView({ id }: { id: number }) {
                       <BillSummary bill={r.bill} />
                       <div className="flex flex-col gap-2">
                         {!r.bill.isPaid && r.bill.id ? (
-                          <ButtonLink href={`/customer/requests/${r.id}/pay`} size="lg" icon={<Icon name="card" className="size-4" />}>
+                          <ButtonLink
+                            href={`/customer/requests/${r.id}/pay`}
+                            size="lg"
+                            icon={<Icon name="card" className="size-4" />}
+                          >
                             Pay now
                           </ButtonLink>
                         ) : null}
@@ -154,7 +187,12 @@ export function RequestDetailView({ id }: { id: number }) {
                             variant="outline"
                             loading={downloading}
                             icon={<Icon name="download" className="size-4" />}
-                            onClick={() => void download(customerApi.billPdfPath(r.bill!.id!), `bill-${r.bill!.id}.pdf`)}
+                            onClick={() =>
+                              void download(
+                                customerApi.billPdfPath(r.bill!.id!),
+                                `bill-${r.bill!.id}.pdf`,
+                              )
+                            }
                           >
                             Download invoice (PDF)
                           </Button>
@@ -186,7 +224,11 @@ export function RequestDetailView({ id }: { id: number }) {
                   <Button variant="outline" onClick={() => setRateOpen(false)}>
                     Close
                   </Button>
-                  <Button disabled={stars === 0} loading={rate.isPending} onClick={() => rate.mutate()}>
+                  <Button
+                    disabled={stars === 0}
+                    loading={rate.isPending}
+                    onClick={() => rate.mutate()}
+                  >
                     Submit rating
                   </Button>
                 </>
@@ -196,7 +238,11 @@ export function RequestDetailView({ id }: { id: number }) {
                 <StarRating value={stars} onChange={setStars} label="Your rating" />
                 <label className="block space-y-1.5 text-sm">
                   <span className="font-medium">Comment (optional)</span>
-                  <Textarea value={comment} maxLength={1000} onChange={(e) => setComment(e.target.value)} />
+                  <Textarea
+                    value={comment}
+                    maxLength={1000}
+                    onChange={(e) => setComment(e.target.value)}
+                  />
                 </label>
               </div>
             </Modal>

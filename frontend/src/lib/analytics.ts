@@ -33,14 +33,20 @@ export function dailySeries(rows: AdminRequestRow[], days: number, now = new Dat
 }
 
 export function statusBreakdown(rows: AdminRequestRow[]) {
-  return REQUEST_STATUSES.map((s) => ({ name: humanize(s), value: rows.filter((r) => r.status === s).length }));
+  return REQUEST_STATUSES.map((s) => ({
+    name: humanize(s),
+    value: rows.filter((r) => r.status === s).length,
+  }));
 }
 
 export function categoryBreakdown(rows: AdminRequestRow[]) {
   const counts = new Map<string, number>();
   for (const r of rows) counts.set(r.category, (counts.get(r.category) ?? 0) + 1);
   return [...counts.entries()]
-    .map(([category, count]) => ({ category: CATEGORY_INFO[category as keyof typeof CATEGORY_INFO]?.label ?? category, count }))
+    .map(([category, count]) => ({
+      category: CATEGORY_INFO[category as keyof typeof CATEGORY_INFO]?.label ?? category,
+      count,
+    }))
     .sort((a, b) => b.count - a.count);
 }
 
@@ -53,5 +59,7 @@ export function topTechnicians(rows: AdminRequestRow[], limit = 5) {
     if (r.billPaid && r.billAmount) s.revenue += r.billAmount;
     stats.set(r.technicianName, s);
   }
-  return [...stats.values()].sort((a, b) => b.completed - a.completed || b.revenue - a.revenue).slice(0, limit);
+  return [...stats.values()]
+    .sort((a, b) => b.completed - a.completed || b.revenue - a.revenue)
+    .slice(0, limit);
 }

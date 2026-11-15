@@ -27,21 +27,35 @@ export function TechniciansView() {
   const search = url.get("q");
   const term = useDebounce(search.trim().toLowerCase());
 
-  const accounts = useQuery({ queryKey: qk.admin.users("Technician"), queryFn: () => adminApi.getUsers("Technician") });
-  const available = useQuery({ queryKey: qk.admin.available(skill), queryFn: () => adminApi.getAvailableTechnicians(skill) });
+  const accounts = useQuery({
+    queryKey: qk.admin.users("Technician"),
+    queryFn: () => adminApi.getUsers("Technician"),
+  });
+  const available = useQuery({
+    queryKey: qk.admin.available(skill),
+    queryFn: () => adminApi.getAvailableTechnicians(skill),
+  });
   const rows = (accounts.data?.items ?? []).filter(
     (u) => !term || [u.name, u.email, u.phone].some((v) => v?.toLowerCase().includes(term)),
   );
 
   return (
     <>
-      <PageHeader title="Technicians" description="Manage technician accounts and see who is available by skill." />
+      <PageHeader
+        title="Technicians"
+        description="Manage technician accounts and see who is available by skill."
+      />
       <div className="space-y-6">
         <Card>
           <CardHeader
             title="Available now"
             action={
-              <Select aria-label="Skill" value={skill} onChange={(e) => url.set({ skill: e.target.value })} className="w-48">
+              <Select
+                aria-label="Skill"
+                value={skill}
+                onChange={(e) => url.set({ skill: e.target.value })}
+                className="w-48"
+              >
                 {SERVICE_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
                     {CATEGORY_INFO[c].label}
@@ -54,7 +68,12 @@ export function TechniciansView() {
             <QueryView
               query={available}
               isEmpty={(d) => d.length === 0}
-              empty={<EmptyState title="Nobody available" description={`No ${CATEGORY_INFO[skill].label} technicians are available right now.`} />}
+              empty={
+                <EmptyState
+                  title="Nobody available"
+                  description={`No ${CATEGORY_INFO[skill].label} technicians are available right now.`}
+                />
+              }
             >
               {(list) => (
                 <DataTable
@@ -76,8 +95,16 @@ export function TechniciansView() {
 
         <section className="space-y-3">
           <h2 className="font-semibold">All technician accounts</h2>
-          <SearchInput value={search} onChange={(q) => url.set({ q })} placeholder="Search name, email or phone" />
-          <QueryView query={accounts} isEmpty={() => rows.length === 0} empty={<EmptyState title="No technicians found" />}>
+          <SearchInput
+            value={search}
+            onChange={(q) => url.set({ q })}
+            placeholder="Search name, email or phone"
+          />
+          <QueryView
+            query={accounts}
+            isEmpty={() => rows.length === 0}
+            empty={<EmptyState title="No technicians found" />}
+          >
             {() => <UserTable users={rows} showRole={false} />}
           </QueryView>
         </section>

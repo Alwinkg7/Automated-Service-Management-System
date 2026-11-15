@@ -10,7 +10,10 @@ function cell(value: CsvValue): string {
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-export function toCsv<T>(rows: T[], columns: { header: string; value: (row: T) => CsvValue }[]): string {
+export function toCsv<T>(
+  rows: T[],
+  columns: { header: string; value: (row: T) => CsvValue }[],
+): string {
   const lines = [columns.map((c) => cell(c.header)).join(",")];
   for (const row of rows) lines.push(columns.map((c) => cell(c.value(row))).join(","));
   // CRLF + BOM so Excel opens UTF-8 (₹, names) correctly.

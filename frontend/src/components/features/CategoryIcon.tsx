@@ -13,9 +13,20 @@ const ICONS: Record<ServiceCategory, IconName> = {
   General: "home",
 };
 
-export function CategoryIcon({ category, className }: { category: ServiceCategory; className?: string }) {
+export function CategoryIcon({
+  category,
+  className,
+}: {
+  category: ServiceCategory;
+  className?: string;
+}) {
   return (
-    <span className={cn("inline-flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary", className)}>
+    <span
+      className={cn(
+        "bg-primary-soft text-primary inline-flex size-10 items-center justify-center rounded-xl",
+        className,
+      )}
+    >
       <Icon name={ICONS[category]} />
     </span>
   );

@@ -17,13 +17,16 @@ interface ActionOptions<TVars, TResult> {
 export function useAction<TVars = void, TResult = unknown>(options: ActionOptions<TVars, TResult>) {
   const queryClient = useQueryClient();
   const refresh = () =>
-    Promise.all((options.invalidate ?? []).map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+    Promise.all(
+      (options.invalidate ?? []).map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    );
 
   return useMutation({
     mutationFn: options.fn,
     onSuccess: async (result, vars) => {
       await refresh();
-      const message = typeof options.success === "function" ? options.success(result, vars) : options.success;
+      const message =
+        typeof options.success === "function" ? options.success(result, vars) : options.success;
       if (message) toast.success(message);
       options.onSuccess?.(result, vars);
     },

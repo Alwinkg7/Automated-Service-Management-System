@@ -28,7 +28,12 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   add: (n) =>
     set((state) => ({
       items: [
-        { ...n, id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, at: Date.now(), read: false },
+        {
+          ...n,
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          at: Date.now(),
+          read: false,
+        },
         ...state.items,
       ].slice(0, MAX_ITEMS),
     })),
@@ -37,4 +42,5 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   setConnected: (connected) => set({ connected }),
 }));
 
-export const selectUnreadCount = (state: NotificationState) => state.items.filter((i) => !i.read).length;
+export const selectUnreadCount = (state: NotificationState) =>
+  state.items.filter((i) => !i.read).length;

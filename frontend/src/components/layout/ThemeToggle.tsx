@@ -6,7 +6,11 @@ import { Icon } from "@/components/ui/Icon";
 // True only after hydration – avoids a server/client icon mismatch.
 const subscribe = () => () => {};
 function useMounted() {
-  return useSyncExternalStore(subscribe, () => true, () => false);
+  return useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
 }
 
 export function ThemeToggle() {
@@ -17,7 +21,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="rounded-lg p-2 text-fg-muted hover:bg-surface-muted hover:text-fg"
+      className="text-fg-muted hover:bg-surface-muted hover:text-fg rounded-lg p-2"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
       <Icon name={isDark ? "sun" : "moon"} />

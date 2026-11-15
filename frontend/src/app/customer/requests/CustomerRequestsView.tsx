@@ -21,7 +21,10 @@ export function CustomerRequestsView() {
   const debounced = useDebounce(search.trim().toLowerCase());
 
   // One fetch for all requests; filtering is instant and counts stay accurate.
-  const query = useQuery({ queryKey: qk.customer.requests(), queryFn: () => customerApi.getRequests() });
+  const query = useQuery({
+    queryKey: qk.customer.requests(),
+    queryFn: () => customerApi.getRequests(),
+  });
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
@@ -49,14 +52,22 @@ export function CustomerRequestsView() {
         actions={<ButtonLink href="/customer/requests/new">Book a service</ButtonLink>}
       />
       <div className="mb-4 space-y-3">
-        <SearchInput value={search} onChange={(q) => url.set({ q })} placeholder="Search by description, technician or #id" />
+        <SearchInput
+          value={search}
+          onChange={(q) => url.set({ q })}
+          placeholder="Search by description, technician or #id"
+        />
         <FilterChips
           label="Filter by status"
           value={status}
           onChange={(s) => url.set({ status: s })}
           options={[
             { value: "", label: "All", count: query.data?.length },
-            ...REQUEST_STATUSES.map((s) => ({ value: s, label: humanize(s), count: counts[s] ?? 0 })),
+            ...REQUEST_STATUSES.map((s) => ({
+              value: s,
+              label: humanize(s),
+              count: counts[s] ?? 0,
+            })),
           ]}
         />
       </div>
@@ -65,7 +76,10 @@ export function CustomerRequestsView() {
         isEmpty={() => filtered.length === 0}
         empty={
           query.data?.length ? (
-            <EmptyState title="No matching requests" description="Try a different filter or search term." />
+            <EmptyState
+              title="No matching requests"
+              description="Try a different filter or search term."
+            />
           ) : (
             <EmptyState
               title="No requests yet"

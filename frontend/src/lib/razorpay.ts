@@ -59,7 +59,9 @@ export class PaymentCancelledError extends Error {
 }
 
 /** Opens Checkout and resolves with the ids the backend must verify. */
-export async function openCheckout(options: Omit<RazorpayOptions, "handler" | "modal">): Promise<RazorpaySuccess> {
+export async function openCheckout(
+  options: Omit<RazorpayOptions, "handler" | "modal">,
+): Promise<RazorpaySuccess> {
   await loadRazorpay();
   const Razorpay = window.Razorpay;
   if (!Razorpay) throw new Error("Payment window unavailable.");
@@ -69,7 +71,9 @@ export async function openCheckout(options: Omit<RazorpayOptions, "handler" | "m
       handler: resolve,
       modal: { ondismiss: () => reject(new PaymentCancelledError()) },
     });
-    rzp.on("payment.failed", (e) => reject(new PaymentCancelledError(e.error?.description ?? "Payment failed.")));
+    rzp.on("payment.failed", (e) =>
+      reject(new PaymentCancelledError(e.error?.description ?? "Payment failed.")),
+    );
     rzp.open();
   });
 }

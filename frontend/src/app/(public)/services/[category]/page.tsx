@@ -21,7 +21,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: service.title,
     description: service.summary,
     alternates: { canonical: `/services/${service.slug}` },
-    openGraph: { title: `${service.title} · ASMS`, description: service.summary, url: `/services/${service.slug}` },
+    openGraph: {
+      title: `${service.title} · ASMS`,
+      description: service.summary,
+      url: `/services/${service.slug}`,
+    },
   };
 }
 
@@ -42,12 +46,15 @@ export default async function ServicePage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="flex items-center gap-4">
         <CategoryIcon category={service.category} className="size-12" />
         <h1 className="text-3xl font-semibold tracking-tight">{service.title}</h1>
       </div>
-      <p className="mt-4 text-lg text-fg-muted">{service.summary}</p>
+      <p className="text-fg-muted mt-4 text-lg">{service.summary}</p>
       <div className="mt-6 flex flex-wrap gap-3">
         <ButtonLink href={`/customer/requests/new?category=${service.category}`} size="lg">
           Book {service.title.toLowerCase()}
@@ -63,7 +70,10 @@ export default async function ServicePage({ params }: Props) {
         </h2>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
           {service.covers.map((c) => (
-            <li key={c} className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3">
+            <li
+              key={c}
+              className="border-border bg-surface flex items-center gap-2 rounded-lg border px-4 py-3"
+            >
               <Icon name="check" className="text-success" />
               {c}
             </li>
@@ -75,16 +85,19 @@ export default async function ServicePage({ params }: Props) {
         <h2 id="faq" className="text-xl font-semibold">
           Frequently asked questions
         </h2>
-        <div className="mt-4 divide-y divide-border rounded-card border border-border bg-surface">
+        <div className="divide-border rounded-card border-border bg-surface mt-4 divide-y border">
           {service.faqs.map((f) => (
             <details key={f.q} className="group px-5 py-4">
               <summary className="cursor-pointer list-none font-medium marker:hidden">
                 <span className="flex items-center justify-between gap-3">
                   {f.q}
-                  <Icon name="chevronRight" className="size-4 transition-transform group-open:rotate-90" />
+                  <Icon
+                    name="chevronRight"
+                    className="size-4 transition-transform group-open:rotate-90"
+                  />
                 </span>
               </summary>
-              <p className="mt-2 text-sm text-fg-muted">{f.a}</p>
+              <p className="text-fg-muted mt-2 text-sm">{f.a}</p>
             </details>
           ))}
         </div>

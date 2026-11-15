@@ -18,7 +18,10 @@ const inr = (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`;
 
 export function AnalyticsView() {
   const [days, setDays] = useState("14");
-  const requests = useQuery({ queryKey: qk.admin.requests(), queryFn: () => adminApi.getRequests() });
+  const requests = useQuery({
+    queryKey: qk.admin.requests(),
+    queryFn: () => adminApi.getRequests(),
+  });
   const dashboard = useQuery({ queryKey: qk.admin.dashboard(), queryFn: adminApi.getDashboard });
 
   const rows = useMemo(() => requests.data?.items ?? [], [requests.data]);
@@ -29,15 +32,33 @@ export function AnalyticsView() {
 
   return (
     <>
-      <PageHeader title="Analytics" description="Computed from all requests. Revenue counts paid bills, grouped by request date." />
+      <PageHeader
+        title="Analytics"
+        description="Computed from all requests. Revenue counts paid bills, grouped by request date."
+      />
       <QueryView query={requests} loading={<SkeletonStats count={4} />}>
         {() => (
           <div className="space-y-6">
             <StatGrid>
               <StatCard label="Requests" value={rows.length} icon="list" />
-              <StatCard label="Completed" value={rows.filter((r) => r.status === "Completed").length} icon="check" />
-              <StatCard label="Customers" value={dashboard.data?.stats.totalCustomers ?? "—"} icon="users" />
-              <StatCard label="Revenue" value={formatMoney(dashboard.data?.stats.revenue ?? rows.reduce((s, r) => s + (r.billPaid ? (r.billAmount ?? 0) : 0), 0))} icon="wallet" />
+              <StatCard
+                label="Completed"
+                value={rows.filter((r) => r.status === "Completed").length}
+                icon="check"
+              />
+              <StatCard
+                label="Customers"
+                value={dashboard.data?.stats.totalCustomers ?? "—"}
+                icon="users"
+              />
+              <StatCard
+                label="Revenue"
+                value={formatMoney(
+                  dashboard.data?.stats.revenue ??
+                    rows.reduce((s, r) => s + (r.billPaid ? (r.billAmount ?? 0) : 0), 0),
+                )}
+                icon="wallet"
+              />
             </StatGrid>
 
             <FilterChips
@@ -55,13 +76,22 @@ export function AnalyticsView() {
               <Card>
                 <CardHeader title="New requests per day" />
                 <CardBody>
-                  <BarSeriesChart data={series} xKey="label" series={[{ key: "requests", label: "Requests" }]} />
+                  <BarSeriesChart
+                    data={series}
+                    xKey="label"
+                    series={[{ key: "requests", label: "Requests" }]}
+                  />
                 </CardBody>
               </Card>
               <Card>
                 <CardHeader title="Paid revenue per day" />
                 <CardBody>
-                  <LineSeriesChart data={series} xKey="label" series={[{ key: "billed", label: "Revenue" }]} format={inr} />
+                  <LineSeriesChart
+                    data={series}
+                    xKey="label"
+                    series={[{ key: "billed", label: "Revenue" }]}
+                    format={inr}
+                  />
                 </CardBody>
               </Card>
               <Card>
@@ -73,7 +103,12 @@ export function AnalyticsView() {
               <Card>
                 <CardHeader title="Requests by category" />
                 <CardBody>
-                  <BarSeriesChart data={categories} xKey="category" series={[{ key: "count", label: "Requests" }]} horizontal />
+                  <BarSeriesChart
+                    data={categories}
+                    xKey="category"
+                    series={[{ key: "count", label: "Requests" }]}
+                    horizontal
+                  />
                 </CardBody>
               </Card>
             </div>
@@ -85,9 +120,16 @@ export function AnalyticsView() {
                 rows={top}
                 rowKey={(t) => t.name}
                 columns={[
-                  { header: "Technician", cell: (t) => <span className="font-medium">{t.name}</span> },
+                  {
+                    header: "Technician",
+                    cell: (t) => <span className="font-medium">{t.name}</span>,
+                  },
                   { header: "Completed jobs", cell: (t) => t.completed, className: "tabular-nums" },
-                  { header: "Paid revenue", cell: (t) => formatMoney(t.revenue), className: "tabular-nums" },
+                  {
+                    header: "Paid revenue",
+                    cell: (t) => formatMoney(t.revenue),
+                    className: "tabular-nums",
+                  },
                 ]}
               />
             </section>

@@ -25,7 +25,10 @@ export function HistoryView() {
   const category = url.get("category");
   const search = url.get("q");
   const term = useDebounce(search.trim().toLowerCase());
-  const query = useQuery({ queryKey: qk.customer.requests(), queryFn: () => customerApi.getRequests() });
+  const query = useQuery({
+    queryKey: qk.customer.requests(),
+    queryFn: () => customerApi.getRequests(),
+  });
 
   const past = useMemo(
     () => (query.data ?? []).filter((r) => r.status === "Completed" || r.status === "Cancelled"),
@@ -56,8 +59,18 @@ export function HistoryView() {
               <StatCard label="Total spent" value={formatMoney(spent)} icon="wallet" />
             </StatGrid>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <SearchInput className="flex-1" value={search} onChange={(q) => url.set({ q })} placeholder="Search description or technician" />
-              <Select aria-label="Category" className="sm:w-56" value={category} onChange={(e) => url.set({ category: e.target.value })}>
+              <SearchInput
+                className="flex-1"
+                value={search}
+                onChange={(q) => url.set({ q })}
+                placeholder="Search description or technician"
+              />
+              <Select
+                aria-label="Category"
+                className="sm:w-56"
+                value={category}
+                onChange={(e) => url.set({ category: e.target.value })}
+              >
                 <option value="">All categories</option>
                 {SERVICE_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -67,7 +80,10 @@ export function HistoryView() {
               </Select>
             </div>
             {rows.length === 0 ? (
-              <EmptyState title="Nothing here yet" description="Finished and cancelled requests will appear here." />
+              <EmptyState
+                title="Nothing here yet"
+                description="Finished and cancelled requests will appear here."
+              />
             ) : (
               <DataTable
                 caption="Service history"
@@ -77,18 +93,33 @@ export function HistoryView() {
                   {
                     header: "Request",
                     cell: (r) => (
-                      <Link href={`/customer/requests/${r.id}`} className="font-medium text-primary hover:underline">
+                      <Link
+                        href={`/customer/requests/${r.id}`}
+                        className="text-primary font-medium hover:underline"
+                      >
                         {CATEGORY_INFO[r.category].label} #{r.id}
                       </Link>
                     ),
                   },
                   { header: "Status", cell: (r) => <StatusBadge status={r.status} /> },
                   { header: "Date", cell: (r) => formatDate(r.scheduledDate) },
-                  { header: "Technician", cell: (r) => r.technicianName ?? "—", hideOnMobile: true },
-                  { header: "Amount", cell: (r) => formatMoney(r.billAmount), className: "tabular-nums" },
+                  {
+                    header: "Technician",
+                    cell: (r) => r.technicianName ?? "—",
+                    hideOnMobile: true,
+                  },
+                  {
+                    header: "Amount",
+                    cell: (r) => formatMoney(r.billAmount),
+                    className: "tabular-nums",
+                  },
                 ]}
                 rowAction={(r) => (
-                  <ButtonLink href={`/customer/requests/new?rebook=${r.id}`} variant="outline" size="sm">
+                  <ButtonLink
+                    href={`/customer/requests/new?rebook=${r.id}`}
+                    variant="outline"
+                    size="sm"
+                  >
                     Re-book
                   </ButtonLink>
                 )}

@@ -16,15 +16,15 @@ export default function LoginPage() {
       <CardBody className="space-y-6 sm:p-8">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-          <p className="mt-1 text-sm text-fg-muted">Sign in to continue.</p>
+          <p className="text-fg-muted mt-1 text-sm">Sign in to continue.</p>
         </div>
         {/* useSearchParams needs a Suspense boundary */}
         <Suspense>
           <LoginForm />
         </Suspense>
-        <p className="text-center text-sm text-fg-muted">
+        <p className="text-fg-muted text-center text-sm">
           New here?{" "}
-          <Link href="/register" className="font-medium text-primary hover:underline">
+          <Link href="/register" className="text-primary font-medium hover:underline">
             Create an account
           </Link>
         </p>

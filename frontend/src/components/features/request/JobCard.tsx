@@ -18,7 +18,7 @@ export function JobCard({ job }: { job: JobLike }) {
   return (
     <Link
       href={`/technician/jobs/${job.id}`}
-      className="flex gap-4 rounded-card border border-border bg-surface p-4 transition-colors hover:border-primary/40"
+      className="rounded-card border-border bg-surface hover:border-primary/40 flex gap-4 border p-4 transition-colors"
     >
       <CategoryIcon category={job.category} />
       <div className="min-w-0 flex-1">
@@ -28,10 +28,12 @@ export function JobCard({ job }: { job: JobLike }) {
           </p>
           <StatusBadge status={job.status} />
         </div>
-        <p className="mt-1 text-sm text-fg-muted">
+        <p className="text-fg-muted mt-1 text-sm">
           {job.customerName ?? "Customer"} · {formatDate(job.scheduledDate, true)}
         </p>
-        {job.address ? <p className="mt-0.5 line-clamp-1 text-xs text-fg-muted">{job.address}</p> : null}
+        {job.address ? (
+          <p className="text-fg-muted mt-0.5 line-clamp-1 text-xs">{job.address}</p>
+        ) : null}
       </div>
     </Link>
   );

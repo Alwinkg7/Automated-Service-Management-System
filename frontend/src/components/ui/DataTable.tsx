@@ -27,10 +27,10 @@ export function DataTable<T>({
   caption?: string;
 }) {
   return (
-    <div className="rounded-card border border-border bg-surface">
+    <div className="rounded-card border-border bg-surface border">
       <table className="hidden w-full text-left text-sm md:table">
         {caption ? <caption className="sr-only">{caption}</caption> : null}
-        <thead className="border-b border-border text-xs tracking-wide text-fg-muted uppercase">
+        <thead className="border-border text-fg-muted border-b text-xs tracking-wide uppercase">
           <tr>
             {columns.map((c) => (
               <th key={c.header} scope="col" className={cn("px-4 py-3 font-medium", c.className)}>
@@ -44,7 +44,7 @@ export function DataTable<T>({
             ) : null}
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
+        <tbody className="divide-border divide-y">
           {rows.map((row) => (
             <tr key={rowKey(row)} className="hover:bg-surface-muted/50">
               {columns.map((c) => (
@@ -52,13 +52,15 @@ export function DataTable<T>({
                   {c.cell(row)}
                 </td>
               ))}
-              {rowAction ? <td className="px-4 py-3 text-right whitespace-nowrap">{rowAction(row)}</td> : null}
+              {rowAction ? (
+                <td className="px-4 py-3 text-right whitespace-nowrap">{rowAction(row)}</td>
+              ) : null}
             </tr>
           ))}
         </tbody>
       </table>
 
-      <ul className="divide-y divide-border md:hidden" aria-label={caption}>
+      <ul className="divide-border divide-y md:hidden" aria-label={caption}>
         {rows.map((row) => (
           <li key={rowKey(row)} className="space-y-2 p-4">
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
@@ -71,7 +73,9 @@ export function DataTable<T>({
                   </div>
                 ))}
             </dl>
-            {rowAction ? <div className="flex flex-wrap justify-end gap-2 pt-1">{rowAction(row)}</div> : null}
+            {rowAction ? (
+              <div className="flex flex-wrap justify-end gap-2 pt-1">{rowAction(row)}</div>
+            ) : null}
           </li>
         ))}
       </ul>

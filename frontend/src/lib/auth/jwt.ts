@@ -18,7 +18,10 @@ const ID_CLAIMS = [
   "nameid",
   "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier",
 ];
-const EMAIL_CLAIMS = ["email", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"];
+const EMAIL_CLAIMS = [
+  "email",
+  "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+];
 
 function base64UrlDecode(input: string): string {
   const base64 = input.replace(/-/g, "+").replace(/_/g, "/");

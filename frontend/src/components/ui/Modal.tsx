@@ -16,7 +16,15 @@ interface ModalProps {
 
 const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl" };
 
-export function Modal({ open, onClose, title, description, children, footer, size = "md" }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  description,
+  children,
+  footer,
+  size = "md",
+}: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -41,31 +49,35 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         if (e.target === ref.current) onClose();
       }}
       className={cn(
-        "m-auto w-[calc(100%-2rem)] rounded-card border border-border bg-surface p-0 text-fg shadow-xl",
-        "backdrop:bg-black/50 open:animate-slide-up",
+        "rounded-card border-border bg-surface text-fg m-auto w-[calc(100%-2rem)] border p-0 shadow-xl",
+        "open:animate-slide-up backdrop:bg-black/50",
         widths[size],
       )}
     >
       {open ? (
         <div className="flex max-h-[85vh] flex-col">
-          <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+          <header className="border-border flex items-start justify-between gap-4 border-b px-5 py-4">
             <div>
               <h2 id={titleId} className="text-lg font-semibold">
                 {title}
               </h2>
-              {description ? <p className="mt-1 text-sm text-fg-muted">{description}</p> : null}
+              {description ? <p className="text-fg-muted mt-1 text-sm">{description}</p> : null}
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md p-1 text-fg-muted hover:bg-surface-muted"
+              className="text-fg-muted hover:bg-surface-muted rounded-md p-1"
               aria-label="Close"
             >
               <Icon name="close" />
             </button>
           </header>
           <div className="overflow-y-auto px-5 py-4">{children}</div>
-          {footer ? <footer className="flex justify-end gap-2 border-t border-border px-5 py-3">{footer}</footer> : null}
+          {footer ? (
+            <footer className="border-border flex justify-end gap-2 border-t px-5 py-3">
+              {footer}
+            </footer>
+          ) : null}
         </div>
       ) : null}
     </dialog>

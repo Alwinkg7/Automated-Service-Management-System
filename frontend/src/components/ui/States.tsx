@@ -16,10 +16,15 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center rounded-card border border-dashed border-border px-6 py-12 text-center", className)}>
-      <Icon name="inbox" className="size-10 text-fg-muted" />
+    <div
+      className={cn(
+        "rounded-card border-border flex flex-col items-center justify-center border border-dashed px-6 py-12 text-center",
+        className,
+      )}
+    >
+      <Icon name="inbox" className="text-fg-muted size-10" />
       <h3 className="mt-3 font-semibold">{title}</h3>
-      {description ? <p className="mt-1 max-w-sm text-sm text-fg-muted">{description}</p> : null}
+      {description ? <p className="text-fg-muted mt-1 max-w-sm text-sm">{description}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
@@ -37,10 +42,16 @@ export function ErrorState({
   className?: string;
 }) {
   return (
-    <div role="alert" className={cn("flex flex-col items-center rounded-card border border-danger/30 bg-danger-soft/50 px-6 py-10 text-center", className)}>
-      <Icon name="alert" className="size-9 text-danger" />
+    <div
+      role="alert"
+      className={cn(
+        "rounded-card border-danger/30 bg-danger-soft/50 flex flex-col items-center border px-6 py-10 text-center",
+        className,
+      )}
+    >
+      <Icon name="alert" className="text-danger size-9" />
       <h3 className="mt-3 font-semibold">{title}</h3>
-      <p className="mt-1 max-w-md text-sm text-fg-muted">{errorMessage(error)}</p>
+      <p className="text-fg-muted mt-1 max-w-md text-sm">{errorMessage(error)}</p>
       {onRetry ? (
         <Button variant="outline" className="mt-4" onClick={onRetry}>
           Try again

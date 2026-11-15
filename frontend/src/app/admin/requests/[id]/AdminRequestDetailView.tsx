@@ -33,12 +33,20 @@ function AssignPanel({ request }: { request: AdminRequestDetail }) {
 
   return (
     <Card>
-      <CardHeader title="Assign a technician" description={`Available ${CATEGORY_INFO[request.category].label} technicians`} />
+      <CardHeader
+        title="Assign a technician"
+        description={`Available ${CATEGORY_INFO[request.category].label} technicians`}
+      />
       <CardBody>
         <QueryView
           query={techs}
           isEmpty={(d) => d.length === 0}
-          empty={<EmptyState title="No one available" description="No active technicians with this skill are available right now." />}
+          empty={
+            <EmptyState
+              title="No one available"
+              description="No active technicians with this skill are available right now."
+            />
+          }
         >
           {(list) => (
             <div className="space-y-4">
@@ -52,13 +60,16 @@ function AssignPanel({ request }: { request: AdminRequestDetail }) {
                       onClick={() => setSelected(t.id)}
                       className={cn(
                         "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors",
-                        selected === t.id ? "border-primary bg-primary-soft" : "border-border hover:bg-surface-muted",
+                        selected === t.id
+                          ? "border-primary bg-primary-soft"
+                          : "border-border hover:bg-surface-muted",
                       )}
                     >
                       <span>
                         <span className="block font-medium">{t.name}</span>
-                        <span className="text-xs text-fg-muted">
-                          {formatRating(t.rating)} · {t.totalJobs} jobs{t.phone ? ` · ${t.phone}` : ""}
+                        <span className="text-fg-muted text-xs">
+                          {formatRating(t.rating)} · {t.totalJobs} jobs
+                          {t.phone ? ` · ${t.phone}` : ""}
                         </span>
                       </span>
                       <StatusBadge status={t.status} />
@@ -66,7 +77,12 @@ function AssignPanel({ request }: { request: AdminRequestDetail }) {
                   </li>
                 ))}
               </ul>
-              <Button className="w-full" disabled={selected === null} loading={assign.isPending} onClick={() => selected !== null && assign.mutate(selected)}>
+              <Button
+                className="w-full"
+                disabled={selected === null}
+                loading={assign.isPending}
+                onClick={() => selected !== null && assign.mutate(selected)}
+              >
                 Assign technician
               </Button>
             </div>
@@ -78,7 +94,10 @@ function AssignPanel({ request }: { request: AdminRequestDetail }) {
 }
 
 export function AdminRequestDetailView({ id }: { id: number }) {
-  const query = useQuery({ queryKey: qk.admin.request(id), queryFn: () => adminApi.getRequest(id) });
+  const query = useQuery({
+    queryKey: qk.admin.request(id),
+    queryFn: () => adminApi.getRequest(id),
+  });
   return (
     <QueryView query={query}>
       {(r) => (
@@ -101,7 +120,10 @@ export function AdminRequestDetailView({ id }: { id: number }) {
                   <InfoList
                     items={[
                       { label: "Scheduled for", value: formatDate(r.scheduledDate, true) },
-                      { label: "Address", value: [r.address, r.pinCode].filter(Boolean).join(" – ") },
+                      {
+                        label: "Address",
+                        value: [r.address, r.pinCode].filter(Boolean).join(" – "),
+                      },
                       { label: "Description", value: r.description },
                     ]}
                   />
@@ -128,11 +150,18 @@ export function AdminRequestDetailView({ id }: { id: number }) {
               </Card>
               {r.technician ? (
                 <Card>
-                  <CardHeader title="Technician" action={r.technician.status ? <StatusBadge status={r.technician.status} /> : null} />
+                  <CardHeader
+                    title="Technician"
+                    action={
+                      r.technician.status ? <StatusBadge status={r.technician.status} /> : null
+                    }
+                  />
                   <CardBody className="space-y-1 text-sm">
                     <p className="font-medium">{r.technician.name}</p>
                     <p className="text-fg-muted">{formatRating(r.technician.rating)}</p>
-                    {r.technician.phone ? <p className="text-fg-muted">{r.technician.phone}</p> : null}
+                    {r.technician.phone ? (
+                      <p className="text-fg-muted">{r.technician.phone}</p>
+                    ) : null}
                   </CardBody>
                 </Card>
               ) : null}

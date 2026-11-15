@@ -5,10 +5,10 @@ import { ThemeToggle } from "./ThemeToggle";
 
 export function PublicHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur">
+    <header className="border-border bg-bg/85 sticky top-0 z-30 border-b backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
         <Logo />
-        <nav aria-label="Main" className="ml-6 hidden gap-6 text-sm text-fg-muted sm:flex">
+        <nav aria-label="Main" className="text-fg-muted ml-6 hidden gap-6 text-sm sm:flex">
           <Link href="/services" className="hover:text-fg">
             Services
           </Link>
@@ -35,8 +35,8 @@ export function PublicHeader() {
 
 export function PublicFooter() {
   return (
-    <footer className="border-t border-border">
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-fg-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <footer className="border-border border-t">
+      <div className="text-fg-muted mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <p>© {new Date().getFullYear()} ASMS – Automated Service Management System</p>
         <nav aria-label="Footer" className="flex gap-5">
           <Link href="/services" className="hover:text-fg">

@@ -323,7 +323,6 @@ export const walletSchema = z.object({
 });
 export type Wallet = z.infer<typeof walletSchema>;
 
-
 // ── Admin ────────────────────────────────────────────────────────
 export const adminDashboardSchema = z.object({
   stats: z.object({

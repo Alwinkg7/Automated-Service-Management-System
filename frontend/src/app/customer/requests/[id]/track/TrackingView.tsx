@@ -25,7 +25,10 @@ const TrackingMap = dynamic(() => import("@/components/features/tracking/Trackin
 const MAX_TRAIL = 200;
 
 export function TrackingView({ id }: { id: number }) {
-  const query = useQuery({ queryKey: qk.customer.request(id), queryFn: () => customerApi.getRequest(id) });
+  const query = useQuery({
+    queryKey: qk.customer.request(id),
+    queryFn: () => customerApi.getRequest(id),
+  });
   const [trail, setTrail] = useState<LatLng[]>([]);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [stopped, setStopped] = useState(false);
@@ -41,7 +44,11 @@ export function TrackingView({ id }: { id: number }) {
     },
     live,
   );
-  useHubEvent<{ requestId: number }>("LocationStopped", (p) => p.requestId === id && setStopped(true), live);
+  useHubEvent<{ requestId: number }>(
+    "LocationStopped",
+    (p) => p.requestId === id && setStopped(true),
+    live,
+  );
 
   const position = trail.at(-1) ?? null;
 
@@ -65,20 +72,26 @@ export function TrackingView({ id }: { id: number }) {
             <div className="space-y-4">
               <Card>
                 <CardBody className="flex flex-wrap items-center gap-3 text-sm" aria-live="polite">
-                  <span className={`size-2.5 rounded-full ${position && !stopped ? "animate-pulse bg-success" : "bg-fg-muted"}`} aria-hidden />
+                  <span
+                    className={`size-2.5 rounded-full ${position && !stopped ? "bg-success animate-pulse" : "bg-fg-muted"}`}
+                    aria-hidden
+                  />
                   {stopped
                     ? "The technician has stopped sharing their location."
                     : position
                       ? `Last update ${updatedAt?.toLocaleTimeString() ?? ""}`
                       : "Waiting for the technician's location…"}
                   {r.technician?.phone ? (
-                    <a href={`tel:${r.technician.phone}`} className="ml-auto inline-flex items-center gap-1.5 text-primary hover:underline">
+                    <a
+                      href={`tel:${r.technician.phone}`}
+                      className="text-primary ml-auto inline-flex items-center gap-1.5 hover:underline"
+                    >
                       <Icon name="phone" className="size-4" /> Call technician
                     </a>
                   ) : null}
                 </CardBody>
               </Card>
-              <div className="h-[60vh] min-h-80 overflow-hidden rounded-card border border-border">
+              <div className="rounded-card border-border h-[60vh] min-h-80 overflow-hidden border">
                 <TrackingMap position={position} trail={trail} />
               </div>
             </div>

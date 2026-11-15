@@ -20,8 +20,16 @@ export default function WithdrawalsPage() {
   const [rejecting, setRejecting] = useState<Withdrawal | null>(null);
   const [note, setNote] = useState("");
   const invalidate = [qk.admin.withdrawals()];
-  const approve = useAction({ fn: (id: number) => adminApi.approveWithdrawal(id), invalidate, success: "Withdrawal approved." });
-  const pay = useAction({ fn: (id: number) => adminApi.payWithdrawal(id), invalidate, success: "Marked as paid." });
+  const approve = useAction({
+    fn: (id: number) => adminApi.approveWithdrawal(id),
+    invalidate,
+    success: "Withdrawal approved.",
+  });
+  const pay = useAction({
+    fn: (id: number) => adminApi.payWithdrawal(id),
+    invalidate,
+    success: "Marked as paid.",
+  });
   const reject = useAction({
     fn: (id: number) => adminApi.rejectWithdrawal(id, note),
     invalidate,
@@ -34,7 +42,10 @@ export default function WithdrawalsPage() {
 
   return (
     <>
-      <PageHeader title="Withdrawals" description="Technician payout requests. Pay to the UPI ID shown, then mark as paid." />
+      <PageHeader
+        title="Withdrawals"
+        description="Technician payout requests. Pay to the UPI ID shown, then mark as paid."
+      />
       <QueryView
         query={query}
         pendingEndpoint="GET /api/admin/withdrawals"
@@ -48,7 +59,11 @@ export default function WithdrawalsPage() {
             rowKey={(w) => w.id}
             columns={[
               { header: "Technician", cell: (w) => w.technicianName ?? "—" },
-              { header: "Amount", cell: (w) => <span className="font-medium">{formatMoney(w.amount)}</span>, className: "tabular-nums" },
+              {
+                header: "Amount",
+                cell: (w) => <span className="font-medium">{formatMoney(w.amount)}</span>,
+                className: "tabular-nums",
+              },
               { header: "UPI ID", cell: (w) => w.upiId },
               { header: "Requested", cell: (w) => formatDate(w.requestedAt), hideOnMobile: true },
               { header: "Status", cell: (w) => <StatusBadge status={w.status} /> },
@@ -56,12 +71,21 @@ export default function WithdrawalsPage() {
             rowAction={(w) => (
               <>
                 {w.status === "Pending" ? (
-                  <Button size="sm" variant="secondary" loading={approve.isPending && approve.variables === w.id} onClick={() => approve.mutate(w.id)}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={approve.isPending && approve.variables === w.id}
+                    onClick={() => approve.mutate(w.id)}
+                  >
                     Approve
                   </Button>
                 ) : null}
                 {w.status === "Approved" ? (
-                  <Button size="sm" loading={pay.isPending && pay.variables === w.id} onClick={() => pay.mutate(w.id)}>
+                  <Button
+                    size="sm"
+                    loading={pay.isPending && pay.variables === w.id}
+                    onClick={() => pay.mutate(w.id)}
+                  >
                     Mark paid
                   </Button>
                 ) : null}
@@ -78,7 +102,9 @@ export default function WithdrawalsPage() {
       <ConfirmDialog
         open={!!rejecting}
         title="Reject withdrawal?"
-        description={rejecting ? `${formatMoney(rejecting.amount)} to ${rejecting.upiId}` : undefined}
+        description={
+          rejecting ? `${formatMoney(rejecting.amount)} to ${rejecting.upiId}` : undefined
+        }
         confirmLabel="Reject"
         tone="danger"
         loading={reject.isPending}

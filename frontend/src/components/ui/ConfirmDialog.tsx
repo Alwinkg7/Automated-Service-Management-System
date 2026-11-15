@@ -37,13 +37,17 @@ export function ConfirmDialog({
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button variant={tone === "danger" ? "danger" : "primary"} onClick={onConfirm} loading={loading}>
+          <Button
+            variant={tone === "danger" ? "danger" : "primary"}
+            onClick={onConfirm}
+            loading={loading}
+          >
             {confirmLabel}
           </Button>
         </>
       }
     >
-      {description ? <p className="text-sm text-fg-muted">{description}</p> : null}
+      {description ? <p className="text-fg-muted text-sm">{description}</p> : null}
       {children}
     </Modal>
   );

@@ -40,7 +40,13 @@ export function useLocationSharing(requestId: number) {
         lastSentAt.current = now;
         try {
           const conn = await getConnection();
-          await conn.invoke("ShareLocation", requestId, pos.coords.latitude, pos.coords.longitude, "");
+          await conn.invoke(
+            "ShareLocation",
+            requestId,
+            pos.coords.latitude,
+            pos.coords.longitude,
+            "",
+          );
           setState("on");
           setLastSent(new Date());
         } catch {

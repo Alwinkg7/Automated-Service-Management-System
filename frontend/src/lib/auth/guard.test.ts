@@ -29,17 +29,27 @@ describe("decideRoute", () => {
 
   it("treats an expired token as signed out", () => {
     const expired = user("Customer", Math.floor(now / 1000) - 10);
-    expect(decideRoute("/customer/dashboard", "", expired, now)).toMatchObject({ action: "redirect" });
+    expect(decideRoute("/customer/dashboard", "", expired, now)).toMatchObject({
+      action: "redirect",
+    });
     expect(decideRoute("/login", "", expired, now)).toEqual({ action: "allow" });
   });
 
   it("blocks the wrong role with /403", () => {
-    expect(decideRoute("/admin/users", "", user("Customer"), now)).toEqual({ action: "redirect", to: "/403" });
-    expect(decideRoute("/technician/jobs", "", user("Admin"), now)).toEqual({ action: "redirect", to: "/403" });
+    expect(decideRoute("/admin/users", "", user("Customer"), now)).toEqual({
+      action: "redirect",
+      to: "/403",
+    });
+    expect(decideRoute("/technician/jobs", "", user("Admin"), now)).toEqual({
+      action: "redirect",
+      to: "/403",
+    });
   });
 
   it("allows the matching role", () => {
-    expect(decideRoute("/technician/jobs/4", "", user("Technician"), now)).toEqual({ action: "allow" });
+    expect(decideRoute("/technician/jobs/4", "", user("Technician"), now)).toEqual({
+      action: "allow",
+    });
   });
 
   it("does not confuse similar prefixes", () => {
@@ -47,7 +57,10 @@ describe("decideRoute", () => {
   });
 
   it("redirects area roots and auth pages to the dashboard", () => {
-    expect(decideRoute("/admin", "", user("Admin"), now)).toEqual({ action: "redirect", to: "/admin/dashboard" });
+    expect(decideRoute("/admin", "", user("Admin"), now)).toEqual({
+      action: "redirect",
+      to: "/admin/dashboard",
+    });
     expect(decideRoute("/login", "", user("Customer"), now)).toEqual({
       action: "redirect",
       to: "/customer/dashboard",
@@ -73,7 +86,13 @@ describe("decodeJwt", () => {
       fullName: "Tara",
       exp: future,
     });
-    expect(decodeJwt(token)).toEqual({ id: "abc", email: "t@x.io", role: "Technician", name: "Tara", exp: future });
+    expect(decodeJwt(token)).toEqual({
+      id: "abc",
+      email: "t@x.io",
+      role: "Technician",
+      name: "Tara",
+      exp: future,
+    });
   });
 
   it("returns null for garbage or unknown roles", () => {

@@ -16,17 +16,17 @@ export function StatCard({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-card border border-border bg-surface p-4", className)}>
+    <div className={cn("rounded-card border-border bg-surface border p-4", className)}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm text-fg-muted">{label}</p>
+        <p className="text-fg-muted text-sm">{label}</p>
         {icon ? (
-          <span className="rounded-lg bg-primary-soft p-1.5 text-primary">
+          <span className="bg-primary-soft text-primary rounded-lg p-1.5">
             <Icon name={icon} className="size-4" />
           </span>
         ) : null}
       </div>
       <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-fg-muted">{hint}</p> : null}
+      {hint ? <p className="text-fg-muted mt-1 text-xs">{hint}</p> : null}
     </div>
   );
 }

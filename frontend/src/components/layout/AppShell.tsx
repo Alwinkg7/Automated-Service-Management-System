@@ -27,7 +27,9 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           aria-current={active === item.href ? "page" : undefined}
           className={cn(
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-            active === item.href ? "bg-primary-soft text-primary" : "text-fg-muted hover:bg-surface-muted hover:text-fg",
+            active === item.href
+              ? "bg-primary-soft text-primary"
+              : "text-fg-muted hover:bg-surface-muted hover:text-fg",
           )}
         >
           <Icon name={item.icon} />
@@ -42,22 +44,22 @@ function UserBlock() {
   const user = useSession();
   const { logout, pending } = useLogout();
   return (
-    <div className="flex items-center gap-3 border-t border-border pt-4">
+    <div className="border-border flex items-center gap-3 border-t pt-4">
       <span
         aria-hidden
-        className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary"
+        className="bg-primary-soft text-primary flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
       >
         {(user.name || user.email || "?").charAt(0).toUpperCase()}
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{user.name || user.email}</p>
-        <p className="truncate text-xs text-fg-muted">{user.role}</p>
+        <p className="text-fg-muted truncate text-xs">{user.role}</p>
       </div>
       <button
         type="button"
         onClick={() => void logout()}
         disabled={pending}
-        className="rounded-lg p-2 text-fg-muted hover:bg-surface-muted hover:text-fg disabled:opacity-50"
+        className="text-fg-muted hover:bg-surface-muted hover:text-fg rounded-lg p-2 disabled:opacity-50"
         aria-label="Sign out"
       >
         <Icon name="logout" />
@@ -72,12 +74,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[16rem_1fr]">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-surface focus:px-3 focus:py-2">
+      <a
+        href="#main"
+        className="focus:bg-surface sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:px-3 focus:py-2"
+      >
         Skip to content
       </a>
 
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r border-border bg-surface p-4 lg:flex">
+      <aside className="border-border bg-surface sticky top-0 hidden h-dvh flex-col gap-6 border-r p-4 lg:flex">
         <Logo />
         <div className="flex-1 overflow-y-auto">
           <NavLinks />
@@ -87,12 +92,27 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Mobile drawer */}
       {drawerOpen ? (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-          <button type="button" className="absolute inset-0 animate-fade-in bg-black/40" aria-label="Close menu" onClick={() => setDrawerOpen(false)} />
-          <aside className="relative flex h-full w-72 max-w-[85vw] animate-slide-up flex-col gap-6 bg-surface p-4 shadow-xl">
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu"
+        >
+          <button
+            type="button"
+            className="animate-fade-in absolute inset-0 bg-black/40"
+            aria-label="Close menu"
+            onClick={() => setDrawerOpen(false)}
+          />
+          <aside className="animate-slide-up bg-surface relative flex h-full w-72 max-w-[85vw] flex-col gap-6 p-4 shadow-xl">
             <div className="flex items-center justify-between">
               <Logo />
-              <button type="button" onClick={() => setDrawerOpen(false)} className="rounded-lg p-2 hover:bg-surface-muted" aria-label="Close menu">
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="hover:bg-surface-muted rounded-lg p-2"
+                aria-label="Close menu"
+              >
                 <Icon name="close" />
               </button>
             </div>
@@ -105,10 +125,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       ) : null}
 
       <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-surface/90 px-4 backdrop-blur sm:px-6">
+        <header className="border-border bg-surface/90 sticky top-0 z-30 flex h-14 items-center gap-2 border-b px-4 backdrop-blur sm:px-6">
           <button
             type="button"
-            className="-ml-2 rounded-lg p-2 hover:bg-surface-muted lg:hidden"
+            className="hover:bg-surface-muted -ml-2 rounded-lg p-2 lg:hidden"
             onClick={() => setDrawerOpen(true)}
             aria-label="Open menu"
             aria-expanded={drawerOpen}
@@ -123,7 +143,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NotificationBell role={user.role} />
           </div>
         </header>
-        <main id="main" className="mx-auto w-full max-w-6xl flex-1 animate-fade-in px-4 py-6 sm:px-6 lg:py-8">
+        <main
+          id="main"
+          className="animate-fade-in mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:py-8"
+        >
           {children}
         </main>
       </div>

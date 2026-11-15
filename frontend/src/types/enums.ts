@@ -58,16 +58,23 @@ export function humanize(value: string): string {
     .trim();
 }
 
-export const CATEGORY_INFO: Record<ServiceCategory, { label: string; description: string; slug: string }> = {
+export const CATEGORY_INFO: Record<
+  ServiceCategory,
+  { label: string; description: string; slug: string }
+> = {
   Plumbing: { label: "Plumbing", description: "Pipes, leaks, taps & drainage", slug: "plumbing" },
-  Electrical: { label: "Electrical", description: "Wiring, switches & power issues", slug: "electrical" },
+  Electrical: {
+    label: "Electrical",
+    description: "Wiring, switches & power issues",
+    slug: "electrical",
+  },
   Carpentry: { label: "Carpentry", description: "Furniture, doors & woodwork", slug: "carpentry" },
   Cleaning: { label: "Cleaning", description: "Deep clean, pest control", slug: "cleaning" },
   AC_Repair: { label: "AC Repair", description: "AC servicing & installation", slug: "ac-repair" },
   Appliance_Repair: {
     label: "Appliance Repair",
     description: "Washing machine, fridge & more",
-   
+
     slug: "appliance-repair",
   },
   Painting: { label: "Painting", description: "Interior & exterior painting", slug: "painting" },

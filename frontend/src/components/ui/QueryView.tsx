@@ -20,15 +20,28 @@ interface QueryViewProps<T> {
   pendingEndpoint?: string;
 }
 
-export function QueryView<T>({ query, children, loading, empty, isEmpty, pendingEndpoint }: QueryViewProps<T>) {
+export function QueryView<T>({
+  query,
+  children,
+  loading,
+  empty,
+  isEmpty,
+  pendingEndpoint,
+}: QueryViewProps<T>) {
   if (query.isPending) return <>{loading ?? <SkeletonList />}</>;
-  if (query.isError && pendingEndpoint && isApiError(query.error) && [404, 405, 501].includes(query.error.status)) {
+  if (
+    query.isError &&
+    pendingEndpoint &&
+    isApiError(query.error) &&
+    [404, 405, 501].includes(query.error.status)
+  ) {
     return (
       <EmptyState
         title="Not available yet"
         description={
           <>
-            This screen is ready but the API doesn&apos;t provide <code className="text-xs">{pendingEndpoint}</code> yet.
+            This screen is ready but the API doesn&apos;t provide{" "}
+            <code className="text-xs">{pendingEndpoint}</code> yet.
           </>
         }
       />

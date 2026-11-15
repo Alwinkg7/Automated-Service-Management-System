@@ -32,12 +32,30 @@ export interface ApiClientConfig {
 export interface ApiClient {
   request<T = unknown>(path: string, options?: RequestOptions<T>): Promise<T>;
   get<T = unknown>(path: string, options?: Omit<RequestOptions<T>, "method" | "body">): Promise<T>;
-  post<T = unknown>(path: string, body?: unknown, options?: Omit<RequestOptions<T>, "method" | "body">): Promise<T>;
-  put<T = unknown>(path: string, body?: unknown, options?: Omit<RequestOptions<T>, "method" | "body">): Promise<T>;
-  patch<T = unknown>(path: string, body?: unknown, options?: Omit<RequestOptions<T>, "method" | "body">): Promise<T>;
-  delete<T = unknown>(path: string, options?: Omit<RequestOptions<T>, "method" | "body">): Promise<T>;
+  post<T = unknown>(
+    path: string,
+    body?: unknown,
+    options?: Omit<RequestOptions<T>, "method" | "body">,
+  ): Promise<T>;
+  put<T = unknown>(
+    path: string,
+    body?: unknown,
+    options?: Omit<RequestOptions<T>, "method" | "body">,
+  ): Promise<T>;
+  patch<T = unknown>(
+    path: string,
+    body?: unknown,
+    options?: Omit<RequestOptions<T>, "method" | "body">,
+  ): Promise<T>;
+  delete<T = unknown>(
+    path: string,
+    options?: Omit<RequestOptions<T>, "method" | "body">,
+  ): Promise<T>;
   /** Fetch a binary file (PDF / CSV). */
-  download(path: string, options?: Pick<RequestOptions<never>, "query" | "signal">): Promise<DownloadedFile>;
+  download(
+    path: string,
+    options?: Pick<RequestOptions<never>, "query" | "signal">,
+  ): Promise<DownloadedFile>;
 }
 
 export interface DownloadedFile {

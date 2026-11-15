@@ -7,10 +7,13 @@ import { createApiClient } from "./client";
 const local = createApiClient({ baseUrl: "" });
 
 export function login(email: string, password: string) {
-  return local.post<{ user: { id: string; role: Role; name: string; email: string } }>("/api/auth/login", {
-    email,
-    password,
-  });
+  return local.post<{ user: { id: string; role: Role; name: string; email: string } }>(
+    "/api/auth/login",
+    {
+      email,
+      password,
+    },
+  );
 }
 
 export function registerAccount(form: RegisterForm) {

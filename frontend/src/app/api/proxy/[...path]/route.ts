@@ -10,11 +10,22 @@ import { decodeJwt, isExpired } from "@/lib/auth/jwt";
 import { serverApiUrl } from "@/lib/env";
 
 const FORWARD_REQUEST_HEADERS = ["accept", "content-type", "idempotency-key", "x-request-id"];
-const FORWARD_RESPONSE_HEADERS = ["content-type", "content-disposition", "retry-after", "x-total-count", "location"];
+const FORWARD_RESPONSE_HEADERS = [
+  "content-type",
+  "content-disposition",
+  "retry-after",
+  "x-total-count",
+  "location",
+];
 
 type Context = { params: Promise<{ path: string[] }> };
 
-async function forward(request: NextRequest, path: string[], body: ArrayBuffer | undefined, token?: string) {
+async function forward(
+  request: NextRequest,
+  path: string[],
+  body: ArrayBuffer | undefined,
+  token?: string,
+) {
   const target = `${serverApiUrl()}/${path.map(encodeURIComponent).join("/")}${request.nextUrl.search}`;
   const headers = new Headers();
   for (const name of FORWARD_REQUEST_HEADERS) {
@@ -40,13 +51,17 @@ async function handle(request: NextRequest, { params }: Context) {
     return NextResponse.json({ success: false, error: "Not found." }, { status: 404 });
   }
   if (request.method !== "GET" && !isSameOrigin(request)) {
-    return NextResponse.json({ success: false, error: "Cross-site request blocked." }, { status: 403 });
+    return NextResponse.json(
+      { success: false, error: "Cross-site request blocked." },
+      { status: 403 },
+    );
   }
 
   const jar = await cookies();
   const token = jar.get(TOKEN_COOKIE)?.value;
   const refresh = jar.get(REFRESH_COOKIE)?.value;
-  const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
+  const body =
+    request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
 
   // Access token already expired (short-lived JWTs): refresh before calling.
   let renewed: Awaited<ReturnType<typeof refreshTokens>> = null;

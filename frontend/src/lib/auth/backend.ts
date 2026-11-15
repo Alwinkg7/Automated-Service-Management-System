@@ -14,7 +14,11 @@ export const AUTH_PATHS = {
 } as const;
 
 export function loginWithPassword(email: string, password: string): Promise<LoginResponse> {
-  return authApi.post(AUTH_PATHS.login, { email, password }, { schema: loginResponseSchema, cache: "no-store" });
+  return authApi.post(
+    AUTH_PATHS.login,
+    { email, password },
+    { schema: loginResponseSchema, cache: "no-store" },
+  );
 }
 
 export function register(path: string, body: unknown): Promise<unknown> {
@@ -24,7 +28,11 @@ export function register(path: string, body: unknown): Promise<unknown> {
 /** Exchange a refresh token for a new access token. Returns null when refresh isn't possible. */
 export async function refreshTokens(refreshToken: string): Promise<LoginResponse | null> {
   try {
-    return await authApi.post(AUTH_PATHS.refresh, { refreshToken }, { schema: loginResponseSchema, cache: "no-store" });
+    return await authApi.post(
+      AUTH_PATHS.refresh,
+      { refreshToken },
+      { schema: loginResponseSchema, cache: "no-store" },
+    );
   } catch {
     return null;
   }

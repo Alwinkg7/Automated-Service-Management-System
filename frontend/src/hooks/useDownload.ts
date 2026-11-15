@@ -8,7 +8,11 @@ import { saveBlob } from "@/lib/format";
 /** Download a file (PDF/CSV) through the authenticated proxy. */
 export function useDownload() {
   const [pending, setPending] = useState(false);
-  async function download(path: string, fallbackName: string, query?: Record<string, string | number | undefined>) {
+  async function download(
+    path: string,
+    fallbackName: string,
+    query?: Record<string, string | number | undefined>,
+  ) {
     setPending(true);
     try {
       const { blob, fileName } = await browserApi.download(path, { query });

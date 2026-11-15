@@ -16,7 +16,10 @@ const FILTERS: RequestStatus[] = ["Assigned", "InProgress", "Billed", "Completed
 export function JobsView() {
   const url = useUrlState();
   const status = url.get("status");
-  const query = useQuery({ queryKey: qk.technician.jobs(), queryFn: () => technicianApi.getJobs() });
+  const query = useQuery({
+    queryKey: qk.technician.jobs(),
+    queryFn: () => technicianApi.getJobs(),
+  });
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
@@ -27,7 +30,10 @@ export function JobsView() {
 
   return (
     <>
-      <PageHeader title="My jobs" description="Jobs assigned to you. New assignments appear here in real time." />
+      <PageHeader
+        title="My jobs"
+        description="Jobs assigned to you. New assignments appear here in real time."
+      />
       <div className="mb-4">
         <FilterChips
           label="Filter by status"
@@ -42,7 +48,12 @@ export function JobsView() {
       <QueryView
         query={query}
         isEmpty={() => rows.length === 0}
-        empty={<EmptyState title="No jobs here" description={status ? "Try another filter." : "Stay online to receive new jobs."} />}
+        empty={
+          <EmptyState
+            title="No jobs here"
+            description={status ? "Try another filter." : "Stay online to receive new jobs."}
+          />
+        }
       >
         {() => (
           <ul className="space-y-3">

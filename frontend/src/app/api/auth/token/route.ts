@@ -22,5 +22,8 @@ export async function GET() {
     token = renewed.token;
   }
 
-  return NextResponse.json({ success: true, data: { token } }, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json(
+    { success: true, data: { token } },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

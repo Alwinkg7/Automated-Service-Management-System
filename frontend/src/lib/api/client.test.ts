@@ -12,14 +12,18 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 }
 
 function clientWith(response: Response | (() => Promise<Response>), extra = {}) {
-  const fetchImpl = vi.fn(async () => (typeof response === "function" ? response() : response.clone()));
+  const fetchImpl = vi.fn(async () =>
+    typeof response === "function" ? response() : response.clone(),
+  );
   const client = createApiClient({ baseUrl: "http://api.test", fetchImpl, ...extra });
   return { client, fetchImpl };
 }
 
 describe("buildUrl", () => {
   it("skips empty query values", () => {
-    expect(buildUrl("http://x", "/a", { s: "", n: 0, b: undefined, c: "Pending" })).toBe("http://x/a?n=0&c=Pending");
+    expect(buildUrl("http://x", "/a", { s: "", n: 0, b: undefined, c: "Pending" })).toBe(
+      "http://x/a?n=0&c=Pending",
+    );
   });
 });
 
@@ -34,13 +38,19 @@ describe("unwrapEnvelope", () => {
 
 describe("createApiClient", () => {
   it("unwraps and validates with a schema", async () => {
-    const { client } = clientWith(jsonResponse({ success: true, data: { id: 5, name: "x", extra: true } }));
-    const result = await client.get("/api/thing", { schema: z.object({ id: z.number(), name: z.string() }) });
+    const { client } = clientWith(
+      jsonResponse({ success: true, data: { id: 5, name: "x", extra: true } }),
+    );
+    const result = await client.get("/api/thing", {
+      schema: z.object({ id: z.number(), name: z.string() }),
+    });
     expect(result).toEqual({ id: 5, name: "x" });
   });
 
   it("sends JSON body, bearer token and custom headers", async () => {
-    const { client, fetchImpl } = clientWith(jsonResponse({ success: true }), { getToken: () => "tok" });
+    const { client, fetchImpl } = clientWith(jsonResponse({ success: true }), {
+      getToken: () => "tok",
+    });
     await client.post("/api/customer/requests", { a: 1 }, { headers: { "Idempotency-Key": "k1" } });
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     const headers = init.headers as Record<string, string>;
@@ -53,8 +63,13 @@ describe("createApiClient", () => {
   });
 
   it("throws ApiError with the legacy envelope message", async () => {
-    const { client } = clientWith(jsonResponse({ success: false, error: "Invalid category." }, { status: 400 }));
-    await expect(client.get("/x")).rejects.toMatchObject({ status: 400, message: "Invalid category." });
+    const { client } = clientWith(
+      jsonResponse({ success: false, error: "Invalid category." }, { status: 400 }),
+    );
+    await expect(client.get("/x")).rejects.toMatchObject({
+      status: 400,
+      message: "Invalid category.",
+    });
   });
 
   it("parses ProblemDetails with field errors", async () => {
@@ -84,7 +99,9 @@ describe("createApiClient", () => {
   });
 
   it("never exposes raw server text for 5xx", async () => {
-    const { client } = clientWith(jsonResponse({ success: false, error: "SqlException: boom" }, { status: 500 }));
+    const { client } = clientWith(
+      jsonResponse({ success: false, error: "SqlException: boom" }, { status: 500 }),
+    );
     const error = (await client.get("/x").catch((e: unknown) => e)) as ApiError;
     expect(error.isServerError).toBe(true);
     expect(error.message).not.toContain("SqlException");
@@ -101,9 +118,12 @@ describe("createApiClient", () => {
 
   it("calls onUnauthorized for 401", async () => {
     const onUnauthorized = vi.fn();
-    const { client } = clientWith(jsonResponse({ success: false, error: "nope" }, { status: 401 }), {
-      onUnauthorized,
-    });
+    const { client } = clientWith(
+      jsonResponse({ success: false, error: "nope" }, { status: 401 }),
+      {
+        onUnauthorized,
+      },
+    );
     await expect(client.get("/x")).rejects.toMatchObject({ status: 401 });
     expect(onUnauthorized).toHaveBeenCalledOnce();
   });

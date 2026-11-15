@@ -42,16 +42,21 @@ export function Field({ label, error, hint, required, className, children }: Fie
     <div className={cn("space-y-1.5", className)}>
       <label htmlFor={id} className="block text-sm font-medium">
         {label}
-        {required ? <span className="text-danger" aria-hidden> *</span> : null}
+        {required ? (
+          <span className="text-danger" aria-hidden>
+            {" "}
+            *
+          </span>
+        ) : null}
       </label>
       {children({ id, describedBy, invalid: !!error })}
       {hint && !error ? (
-        <p id={hintId} className="text-xs text-fg-muted">
+        <p id={hintId} className="text-fg-muted text-xs">
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p id={errorId} role="alert" className="text-xs font-medium text-danger">
+        <p id={errorId} role="alert" className="text-danger text-xs font-medium">
           {error}
         </p>
       ) : null}
@@ -62,7 +67,10 @@ export function Field({ label, error, hint, required, className, children }: Fie
 export function FormError({ message }: { message?: string | null }) {
   if (!message) return null;
   return (
-    <div role="alert" className="rounded-lg border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">
+    <div
+      role="alert"
+      className="border-danger/30 bg-danger-soft text-danger rounded-lg border px-3 py-2 text-sm"
+    >
       {message}
     </div>
   );

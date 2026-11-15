@@ -20,7 +20,10 @@ import { CATEGORY_INFO } from "@/types/enums";
 
 export function TechnicianDashboardView() {
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey: qk.technician.dashboard(), queryFn: technicianApi.getDashboard });
+  const query = useQuery({
+    queryKey: qk.technician.dashboard(),
+    queryFn: technicianApi.getDashboard,
+  });
 
   const toggle = useAction({
     fn: technicianApi.toggleStatus,
@@ -32,7 +35,9 @@ export function TechnicianDashboardView() {
         old ? { ...old, technician: { ...old.technician, status: r.newStatus } } : old,
       );
       // Join/leave the "new job available" broadcast group.
-      void currentConnection()?.invoke("UpdateAvailability", r.newStatus === "Available").catch(() => {});
+      void currentConnection()
+        ?.invoke("UpdateAvailability", r.newStatus === "Available")
+        .catch(() => {});
     },
   });
 
@@ -58,10 +63,10 @@ export function TechnicianDashboardView() {
               <Card>
                 <CardBody className="flex flex-wrap items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm text-fg-muted">Availability</p>
+                    <p className="text-fg-muted text-sm">Availability</p>
                     <div className="mt-1 flex items-center gap-2">
                       <StatusBadge status={status} className="text-sm" />
-                      <span className="text-sm text-fg-muted">
+                      <span className="text-fg-muted text-sm">
                         {status === "Busy"
                           ? "You're on a job. You'll be available again once it's completed."
                           : status === "Available"
@@ -71,7 +76,11 @@ export function TechnicianDashboardView() {
                     </div>
                   </div>
                   {status !== "Busy" ? (
-                    <Button variant={status === "Available" ? "outline" : "primary"} loading={toggle.isPending} onClick={() => toggle.mutate()}>
+                    <Button
+                      variant={status === "Available" ? "outline" : "primary"}
+                      loading={toggle.isPending}
+                      onClick={() => toggle.mutate()}
+                    >
                       {status === "Available" ? "Go offline" : "Go online"}
                     </Button>
                   ) : null}
@@ -92,7 +101,10 @@ export function TechnicianDashboardView() {
                     {d.activeJob ? (
                       <JobCard job={d.activeJob} />
                     ) : (
-                      <EmptyState title="No active job" description="New assignments will show up here instantly." />
+                      <EmptyState
+                        title="No active job"
+                        description="New assignments will show up here instantly."
+                      />
                     )}
                   </CardBody>
                 </Card>
@@ -107,14 +119,20 @@ export function TechnicianDashboardView() {
                   />
                   <CardBody>
                     {d.recentJobs.length === 0 ? (
-                      <p className="text-sm text-fg-muted">No completed jobs yet.</p>
+                      <p className="text-fg-muted text-sm">No completed jobs yet.</p>
                     ) : (
-                      <ul className="divide-y divide-border">
+                      <ul className="divide-border divide-y">
                         {d.recentJobs.map((j) => (
-                          <li key={j.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                            <Link href={`/technician/jobs/${j.id}`} className="font-medium hover:text-primary">
+                          <li
+                            key={j.id}
+                            className="flex items-center justify-between gap-3 py-3 text-sm"
+                          >
+                            <Link
+                              href={`/technician/jobs/${j.id}`}
+                              className="hover:text-primary font-medium"
+                            >
                               {CATEGORY_INFO[j.category].label} #{j.id}
-                              <span className="block text-xs font-normal text-fg-muted">
+                              <span className="text-fg-muted block text-xs font-normal">
                                 {j.customerName} · {formatDate(j.completedAt)}
                               </span>
                             </Link>

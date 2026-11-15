@@ -17,7 +17,10 @@ import { DISPUTE_STATUSES, humanize } from "@/types/enums";
 function DisputesList() {
   const url = useUrlState();
   const status = url.get("status");
-  const query = useQuery({ queryKey: qk.admin.disputes(status), queryFn: () => adminApi.getDisputes(status || undefined) });
+  const query = useQuery({
+    queryKey: qk.admin.disputes(status),
+    queryFn: () => adminApi.getDisputes(status || undefined),
+  });
   return (
     <>
       <div className="mb-4">
@@ -25,7 +28,10 @@ function DisputesList() {
           label="Filter by status"
           value={status}
           onChange={(s) => url.set({ status: s })}
-          options={[{ value: "", label: "All" }, ...DISPUTE_STATUSES.map((s) => ({ value: s, label: humanize(s) }))]}
+          options={[
+            { value: "", label: "All" },
+            ...DISPUTE_STATUSES.map((s) => ({ value: s, label: humanize(s) })),
+          ]}
         />
       </div>
       <QueryView
@@ -43,12 +49,22 @@ function DisputesList() {
               {
                 header: "Dispute",
                 cell: (d) => (
-                  <Link href={`/admin/disputes/${d.id}`} className="font-medium text-primary hover:underline">
+                  <Link
+                    href={`/admin/disputes/${d.id}`}
+                    className="text-primary font-medium hover:underline"
+                  >
                     #{d.id}
                   </Link>
                 ),
               },
-              { header: "Request", cell: (d) => <Link href={`/admin/requests/${d.requestId}`} className="hover:underline">#{d.requestId}</Link> },
+              {
+                header: "Request",
+                cell: (d) => (
+                  <Link href={`/admin/requests/${d.requestId}`} className="hover:underline">
+                    #{d.requestId}
+                  </Link>
+                ),
+              },
               { header: "Reason", cell: (d) => humanize(d.reason) },
               { header: "Raised by", cell: (d) => d.raisedByName ?? "—", hideOnMobile: true },
               { header: "Raised", cell: (d) => formatDate(d.raisedAt), hideOnMobile: true },
@@ -72,7 +88,10 @@ function DisputesList() {
 export default function AdminDisputesPage() {
   return (
     <>
-      <PageHeader title="Disputes" description="Resolve within 48 hours. Refunds go back through Razorpay." />
+      <PageHeader
+        title="Disputes"
+        description="Resolve within 48 hours. Refunds go back through Razorpay."
+      />
       <Suspense>
         <DisputesList />
       </Suspense>

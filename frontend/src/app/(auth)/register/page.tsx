@@ -16,14 +16,16 @@ export default function RegisterPage() {
       <CardBody className="space-y-6 sm:p-8">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
-          <p className="mt-1 text-sm text-fg-muted">Book services as a customer, or join as a technician.</p>
+          <p className="text-fg-muted mt-1 text-sm">
+            Book services as a customer, or join as a technician.
+          </p>
         </div>
         <Suspense>
           <RegisterForm />
         </Suspense>
-        <p className="text-center text-sm text-fg-muted">
+        <p className="text-fg-muted text-center text-sm">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          <Link href="/login" className="text-primary font-medium hover:underline">
             Sign in
           </Link>
         </p>

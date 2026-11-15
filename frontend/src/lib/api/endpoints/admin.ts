@@ -42,7 +42,8 @@ export function adminEndpoints(api: ApiClient) {
     getRequests: (status?: RequestStatus) =>
       api.get("/api/admin/requests", { query: { status }, schema: adminRequestsSchema }),
 
-    getRequest: (id: number) => api.get(`/api/admin/requests/${id}`, { schema: adminRequestDetailSchema }),
+    getRequest: (id: number) =>
+      api.get(`/api/admin/requests/${id}`, { schema: adminRequestDetailSchema }),
 
     getAvailableTechnicians: (category: ServiceCategory) =>
       api.get("/api/admin/technicians/available", {
@@ -83,9 +84,13 @@ export function adminEndpoints(api: ApiClient) {
     resolveDispute: (id: number, resolution: string, adminNote: string) =>
       api.post<void>(`/api/admin/disputes/${id}/resolve`, { resolution, adminNote }),
     refundDispute: (id: number, amount: number, adminNote: string) =>
-      api.post(`/api/admin/disputes/${id}/refund`, { amount, adminNote }, {
-        schema: z.object({ razorpayRefundId: z.string().nullish() }).nullish(),
-      }),
+      api.post(
+        `/api/admin/disputes/${id}/refund`,
+        { amount, adminNote },
+        {
+          schema: z.object({ razorpayRefundId: z.string().nullish() }).nullish(),
+        },
+      ),
 
     // Withdrawals
     getWithdrawals: () => api.get("/api/admin/withdrawals", { schema: z.array(withdrawalSchema) }),

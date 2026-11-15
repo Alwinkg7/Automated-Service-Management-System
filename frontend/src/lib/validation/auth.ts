@@ -16,7 +16,11 @@ const phone = z
   .regex(/^[+\d][\d\s-]+$/, "Enter a valid phone number");
 
 const base = {
-  fullName: z.string().trim().min(2, "Name must be 2–100 characters").max(100, "Name must be 2–100 characters"),
+  fullName: z
+    .string()
+    .trim()
+    .min(2, "Name must be 2–100 characters")
+    .max(100, "Name must be 2–100 characters"),
   email: z.email("Enter a valid email address"),
   phone,
   password: z.string().min(8, "Password must be at least 8 characters").max(100),

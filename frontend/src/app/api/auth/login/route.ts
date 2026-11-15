@@ -12,12 +12,18 @@ const bodySchema = z.object({
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) {
-    return NextResponse.json({ success: false, error: "Cross-site request blocked." }, { status: 403 });
+    return NextResponse.json(
+      { success: false, error: "Cross-site request blocked." },
+      { status: 403 },
+    );
   }
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ success: false, error: "Email and password are required." }, { status: 400 });
+    return NextResponse.json(
+      { success: false, error: "Email and password are required." },
+      { status: 400 },
+    );
   }
 
   try {
@@ -40,7 +46,8 @@ export async function POST(request: Request) {
     const status = isApiError(error) ? error.status : 502;
     const message = isApiError(error) ? error.message : "Login failed. Please try again.";
     const headers: Record<string, string> = {};
-    if (isApiError(error) && error.retryAfterSeconds) headers["Retry-After"] = String(error.retryAfterSeconds);
+    if (isApiError(error) && error.retryAfterSeconds)
+      headers["Retry-After"] = String(error.retryAfterSeconds);
     return NextResponse.json({ success: false, error: message }, { status, headers });
   }
 }

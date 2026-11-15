@@ -15,12 +15,20 @@ export function DisputesView() {
   const query = useQuery({ queryKey: qk.customer.disputes(), queryFn: customerApi.getDisputes });
   return (
     <>
-      <PageHeader title="My disputes" description="Raise a dispute from a completed request. We respond within 48 hours." />
+      <PageHeader
+        title="My disputes"
+        description="Raise a dispute from a completed request. We respond within 48 hours."
+      />
       <QueryView
         query={query}
         pendingEndpoint="GET /api/customer/disputes"
         isEmpty={(d) => d.length === 0}
-        empty={<EmptyState title="No disputes" description="If something went wrong with a completed job, open the request and choose “Raise dispute”." />}
+        empty={
+          <EmptyState
+            title="No disputes"
+            description="If something went wrong with a completed job, open the request and choose “Raise dispute”."
+          />
+        }
       >
         {(rows) => (
           <DataTable
@@ -31,7 +39,10 @@ export function DisputesView() {
               {
                 header: "Dispute",
                 cell: (d) => (
-                  <Link href={`/customer/disputes/${d.id}`} className="font-medium text-primary hover:underline">
+                  <Link
+                    href={`/customer/disputes/${d.id}`}
+                    className="text-primary font-medium hover:underline"
+                  >
                     #{d.id}
                   </Link>
                 ),

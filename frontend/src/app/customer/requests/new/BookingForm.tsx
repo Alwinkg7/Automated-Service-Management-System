@@ -70,7 +70,8 @@ export function BookingForm({
     } catch (error) {
       if (isApiError(error)) {
         for (const [field, messages] of Object.entries(error.fieldErrors)) {
-          if (field in values && messages[0]) setError(field as keyof CreateRequestForm, { message: messages[0] });
+          if (field in values && messages[0])
+            setError(field as keyof CreateRequestForm, { message: messages[0] });
         }
       }
       setFormError(errorMessage(error));
@@ -81,7 +82,7 @@ export function BookingForm({
     <form onSubmit={onSubmit} noValidate className="space-y-6">
       <FormError message={formError} />
       {previousTechnician ? (
-        <p className="rounded-lg bg-info-soft px-3 py-2 text-sm text-info">
+        <p className="bg-info-soft text-info rounded-lg px-3 py-2 text-sm">
           Last time this job was handled by {previousTechnician}.
         </p>
       ) : null}
@@ -95,8 +96,10 @@ export function BookingForm({
             <label
               key={c}
               className={cn(
-                "flex cursor-pointer flex-col items-start gap-2 rounded-card border bg-surface p-3 transition-colors has-focus-visible:outline-2 has-focus-visible:outline-ring",
-                selected === c ? "border-primary ring-1 ring-primary" : "border-border hover:border-primary/40",
+                "rounded-card bg-surface has-focus-visible:outline-ring flex cursor-pointer flex-col items-start gap-2 border p-3 transition-colors has-focus-visible:outline-2",
+                selected === c
+                  ? "border-primary ring-primary ring-1"
+                  : "border-border hover:border-primary/40",
               )}
             >
               <input
@@ -108,12 +111,12 @@ export function BookingForm({
               />
               <CategoryIcon category={c} className="size-9" />
               <span className="text-sm font-medium">{CATEGORY_INFO[c].label}</span>
-              <span className="text-xs text-fg-muted">{CATEGORY_INFO[c].description}</span>
+              <span className="text-fg-muted text-xs">{CATEGORY_INFO[c].description}</span>
             </label>
           ))}
         </div>
         {errors.category ? (
-          <p role="alert" className="mt-2 text-xs font-medium text-danger">
+          <p role="alert" className="text-danger mt-2 text-xs font-medium">
             {errors.category.message}
           </p>
         ) : null}
@@ -121,7 +124,12 @@ export function BookingForm({
 
       <Card>
         <CardBody className="grid gap-4 sm:grid-cols-2">
-          <Field label="What's the problem?" error={errors.description?.message} required className="sm:col-span-2">
+          <Field
+            label="What's the problem?"
+            error={errors.description?.message}
+            required
+            className="sm:col-span-2"
+          >
             {({ id, describedBy, invalid }) => (
               <Textarea
                 id={id}
@@ -133,7 +141,12 @@ export function BookingForm({
               />
             )}
           </Field>
-          <Field label="Preferred date & time" error={errors.scheduledDate?.message} hint="At least 1 hour from now." required>
+          <Field
+            label="Preferred date & time"
+            error={errors.scheduledDate?.message}
+            hint="At least 1 hour from now."
+            required
+          >
             {({ id, describedBy, invalid }) => (
               <Input
                 id={id}
@@ -145,14 +158,33 @@ export function BookingForm({
               />
             )}
           </Field>
-          <Field label="Pin code" error={errors.pinCode?.message} hint="Helps us find a technician near you.">
+          <Field
+            label="Pin code"
+            error={errors.pinCode?.message}
+            hint="Helps us find a technician near you."
+          >
             {({ id, describedBy, invalid }) => (
-              <Input id={id} inputMode="numeric" maxLength={6} autoComplete="postal-code" aria-describedby={describedBy} aria-invalid={invalid} {...register("pinCode")} />
+              <Input
+                id={id}
+                inputMode="numeric"
+                maxLength={6}
+                autoComplete="postal-code"
+                aria-describedby={describedBy}
+                aria-invalid={invalid}
+                {...register("pinCode")}
+              />
             )}
           </Field>
           <Field label="Address" error={errors.address?.message} required className="sm:col-span-2">
             {({ id, describedBy, invalid }) => (
-              <Textarea id={id} rows={2} autoComplete="street-address" aria-describedby={describedBy} aria-invalid={invalid} {...register("address")} />
+              <Textarea
+                id={id}
+                rows={2}
+                autoComplete="street-address"
+                aria-describedby={describedBy}
+                aria-invalid={invalid}
+                {...register("address")}
+              />
             )}
           </Field>
         </CardBody>

@@ -22,14 +22,18 @@ import { LocationSharingCard } from "./LocationSharingCard";
 
 export function JobDetailView({ id }: { id: number }) {
   const router = useRouter();
-  const query = useQuery({ queryKey: qk.technician.job(id), queryFn: () => technicianApi.getJob(id) });
+  const query = useQuery({
+    queryKey: qk.technician.job(id),
+    queryFn: () => technicianApi.getJob(id),
+  });
   const [confirmReject, setConfirmReject] = useState(false);
   const [confirmCash, setConfirmCash] = useState(false);
 
   const accept = useAction({
     fn: () => technicianApi.acceptJob(id),
     invalidate: [qk.technician.all],
-    success: "Job accepted. You're now marked as Busy – share your location so the customer can track you.",
+    success:
+      "Job accepted. You're now marked as Busy – share your location so the customer can track you.",
   });
   const reject = useAction({
     fn: () => technicianApi.rejectJob(id),
@@ -63,7 +67,11 @@ export function JobDetailView({ id }: { id: number }) {
                   <Button variant="outline" onClick={() => setConfirmReject(true)}>
                     Decline
                   </Button>
-                  <Button loading={accept.isPending} onClick={() => accept.mutate()} icon={<Icon name="check" className="size-4" />}>
+                  <Button
+                    loading={accept.isPending}
+                    onClick={() => accept.mutate()}
+                    icon={<Icon name="check" className="size-4" />}
+                  >
                     Accept job
                   </Button>
                 </>
@@ -77,7 +85,10 @@ export function JobDetailView({ id }: { id: number }) {
                   <StatusStepper status={j.status} />
                   <InfoList
                     items={[
-                      { label: "Address", value: [j.address, j.pinCode].filter(Boolean).join(" – ") },
+                      {
+                        label: "Address",
+                        value: [j.address, j.pinCode].filter(Boolean).join(" – "),
+                      },
                       { label: "Created", value: formatDate(j.createdAt) },
                       { label: "Problem", value: j.description },
                     ]}
@@ -91,7 +102,8 @@ export function JobDetailView({ id }: { id: number }) {
                   <CardBody className="flex flex-wrap items-center gap-3 text-sm">
                     <Icon name="card" className="text-info" />
                     <span className="min-w-0 flex-1">
-                      Bill sent. The job completes when the customer pays online, or when you confirm you collected cash.
+                      Bill sent. The job completes when the customer pays online, or when you
+                      confirm you collected cash.
                     </span>
                     {j.canComplete ? (
                       <Button variant="outline" onClick={() => setConfirmCash(true)}>
@@ -108,7 +120,10 @@ export function JobDetailView({ id }: { id: number }) {
                 <CardBody className="space-y-2 text-sm">
                   <p className="font-medium">{j.customer.name ?? "—"}</p>
                   {j.customer.phone ? (
-                    <a href={`tel:${j.customer.phone}`} className="flex items-center gap-1.5 text-primary hover:underline">
+                    <a
+                      href={`tel:${j.customer.phone}`}
+                      className="text-primary flex items-center gap-1.5 hover:underline"
+                    >
                       <Icon name="phone" className="size-4" /> {j.customer.phone}
                     </a>
                   ) : null}
@@ -117,7 +132,7 @@ export function JobDetailView({ id }: { id: number }) {
                       href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(j.address)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-primary hover:underline"
+                      className="text-primary flex items-center gap-1.5 hover:underline"
                     >
                       <Icon name="pin" className="size-4" /> Open in map
                     </a>
