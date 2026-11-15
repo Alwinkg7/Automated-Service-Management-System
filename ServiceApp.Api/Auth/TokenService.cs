@@ -18,7 +18,8 @@ namespace ServiceApp.Api.Auth;
 /// </summary>
 public class TokenService : ITokenService
 {
-    private const string RefreshProvider = "ASMS:RefreshToken";
+    /// <summary>LoginProvider value of refresh-token rows in AspNetUserTokens.</summary>
+    public const string RefreshProvider = "ASMS:RefreshToken";
 
     private readonly UserManager<ApplicationUser> _users;
     private readonly JwtSettings _settings;

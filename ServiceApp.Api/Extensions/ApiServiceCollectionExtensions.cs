@@ -36,6 +36,7 @@ public static class ApiServiceCollectionExtensions
             .ValidateOnStart();
 
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<RefreshTokenCleanupJob>();
 
         services.AddAuthentication(options =>
             {

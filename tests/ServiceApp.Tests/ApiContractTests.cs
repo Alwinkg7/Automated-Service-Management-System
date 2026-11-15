@@ -23,7 +23,8 @@ public class ApiContractTests
 
         var controller = new CustomerApiController(
             Mock.Of<IServiceRequestService>(), bills.Object, payments.Object,
-            Mock.Of<IBillPdfService>(), Options.Create(new RazorpaySettings()))
+            Mock.Of<IBillPdfService>(), Mock.Of<IRequestQueries>(), Mock.Of<IBillDiscountService>(),
+            Options.Create(new RazorpaySettings()))
         {
             ControllerContext = new ControllerContext
             {

@@ -7,6 +7,7 @@ using ServiceApp.Api.Contracts;
 using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
 using ServiceApp.Core.Interfaces;
+using ServiceApp.Core.Models.Queries;
 
 namespace ServiceApp.Api.Controllers;
 
@@ -17,40 +18,41 @@ public class AdminApiController : ApiControllerBase
 {
     private readonly IServiceRequestService _svc;
     private readonly UserManager<ApplicationUser> _users;
+    private readonly IRequestQueries _queries;
 
-    public AdminApiController(IServiceRequestService svc, UserManager<ApplicationUser> users)
+    public AdminApiController(IServiceRequestService svc, UserManager<ApplicationUser> users, IRequestQueries queries)
     {
         _svc = svc;
         _users = users;
+        _queries = queries;
     }
 
     [HttpGet("dashboard")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Dashboard(CancellationToken ct)
+    public async Task<IActionResult> Dashboard([FromServices] IAnalyticsQueries analytics, CancellationToken ct)
     {
-        var all = await _svc.GetAllRequestsAsync();
-        var requests = all.IsSuccess ? all.Data!.ToList() : new List<ServiceRequest>();
-
-        var totalCustomers = await _users.Users.CountAsync(u => u.Role == UserRole.Customer, ct);
-        var totalTechnicians = await _users.Users.CountAsync(u => u.Role == UserRole.Technician, ct);
+        // Counts and revenue are SQL aggregates; only the pending preview rows are loaded.
+        var snapshot = await analytics.GetSnapshotAsync(ct);
+        var pending = await _queries.SearchAsync(new RequestSearchCriteria
+        {
+            Statuses = [RequestStatus.Pending],
+            PageSize = RequestSearchCriteria.MaxPageSize
+        }, ct);
 
         return Ok(new
         {
             success = true,
             stats = new
             {
-                totalRequests = requests.Count,
-                pending = requests.Count(r => r.Status == RequestStatus.Pending),
-                inProgress = requests.Count(r => r.Status == RequestStatus.InProgress),
-                completed = requests.Count(r => r.Status == RequestStatus.Completed),
-                totalCustomers,
-                totalTechnicians,
-                revenue = requests
-                    .Where(r => r.Bill != null && IsPaid(r.Bill))
-                    .Sum(r => r.Bill!.TotalAmount),
+                totalRequests = snapshot.TotalRequests,
+                pending = snapshot.PendingRequests,
+                inProgress = snapshot.StatusCounts.GetValueOrDefault(nameof(RequestStatus.InProgress)),
+                completed = snapshot.CompletedRequests,
+                totalCustomers = snapshot.TotalCustomers,
+                totalTechnicians = snapshot.TotalTechnicians,
+                revenue = snapshot.TotalRevenue,
             },
-            pendingRequests = requests
-                .Where(r => r.Status == RequestStatus.Pending)
+            pendingRequests = pending.Items
                 .OrderBy(r => r.PreferredDateTime)
                 .Take(10)
                 .Select(r => new
@@ -66,39 +68,104 @@ public class AdminApiController : ApiControllerBase
         });
     }
 
+    /// <summary>
+    /// Requests with SQL-side search/status/date filters. With <c>page</c> or
+    /// <c>pageSize</c> the response is paged ({ items, page, pageSize, totalCount });
+    /// without them it is the legacy full array (mobile client).
+    /// </summary>
     [HttpGet("requests")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetRequests([FromQuery] string? status)
+    public async Task<IActionResult> GetRequests(
+        [FromQuery] string? status,
+        [FromQuery] string? search,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
+        CancellationToken ct)
     {
-        RequestStatus? filter = null;
-        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<RequestStatus>(status, true, out var s))
-            filter = s;
+        var paged = page.HasValue || pageSize.HasValue;
+        var result = await _queries.SearchAsync(Criteria(status, search, from, to,
+            page ?? 1, paged ? Math.Clamp(pageSize ?? 20, 1, RequestSearchCriteria.MaxPageSize) : 0), ct);
 
-        var result = await _svc.GetAllRequestsAsync(filter);
-        if (!result.IsSuccess)
-            return Fail(StatusCodes.Status500InternalServerError, result.ErrorMessage);
+        var rows = result.Items.Select(RequestRow).ToList();
+        if (!paged)
+            return Ok(new { success = true, data = rows });
 
         return Ok(new
         {
             success = true,
-            data = result.Data!
-                .OrderByDescending(r => r.CreatedAt)
-                .Select(r => new
-                {
-                    id = r.RequestId,
-                    category = r.Category.ToString(),
-                    status = r.Status.ToString(),
-                    customerName = r.Customer?.FullName,
-                    technicianName = r.AssignedTechnician?.User?.FullName,
-                    scheduledDate = r.PreferredDateTime.ToString("dd MMM yyyy"),
-                    createdAt = r.CreatedAt.ToString("dd MMM yyyy"),
-                    hasBill = r.Bill != null,
-                    billPaid = r.Bill != null && IsPaid(r.Bill),
-                    billAmount = r.Bill?.TotalAmount,
-                    isUnassigned = r.AssignedTechnicianProfileId == null && r.Status == RequestStatus.Pending,
-                })
+            data = new { items = rows, page = result.Page, pageSize = result.PageSize, totalCount = result.TotalCount }
         });
     }
+
+    /// <summary>CSV export (same filters as GET /requests; formula injection escaped).</summary>
+    [HttpGet("requests/export")]
+    [Produces("text/csv", "application/problem+json")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ExportRequests(
+        [FromQuery] string? status,
+        [FromQuery] string? search,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        [FromServices] IRequestExportService export,
+        CancellationToken ct)
+    {
+        var (content, _) = await export.ExportCsvAsync(Criteria(status, search, from, to, 1, 0), ct);
+        return File(content, "text/csv", $"ServiceApp-Requests-{DateTime.UtcNow:yyyyMMdd-HHmm}.csv");
+    }
+
+    /// <summary>Cancels a Pending or Assigned request (frees the technician). 409 otherwise.</summary>
+    [HttpPost("requests/{id:int}/cancel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Cancel(int id)
+    {
+        var result = await _svc.CancelRequestAsync(id, UserId);
+        return result.IsSuccess ? Ok(new { success = true }) : Fail(result);
+    }
+
+    /// <summary>Runs one auto-assignment cycle now and reports how many requests were assigned.</summary>
+    [HttpPost("auto-assign")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RunAutoAssign([FromServices] IAutoAssignmentService autoAssign, CancellationToken ct)
+    {
+        var before = (await _queries.CountByStatusAsync(ct: ct))[RequestStatus.Pending];
+        await autoAssign.RunAsync();
+        var after = (await _queries.CountByStatusAsync(ct: ct))[RequestStatus.Pending];
+
+        return Ok(new { success = true, data = new { assigned = Math.Max(0, before - after), stillPending = after } });
+    }
+
+    private static RequestSearchCriteria Criteria(
+        string? status, string? search, DateTime? from, DateTime? to, int page, int pageSize) => new()
+    {
+        Statuses = Enum.TryParse<RequestStatus>(status, true, out var s) ? [s] : null,
+        Search = search,
+        CreatedFrom = from,
+        CreatedTo = to,
+        Page = Math.Max(1, page),
+        PageSize = pageSize
+    };
+
+    private static object RequestRow(ServiceRequest r) => new
+    {
+        id = r.RequestId,
+        category = r.Category.ToString(),
+        status = r.Status.ToString(),
+        customerName = r.Customer?.FullName,
+        technicianName = r.AssignedTechnician?.User?.FullName,
+        address = r.Address,
+        pinCode = r.PinCode,
+        scheduledDate = r.PreferredDateTime.ToString("dd MMM yyyy"),
+        createdAt = r.CreatedAt.ToString("dd MMM yyyy"),
+        createdAtUtc = r.CreatedAt,
+        hasBill = r.Bill != null,
+        billPaid = r.Bill != null && IsPaid(r.Bill),
+        billAmount = r.Bill?.TotalAmount,
+        paidAt = r.Bill?.PaidAt,
+        isUnassigned = r.AssignedTechnicianProfileId == null && r.Status == RequestStatus.Pending,
+    };
 
     [HttpGet("requests/{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -123,6 +190,11 @@ public class AdminApiController : ApiControllerBase
                 scheduledDate = r.PreferredDateTime.ToString("dd MMM yyyy, hh:mm tt"),
                 createdAt = r.CreatedAt.ToString("dd MMM yyyy"),
                 canAssign = r.Status == RequestStatus.Pending,
+                canCancel = r.Status is RequestStatus.Pending or RequestStatus.Assigned,
+                pinCode = r.PinCode,
+                feedback = r.CustomerFeedback,
+                rating = r.CustomerRating,
+                statusHistory = r.History.OrderBy(h => h.ChangedAt).Select(ResponseMappers.History),
 
                 customer = new
                 {
@@ -142,7 +214,15 @@ public class AdminApiController : ApiControllerBase
 
                 bill = r.Bill == null ? null : new
                 {
+                    id = r.Bill.Id,
                     amount = r.Bill.TotalAmount,
+                    laborCost = r.Bill.LaborCost,
+                    materialCost = r.Bill.MaterialCost,
+                    discount = r.Bill.DiscountAmount,
+                    payable = r.Bill.PayableAmount,
+                    paidAt = r.Bill.PaidAt,
+                    paymentMethod = r.Bill.Payment?.PaymentMethod,
+                    items = r.Bill.BillItems.Select(ResponseMappers.BillItem),
                     isPaid = IsPaid(r.Bill),
                 },
             }

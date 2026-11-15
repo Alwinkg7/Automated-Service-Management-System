@@ -19,7 +19,14 @@ public static class RecurringJobs
                 service => service.RunAsync(),
                 Cron.MinuteInterval(2));
 
-            logger.LogInformation("Hangfire auto-assignment job registered (every 2 minutes)");
+            // Daily at 03:00 UTC: delete expired, never-used refresh tokens.
+            manager.AddOrUpdate<Auth.RefreshTokenCleanupJob>(
+                "refresh-token-cleanup",
+                "default",
+                job => job.RunAsync(),
+                Cron.Daily(3));
+
+            logger.LogInformation("Hangfire jobs registered: auto-assign (every 2 minutes), refresh-token-cleanup (daily)");
         }
         catch (Exception ex)
         {
