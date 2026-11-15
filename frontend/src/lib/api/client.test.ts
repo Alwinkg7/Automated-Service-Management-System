@@ -142,6 +142,14 @@ describe("createApiClient", () => {
     spy.mockRestore();
   });
 
+  it("keeps envelope siblings with envelope: full", async () => {
+    const { client } = clientWith(jsonResponse({ success: true, data: [1], counts: { Open: 2 } }));
+    await expect(client.get("/x", { envelope: "full" })).resolves.toEqual({
+      data: [1],
+      counts: { Open: 2 },
+    });
+  });
+
   it("returns undefined for 204 No Content", async () => {
     const { client } = clientWith(new Response(null, { status: 204 }));
     await expect(client.post("/x")).resolves.toBeUndefined();

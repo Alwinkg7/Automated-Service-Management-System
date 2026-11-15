@@ -44,6 +44,27 @@ export function BillSummary({ bill }: { bill: Partial<Bill> & { amount: number }
         <span>Total</span>
         <span className="tabular-nums">{formatMoney(bill.amount)}</span>
       </div>
+      {bill.discount ? (
+        <>
+          <div className="text-success flex justify-between">
+            <span>Discount{bill.promoCode ? ` (${bill.promoCode})` : ""}</span>
+            <span className="tabular-nums">−{formatMoney(bill.discount)}</span>
+          </div>
+          <div className="flex justify-between font-semibold">
+            <span>Payable</span>
+            <span className="tabular-nums">
+              {formatMoney(bill.payable ?? bill.amount - bill.discount)}
+            </span>
+          </div>
+        </>
+      ) : null}
+      {bill.paymentMethod || bill.preferredPaymentMethod ? (
+        <p className="text-fg-muted text-xs">
+          {bill.isPaid
+            ? `Paid by ${bill.paymentMethod ?? "—"}`
+            : `Customer will pay by ${bill.preferredPaymentMethod}`}
+        </p>
+      ) : null}
       {bill.createdAt ? (
         <p className="text-fg-muted text-xs">Billed on {formatDate(bill.createdAt)}</p>
       ) : null}

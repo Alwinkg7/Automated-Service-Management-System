@@ -1,27 +1,189 @@
 "use client";
-// Payment flow: create order (server computes the amount from the bill) →
-// Razorpay Checkout → send the ids back for server-side signature verification.
-// The frontend never decides the amount and never marks a bill paid itself.
+// Payment: the server owns every amount.
+//   quote → (optional) promo preview/apply, points → Razorpay order (payable, in paise)
+//   → Checkout → server-side signature verification.
+// Or the customer chooses cash and the technician confirms collection.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useSession } from "@/components/providers/SessionProvider";
 import { BillSummary } from "@/components/features/bill/BillSummary";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
-import { FormError, Input } from "@/components/ui/Field";
+import { FormError, Input, Select } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { QueryView } from "@/components/ui/QueryView";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/States";
+import { useAction } from "@/hooks/useAction";
 import { customerApi } from "@/lib/api";
 import { errorMessage } from "@/lib/api/errors";
+import type { Quote } from "@/lib/api/schemas";
 import { formatMoney } from "@/lib/format";
 import { qk } from "@/lib/queryKeys";
 import { openCheckout, PaymentCancelledError } from "@/lib/razorpay";
 
 type Step = "idle" | "creating" | "checkout" | "verifying";
+
+function newKey() {
+  return crypto.randomUUID();
+}
+
+function QuoteLines({ quote }: { quote: Quote }) {
+  return (
+    <dl className="space-y-1.5 text-sm">
+      <div className="flex justify-between">
+        <dt className="text-fg-muted">Subtotal</dt>
+        <dd className="tabular-nums">{formatMoney(quote.subtotal)}</dd>
+      </div>
+      {quote.discount > 0 ? (
+        <div className="text-success flex justify-between">
+          <dt>
+            Discount
+            {quote.promoCode ? ` (${quote.promoCode})` : ""}
+            {quote.pointsRedeemed ? ` · ${quote.pointsRedeemed} pts` : ""}
+          </dt>
+          <dd className="tabular-nums">−{formatMoney(quote.discount)}</dd>
+        </div>
+      ) : null}
+      <div className="border-border flex justify-between border-t pt-2 text-base font-semibold">
+        <dt>To pay</dt>
+        <dd className="tabular-nums">{formatMoney(quote.payable)}</dd>
+      </div>
+    </dl>
+  );
+}
+
+function Discounts({ billId, quote }: { billId: number; quote: Quote }) {
+  const queryClient = useQueryClient();
+  const promotions = useQuery({
+    queryKey: qk.customer.promotions(),
+    queryFn: customerApi.getPromotions,
+  });
+  const [code, setCode] = useState("");
+  const [preview, setPreview] = useState<Quote | null>(null);
+  const [points, setPoints] = useState("");
+  const setQuote = (q: Quote) => {
+    queryClient.setQueryData(qk.customer.quote(billId), q);
+    void queryClient.invalidateQueries({ queryKey: qk.customer.promotions() });
+  };
+
+  const check = useAction({
+    fn: () => customerApi.previewPromo(billId, code.trim()),
+    onSuccess: (q) => setPreview(q),
+    onError: () => setPreview(null),
+  });
+  const apply = useAction({
+    fn: () => customerApi.applyPromo(billId, code.trim()),
+    success: "Promo code applied.",
+    onSuccess: (q) => {
+      setQuote(q);
+      setPreview(null);
+      setCode("");
+    },
+  });
+  const redeem = useAction({
+    fn: () => customerApi.redeemPoints(billId, Number(points)),
+    success: "Points redeemed.",
+    onSuccess: (q) => {
+      setQuote(q);
+      setPoints("");
+    },
+  });
+
+  const balance = promotions.data?.pointsBalance ?? 0;
+  // Multiples of 100, and at most (payable − ₹1) worth (100 pts = ₹10).
+  const maxPoints = Math.min(
+    Math.floor(balance / 100) * 100,
+    Math.floor(((quote.payable - 1) * 10) / 100) * 100,
+  );
+  const pointOptions = Array.from(
+    { length: Math.max(0, maxPoints / 100) },
+    (_, i) => (i + 1) * 100,
+  );
+
+  return (
+    <Card>
+      <CardHeader title="Discounts" description="Applied to the bill on the server." />
+      <CardBody className="space-y-5">
+        {quote.promoCode ? (
+          <p className="text-success text-sm">
+            Promo code <span className="font-semibold">{quote.promoCode}</span> applied.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <label htmlFor="promo" className="text-sm font-medium">
+              Promo code
+            </label>
+            <div className="flex gap-2">
+              <Input
+                id="promo"
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setPreview(null);
+                }}
+                placeholder="e.g. SAVE50"
+              />
+              <Button
+                variant="outline"
+                onClick={() => check.mutate()}
+                disabled={!code.trim()}
+                loading={check.isPending}
+              >
+                Check
+              </Button>
+            </div>
+            {preview ? (
+              <div className="bg-success-soft flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm">
+                <span className="text-success">
+                  You save {formatMoney(preview.discount)}. New total {formatMoney(preview.payable)}
+                  .
+                </span>
+                <Button size="sm" loading={apply.isPending} onClick={() => apply.mutate()}>
+                  Apply code
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {quote.pointsRedeemed ? (
+          <p className="text-success text-sm">{quote.pointsRedeemed} loyalty points redeemed.</p>
+        ) : pointOptions.length ? (
+          <div className="space-y-2">
+            <label htmlFor="points" className="text-sm font-medium">
+              Redeem loyalty points{" "}
+              <span className="text-fg-muted font-normal">
+                ({balance} available · 100 pts = ₹10)
+              </span>
+            </label>
+            <div className="flex gap-2">
+              <Select id="points" value={points} onChange={(e) => setPoints(e.target.value)}>
+                <option value="">Choose points</option>
+                {pointOptions.map((p) => (
+                  <option key={p} value={p}>
+                    {p} pts (−{formatMoney(p / 10)})
+                  </option>
+                ))}
+              </Select>
+              <Button
+                variant="outline"
+                disabled={!points}
+                loading={redeem.isPending}
+                onClick={() => redeem.mutate()}
+              >
+                Redeem
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </CardBody>
+    </Card>
+  );
+}
 
 export function PayView({ requestId }: { requestId: number }) {
   const user = useSession();
@@ -31,57 +193,34 @@ export function PayView({ requestId }: { requestId: number }) {
     queryKey: qk.customer.request(requestId),
     queryFn: () => customerApi.getRequest(requestId),
   });
-  const promotions = useQuery({
-    queryKey: qk.customer.promotions(),
-    queryFn: customerApi.getPromotions,
-    retry: false,
+  const billId = request.data?.bill?.id ?? 0;
+  const billOpen = !!billId && !request.data?.bill?.isPaid;
+  const quote = useQuery({
+    queryKey: qk.customer.quote(billId),
+    queryFn: () => customerApi.getQuote(billId),
+    enabled: billOpen,
   });
 
   const [step, setStep] = useState<Step>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [promoCode, setPromoCode] = useState("");
-  const [promo, setPromo] = useState<{
-    code: string;
-    discount: number;
-    message?: string | null;
-  } | null>(null);
-  const [promoError, setPromoError] = useState<string | null>(null);
-  const [checkingPromo, setCheckingPromo] = useState(false);
-  const [redeemPoints, setRedeemPoints] = useState(false);
-  // Same key for retries of the same order attempt; reset after a finished attempt.
-  const orderKey = useRef<string>(crypto.randomUUID());
+  // One key per payment attempt: retries reuse the same Razorpay order.
+  const [orderKey, setOrderKey] = useState(newKey);
 
-  async function checkPromo(amount: number) {
-    setPromoError(null);
-    setCheckingPromo(true);
-    try {
-      const result = await customerApi.validatePromo(promoCode.trim(), amount);
-      setPromo({
-        code: promoCode.trim().toUpperCase(),
-        discount: result.discount,
-        message: result.message,
-      });
-    } catch (e) {
-      setPromo(null);
-      setPromoError(errorMessage(e));
-    } finally {
-      setCheckingPromo(false);
-    }
-  }
+  const cash = useAction({
+    fn: () => customerApi.chooseCash(billId),
+    invalidate: [qk.customer.request(requestId)],
+    success: (r) => r.message ?? `Pay ${formatMoney(r.payable)} in cash to your technician.`,
+  });
 
-  async function pay(billId: number) {
+  async function payOnline() {
     setError(null);
     setStep("creating");
     try {
-      const order = await customerApi.createRazorpayOrder(
-        billId,
-        { promoCode: promo?.code, redeemPoints: redeemPoints || undefined },
-        orderKey.current,
-      );
+      const order = await customerApi.createRazorpayOrder(billId, orderKey);
       setStep("checkout");
       const result = await openCheckout({
         key: order.keyId, // public key id from the API; never hard-coded
-        amount: order.amount,
+        amount: order.amount, // paise, already discounted by the server
         currency: order.currency,
         order_id: order.orderId,
         name: "ASMS",
@@ -95,18 +234,13 @@ export function PayView({ requestId }: { requestId: number }) {
         razorpayPaymentId: result.razorpay_payment_id,
         razorpaySignature: result.razorpay_signature,
       });
-      orderKey.current = crypto.randomUUID();
+      setOrderKey(newKey());
       await queryClient.invalidateQueries({ queryKey: qk.customer.all });
       toast.success("Payment successful! Your request is now complete.");
       router.replace(`/customer/requests/${requestId}`);
     } catch (e) {
       setStep("idle");
-      if (e instanceof PaymentCancelledError) {
-        setError(e.message);
-        return;
-      }
-      setError(errorMessage(e));
-      // 409 (already paid / state changed): show fresh data.
+      setError(e instanceof PaymentCancelledError ? e.message : errorMessage(e));
       void queryClient.invalidateQueries({ queryKey: qk.customer.request(requestId) });
     }
   }
@@ -145,7 +279,7 @@ export function PayView({ requestId }: { requestId: number }) {
             />
           );
         }
-        const points = promotions.data?.pointsBalance ?? 0;
+        const choseCash = bill.preferredPaymentMethod === "Cash";
         return (
           <>
             <PageHeader
@@ -153,97 +287,55 @@ export function PayView({ requestId }: { requestId: number }) {
               title="Pay your bill"
             />
             <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
-              <Card>
-                <CardHeader title={`Bill #${bill.id}`} />
-                <CardBody>
-                  <BillSummary bill={bill} />
-                </CardBody>
-              </Card>
-
-              <div className="space-y-4">
-                {/* Only shown once the API exposes promotions (see docs/api-requests.md). */}
-                {promotions.isSuccess ? (
-                  <Card>
-                    <CardHeader
-                      title="Discounts"
-                      description="Applied by the server when your order is created."
-                    />
-                    <CardBody className="space-y-4">
-                      <div className="space-y-2">
-                        <label htmlFor="promo" className="text-sm font-medium">
-                          Promo code
-                        </label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="promo"
-                            value={promoCode}
-                            onChange={(e) => setPromoCode(e.target.value)}
-                            placeholder="e.g. WELCOME100"
-                            disabled={busy}
-                          />
-                          <Button
-                            variant="outline"
-                            onClick={() => void checkPromo(bill.amount)}
-                            disabled={!promoCode.trim() || busy}
-                            loading={checkingPromo}
-                          >
-                            Apply
-                          </Button>
-                        </div>
-                        {promo ? (
-                          <p className="text-success text-sm" role="status">
-                            {promo.message ??
-                              `${promo.code}: you save ${formatMoney(promo.discount)}`}
-                          </p>
-                        ) : null}
-                        {promoError ? (
-                          <p className="text-danger text-sm" role="alert">
-                            {promoError}
-                          </p>
-                        ) : null}
-                      </div>
-                      {points >= 100 ? (
-                        <label className="flex items-start gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            className="accent-primary mt-0.5 size-4"
-                            checked={redeemPoints}
-                            onChange={(e) => setRedeemPoints(e.target.checked)}
-                            disabled={busy}
-                          />
-                          <span>
-                            Redeem loyalty points{" "}
-                            <span className="text-fg-muted">
-                              ({points} pts available, 100 pts = ₹10)
-                            </span>
-                          </span>
-                        </label>
-                      ) : null}
-                    </CardBody>
-                  </Card>
-                ) : null}
-
+              <div className="space-y-6">
                 <Card>
-                  <CardBody className="space-y-3">
-                    <FormError message={error} />
-                    <p className="text-fg-muted text-sm">
-                      The final amount is confirmed in the secure Razorpay window.
-                    </p>
-                    <Button
-                      className="w-full"
-                      size="lg"
-                      loading={busy}
-                      onClick={() => void pay(bill.id!)}
-                      icon={<Icon name="card" className="size-4" />}
-                    >
-                      {label ?? `Pay ${formatMoney(bill.amount)}`}
-                    </Button>
-                    <p className="text-fg-muted flex items-center justify-center gap-1.5 text-xs">
-                      <Icon name="shield" className="size-3.5" /> Secured by Razorpay
-                    </p>
+                  <CardHeader title={`Bill #${bill.id}`} />
+                  <CardBody>
+                    <BillSummary bill={bill} />
                   </CardBody>
                 </Card>
+                {quote.data ? <Discounts billId={bill.id} quote={quote.data} /> : null}
               </div>
+
+              <Card className="h-fit">
+                <CardBody className="space-y-4">
+                  {quote.data ? <QuoteLines quote={quote.data} /> : <Skeleton className="h-20" />}
+                  <FormError
+                    message={error ?? (quote.isError ? errorMessage(quote.error) : null)}
+                  />
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    loading={busy}
+                    disabled={!quote.data}
+                    onClick={() => void payOnline()}
+                    icon={<Icon name="card" className="size-4" />}
+                  >
+                    {label ?? `Pay ${quote.data ? formatMoney(quote.data.payable) : ""} online`}
+                  </Button>
+                  <p className="text-fg-muted flex items-center justify-center gap-1.5 text-xs">
+                    <Icon name="shield" className="size-3.5" /> Secured by Razorpay
+                  </p>
+                  <div className="border-border border-t pt-4">
+                    {choseCash ? (
+                      <p className="text-sm" role="status">
+                        You chose to pay in cash. Hand the amount to your technician; they&apos;ll
+                        confirm it and the job will complete.
+                      </p>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        disabled={busy}
+                        loading={cash.isPending}
+                        onClick={() => cash.mutate()}
+                      >
+                        I&apos;ll pay in cash
+                      </Button>
+                    )}
+                  </div>
+                </CardBody>
+              </Card>
             </div>
           </>
         );

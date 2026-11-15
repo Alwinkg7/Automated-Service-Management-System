@@ -1,9 +1,8 @@
 "use client";
-// Completed + cancelled requests with search, category filter and re-booking
-// (mirrors Customer/Requests/History in the MVC app).
-import { useQuery } from "@tanstack/react-query";
+// Completed + cancelled requests with search, category filter, totals and
+// re-booking. Filtering and totals come from GET /api/customer/history.
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useMemo } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
@@ -16,70 +15,59 @@ import { EmptyState } from "@/components/ui/States";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useUrlState } from "@/hooks/useUrlState";
 import { customerApi } from "@/lib/api";
-import { qk } from "@/lib/queryKeys";
 import { formatDate, formatMoney } from "@/lib/format";
+import { qk } from "@/lib/queryKeys";
 import { CATEGORY_INFO, SERVICE_CATEGORIES } from "@/types/enums";
 
 export function HistoryView() {
   const url = useUrlState();
   const category = url.get("category");
   const search = url.get("q");
-  const term = useDebounce(search.trim().toLowerCase());
+  const term = useDebounce(search.trim());
   const query = useQuery({
-    queryKey: qk.customer.requests(),
-    queryFn: () => customerApi.getRequests(),
+    queryKey: qk.customer.history(term, category),
+    queryFn: () => customerApi.getHistory(term || undefined, category || undefined),
+    placeholderData: keepPreviousData,
   });
-
-  const past = useMemo(
-    () => (query.data ?? []).filter((r) => r.status === "Completed" || r.status === "Cancelled"),
-    [query.data],
-  );
-  const rows = useMemo(
-    () =>
-      past.filter(
-        (r) =>
-          (!category || r.category === category) &&
-          (!term || [r.description, r.technicianName].some((v) => v?.toLowerCase().includes(term))),
-      ),
-    [past, category, term],
-  );
-  const completed = past.filter((r) => r.status === "Completed");
-  const spent = completed.reduce((sum, r) => sum + (r.billPaid ? (r.billAmount ?? 0) : 0), 0);
 
   return (
     <>
       <PageHeader title="Service history" description="Your completed and cancelled requests." />
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row">
+        <SearchInput
+          className="flex-1"
+          value={search}
+          onChange={(q) => url.set({ q })}
+          placeholder="Search description, address or technician"
+        />
+        <Select
+          aria-label="Category"
+          className="sm:w-56"
+          value={category}
+          onChange={(e) => url.set({ category: e.target.value })}
+        >
+          <option value="">All categories</option>
+          {SERVICE_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {CATEGORY_INFO[c].label}
+            </option>
+          ))}
+        </Select>
+      </div>
       <QueryView query={query}>
-        {() => (
+        {(h) => (
           <div className="space-y-6">
             <StatGrid>
-              <StatCard label="Past jobs" value={past.length} icon="history" />
-              <StatCard label="Completed" value={completed.length} icon="check" />
-              <StatCard label="Cancelled" value={past.length - completed.length} icon="close" />
-              <StatCard label="Total spent" value={formatMoney(spent)} icon="wallet" />
-            </StatGrid>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <SearchInput
-                className="flex-1"
-                value={search}
-                onChange={(q) => url.set({ q })}
-                placeholder="Search description or technician"
+              <StatCard label="Past jobs" value={h.totalJobs} icon="history" />
+              <StatCard label="Completed" value={h.completedJobs} icon="check" />
+              <StatCard label="Total spent" value={formatMoney(h.totalSpent)} icon="wallet" />
+              <StatCard
+                label="Average rating given"
+                value={h.averageRating ? h.averageRating.toFixed(1) : "—"}
+                icon="star"
               />
-              <Select
-                aria-label="Category"
-                className="sm:w-56"
-                value={category}
-                onChange={(e) => url.set({ category: e.target.value })}
-              >
-                <option value="">All categories</option>
-                {SERVICE_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {CATEGORY_INFO[c].label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            {rows.length === 0 ? (
+            </StatGrid>
+            {h.items.length === 0 ? (
               <EmptyState
                 title="Nothing here yet"
                 description="Finished and cancelled requests will appear here."
@@ -87,7 +75,7 @@ export function HistoryView() {
             ) : (
               <DataTable
                 caption="Service history"
-                rows={rows}
+                rows={h.items}
                 rowKey={(r) => r.id}
                 columns={[
                   {

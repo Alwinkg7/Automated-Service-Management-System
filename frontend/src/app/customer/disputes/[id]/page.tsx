@@ -20,7 +20,7 @@ export default function CustomerDisputePage({ params }: { params: Promise<{ id: 
         back={{ href: "/customer/disputes", label: "My disputes" }}
         title={`Dispute #${id}`}
       />
-      <QueryView query={query} pendingEndpoint="GET /api/customer/disputes/{id}">
+      <QueryView query={query}>
         {(d) => <DisputeDetailCard dispute={d} requestHref={`/customer/requests/${d.requestId}`} />}
       </QueryView>
     </>

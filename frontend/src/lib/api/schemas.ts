@@ -91,6 +91,13 @@ export const billSchema = z.object({
   createdAt: optStr,
   paidAt: optStr,
   items: z.array(billItemSchema).nullish(),
+  /** Discounts live on the bill: payable = amount - discount (never below ₹1). */
+  discount: optMoney,
+  payable: optMoney,
+  promoCode: optStr,
+  pointsRedeemed: z.number().nullish(),
+  preferredPaymentMethod: optStr,
+  paymentMethod: optStr,
 });
 export type Bill = z.infer<typeof billSchema>;
 
@@ -132,6 +139,7 @@ export const customerRequestDetailSchema = z.object({
   scheduledDate: str,
   createdAt: str,
   canCancel: z.boolean(),
+  canRebook: z.boolean().nullish(),
   rating: z.number().nullish(),
   feedback: optStr,
   technician: z
@@ -156,12 +164,41 @@ export const paymentOrderSchema = z.object({
   amount: z.number(),
   currency: str.default("INR"),
   billId: id.nullish(),
+  subtotal: optMoney,
   discount: optMoney,
-  customerName: optStr,
-  customerEmail: optStr,
-  customerPhone: optStr,
+  payable: optMoney,
+  promoCode: optStr,
+  pointsRedeemed: z.number().nullish(),
 });
 export type PaymentOrder = z.infer<typeof paymentOrderSchema>;
+
+/** Bill price breakdown (GET quote, promo preview/apply, points). */
+export const quoteSchema = z.object({
+  billId: id,
+  subtotal: z.number(),
+  discount: z.number(),
+  payable: z.number(),
+  promoCode: optStr,
+  pointsRedeemed: z.number().nullish(),
+});
+export type Quote = z.infer<typeof quoteSchema>;
+
+export const cashChoiceSchema = z.object({
+  billId: id,
+  preferredPaymentMethod: str,
+  payable: z.number(),
+  message: optStr,
+});
+
+export const historySchema = z.object({
+  totalJobs: z.number(),
+  completedJobs: z.number(),
+  cancelledJobs: z.number(),
+  totalSpent: z.number(),
+  averageRating: z.number().nullish(),
+  items: z.array(requestSummarySchema),
+});
+export type History = z.infer<typeof historySchema>;
 
 export const paymentResultSchema = z.object({
   paymentId: id.nullish(),
@@ -273,6 +310,7 @@ export const jobDetailSchema = z.object({
   canAccept: z.boolean(),
   canBill: z.boolean(),
   canComplete: z.boolean(),
+  canShareLocation: z.boolean().nullish(),
   customer: z.object({ name: optStr, phone: optStr, email: optStr }),
   bill: billSchema.nullish(),
 });
@@ -364,6 +402,8 @@ export const adminRequestRowSchema = z.object({
   isUnassigned: z.boolean().nullish(),
   address: optStr,
   pinCode: optStr,
+  createdAtUtc: optStr,
+  paidAt: optStr,
 });
 export type AdminRequestRow = z.infer<typeof adminRequestRowSchema>;
 export const adminRequestsSchema = pagedOrArray(adminRequestRowSchema);
@@ -379,6 +419,8 @@ export const adminRequestDetailSchema = z.object({
   createdAt: str,
   canAssign: z.boolean(),
   canCancel: z.boolean().nullish(),
+  rating: z.number().nullish(),
+  feedback: optStr,
   customer: z.object({ name: optStr, email: optStr, phone: optStr }),
   technician: z
     .object({
@@ -389,7 +431,7 @@ export const adminRequestDetailSchema = z.object({
       status: techStatus.nullish(),
     })
     .nullish(),
-  bill: billSchema.partial({ isPaid: true }).nullish(),
+  bill: billSchema.nullish(),
   statusHistory: z.array(statusHistorySchema).nullish(),
 });
 export type AdminRequestDetail = z.infer<typeof adminRequestDetailSchema>;
@@ -449,5 +491,61 @@ export const promoCodeSchema = z.object({
   isActive: z.boolean(),
   expiresAt: optStr,
   createdAt: optStr,
+  isValid: z.boolean().nullish(),
 });
 export type PromoCode = z.infer<typeof promoCodeSchema>;
+
+// ── Admin: disputes with counts, technicians, analytics ──────────
+export const adminDisputesSchema = z.object({
+  data: z.array(disputeSchema),
+  counts: z.record(z.string(), z.number()).default({}),
+});
+
+export const adminTechnicianSchema = z.object({
+  id,
+  userId: optStr,
+  name: optStr,
+  email: optStr,
+  phone: optStr,
+  skill: category,
+  status: techStatus,
+  rating: z.number(),
+  totalJobsCompleted: z.number(),
+  isActive: z.boolean(),
+  zoneId: z.number().nullish(),
+  zoneName: optStr,
+  totalEarned: optMoney,
+  activeJobCount: z.number().nullish(),
+  yearsOfExperience: z.number().nullish(),
+  serviceAreaPinCode: optStr,
+});
+export type AdminTechnician = z.infer<typeof adminTechnicianSchema>;
+
+export const adminTechniciansSchema = z.object({
+  data: z.array(adminTechnicianSchema),
+  counts: z
+    .object({ total: z.number(), available: z.number(), busy: z.number(), offline: z.number() })
+    .partial()
+    .default({}),
+});
+
+export const analyticsSchema = z.object({
+  totals: z.object({
+    totalRequests: z.number(),
+    completedRequests: z.number(),
+    pendingRequests: z.number(),
+    totalCustomers: z.number(),
+    totalTechnicians: z.number(),
+    totalRevenue: z.number(),
+    completionRate: z.number().nullish(),
+  }),
+  statusBreakdown: z.record(z.string(), z.number()),
+  revenueByDay: z.array(z.object({ label: str, amount: z.number() })),
+  requestsByDay: z.array(z.object({ label: str, count: z.number() })),
+  categories: z.array(z.object({ category: str, count: z.number() })),
+  topTechnicians: z.array(adminTechnicianSchema).default([]),
+  recentActivity: z
+    .array(z.object({ requestId: id, status: str, note: optStr, changedAt: str, category: optStr }))
+    .default([]),
+});
+export type Analytics = z.infer<typeof analyticsSchema>;

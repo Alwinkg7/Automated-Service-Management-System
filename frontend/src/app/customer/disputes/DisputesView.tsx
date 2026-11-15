@@ -21,7 +21,6 @@ export function DisputesView() {
       />
       <QueryView
         query={query}
-        pendingEndpoint="GET /api/customer/disputes"
         isEmpty={(d) => d.length === 0}
         empty={
           <EmptyState

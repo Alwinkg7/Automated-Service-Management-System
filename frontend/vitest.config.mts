@@ -9,5 +9,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // Live API suite runs separately: npm run test:integration
+    exclude: ["src/integration/**", "node_modules/**"],
   },
 });

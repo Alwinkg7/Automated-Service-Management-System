@@ -50,7 +50,7 @@ export function RequestDetailView({ id }: { id: number }) {
     <QueryView query={query}>
       {(r) => {
         const canRate = r.status === "Completed" && !r.rating;
-        const canRebook = r.status === "Completed" || r.status === "Cancelled";
+        const canRebook = r.canRebook ?? (r.status === "Completed" || r.status === "Cancelled");
         return (
           <>
             <PageHeader

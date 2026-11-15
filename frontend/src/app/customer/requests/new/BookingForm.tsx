@@ -26,9 +26,12 @@ function newKey() {
 export function BookingForm({
   defaults,
   previousTechnician,
+  rebookOf,
 }: {
   defaults: Partial<CreateRequestForm>;
   previousTechnician?: string;
+  /** Re-book this past request (keeps its category; new time/description/address). */
+  rebookOf?: number;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -59,10 +62,20 @@ export function BookingForm({
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
     try {
-      const { requestId } = await customerApi.createRequest(
-        { ...values, pinCode: values.pinCode || undefined },
-        idempotencyKey,
-      );
+      const { requestId } = rebookOf
+        ? await customerApi.rebook(
+            rebookOf,
+            {
+              scheduledDate: values.scheduledDate,
+              description: values.description,
+              address: values.address,
+            },
+            idempotencyKey,
+          )
+        : await customerApi.createRequest(
+            { ...values, pinCode: values.pinCode || undefined },
+            idempotencyKey,
+          );
       setIdempotencyKey(newKey());
       await queryClient.invalidateQueries({ queryKey: qk.customer.all });
       toast.success(`Request #${requestId} submitted. We'll assign a technician shortly.`);
@@ -87,9 +100,12 @@ export function BookingForm({
         </p>
       ) : null}
 
-      <fieldset>
+      <fieldset disabled={!!rebookOf} className="disabled:opacity-80">
         <legend className="mb-3 text-sm font-medium">
           Service <span className="text-danger">*</span>
+          {rebookOf ? (
+            <span className="text-fg-muted font-normal"> (same as the original request)</span>
+          ) : null}
         </legend>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {SERVICE_CATEGORIES.map((c) => (

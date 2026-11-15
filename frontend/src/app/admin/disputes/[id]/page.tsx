@@ -44,7 +44,7 @@ export default function AdminDisputePage({ params }: { params: Promise<{ id: str
   return (
     <>
       <PageHeader back={{ href: "/admin/disputes", label: "Disputes" }} title={`Dispute #${id}`} />
-      <QueryView query={query} pendingEndpoint="GET /api/admin/disputes/{id}">
+      <QueryView query={query}>
         {(d) => (
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">

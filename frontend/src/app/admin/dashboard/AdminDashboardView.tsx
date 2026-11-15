@@ -2,13 +2,14 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ButtonLink } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/DataTable";
 import { QueryView } from "@/components/ui/QueryView";
 import { SkeletonList, SkeletonStats } from "@/components/ui/Skeleton";
 import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/States";
+import { useAction } from "@/hooks/useAction";
 import { adminApi } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
 import { qk } from "@/lib/queryKeys";
@@ -17,15 +18,30 @@ import { CATEGORY_INFO } from "@/types/enums";
 export function AdminDashboardView() {
   // New requests / status changes arrive over SignalR and invalidate this query.
   const query = useQuery({ queryKey: qk.admin.dashboard(), queryFn: adminApi.getDashboard });
+  const autoAssign = useAction({
+    fn: adminApi.runAutoAssign,
+    invalidate: [qk.admin.all],
+    success: (r) =>
+      `Auto-assign assigned ${r.assigned} request(s)${r.stillPending ? `; ${r.stillPending} still pending` : ""}.`,
+  });
   return (
     <>
       <PageHeader
         title="Dashboard"
         description="Platform overview. Updates live as requests come in."
         actions={
-          <ButtonLink href="/admin/analytics" variant="outline">
-            View analytics
-          </ButtonLink>
+          <>
+            <Button
+              variant="secondary"
+              loading={autoAssign.isPending}
+              onClick={() => autoAssign.mutate()}
+            >
+              Run auto-assign
+            </Button>
+            <ButtonLink href="/admin/analytics" variant="outline">
+              View analytics
+            </ButtonLink>
+          </>
         }
       />
       <QueryView

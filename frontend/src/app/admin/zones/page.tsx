@@ -153,7 +153,6 @@ export default function ZonesPage() {
       />
       <QueryView
         query={query}
-        pendingEndpoint="GET /api/admin/zones"
         isEmpty={(d) => d.length === 0}
         empty={
           <EmptyState

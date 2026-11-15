@@ -8,6 +8,7 @@ import { StatusStepper, StatusTimeline } from "@/components/features/request/Sta
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { QueryView } from "@/components/ui/QueryView";
 import { EmptyState } from "@/components/ui/States";
 import { useAction } from "@/hooks/useAction";
@@ -98,6 +99,13 @@ export function AdminRequestDetailView({ id }: { id: number }) {
     queryKey: qk.admin.request(id),
     queryFn: () => adminApi.getRequest(id),
   });
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const cancel = useAction({
+    fn: () => adminApi.cancelRequest(id),
+    invalidate: [qk.admin.all],
+    success: "Request cancelled.",
+    onSuccess: () => setConfirmCancel(false),
+  });
   return (
     <QueryView query={query}>
       {(r) => (
@@ -111,6 +119,23 @@ export function AdminRequestDetailView({ id }: { id: number }) {
               </span>
             }
             description={`Created ${formatDate(r.createdAt)}`}
+            actions={
+              r.canCancel ? (
+                <Button variant="danger" onClick={() => setConfirmCancel(true)}>
+                  Cancel request
+                </Button>
+              ) : null
+            }
+          />
+          <ConfirmDialog
+            open={confirmCancel}
+            title={`Cancel request #${r.id}?`}
+            description="The customer and any assigned technician will see it as cancelled."
+            confirmLabel="Cancel request"
+            tone="danger"
+            loading={cancel.isPending}
+            onConfirm={() => cancel.mutate()}
+            onClose={() => setConfirmCancel(false)}
           />
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">

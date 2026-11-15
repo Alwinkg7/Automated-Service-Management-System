@@ -16,7 +16,10 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { qk } from "@/lib/queryKeys";
 
 export default function WithdrawalsPage() {
-  const query = useQuery({ queryKey: qk.admin.withdrawals(), queryFn: adminApi.getWithdrawals });
+  const query = useQuery({
+    queryKey: qk.admin.withdrawals(),
+    queryFn: () => adminApi.getWithdrawals(),
+  });
   const [rejecting, setRejecting] = useState<Withdrawal | null>(null);
   const [note, setNote] = useState("");
   const invalidate = [qk.admin.withdrawals()];
@@ -48,7 +51,6 @@ export default function WithdrawalsPage() {
       />
       <QueryView
         query={query}
-        pendingEndpoint="GET /api/admin/withdrawals"
         isEmpty={(d) => d.length === 0}
         empty={<EmptyState title="No withdrawal requests" />}
       >

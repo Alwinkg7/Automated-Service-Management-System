@@ -195,6 +195,11 @@ export default function PromoCodesPage() {
     invalidate: [qk.admin.promoCodes()],
     success: "Promo code updated.",
   });
+  const remove = useAction({
+    fn: (id: number) => adminApi.deletePromoCode(id),
+    invalidate: [qk.admin.promoCodes()],
+    success: "Promo code deleted.",
+  });
 
   return (
     <>
@@ -205,7 +210,6 @@ export default function PromoCodesPage() {
       />
       <QueryView
         query={query}
-        pendingEndpoint="GET /api/admin/promo-codes"
         isEmpty={(d) => d.length === 0}
         empty={<EmptyState title="No promo codes" description="Create your first discount code." />}
       >
@@ -234,14 +238,27 @@ export default function PromoCodesPage() {
               },
             ]}
             rowAction={(p) => (
-              <Button
-                size="sm"
-                variant="outline"
-                loading={toggle.isPending && toggle.variables === p.id}
-                onClick={() => toggle.mutate(p.id)}
-              >
-                {p.isActive ? "Deactivate" : "Activate"}
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  loading={toggle.isPending && toggle.variables === p.id}
+                  onClick={() => toggle.mutate(p.id)}
+                >
+                  {p.isActive ? "Deactivate" : "Activate"}
+                </Button>
+                {/* Used codes can't be deleted (409) – deactivate them instead. */}
+                {p.usedCount === 0 ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    loading={remove.isPending && remove.variables === p.id}
+                    onClick={() => remove.mutate(p.id)}
+                  >
+                    Delete
+                  </Button>
+                ) : null}
+              </>
             )}
           />
         )}

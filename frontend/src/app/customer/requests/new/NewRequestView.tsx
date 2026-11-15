@@ -53,6 +53,7 @@ export function NewRequestView() {
               : { category: initialCategory }
           }
           previousTechnician={original.data?.technician?.name ?? undefined}
+          rebookOf={original.data ? rebookId : undefined}
         />
       )}
     </>

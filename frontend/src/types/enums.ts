@@ -37,6 +37,7 @@ export const DISPUTE_REASONS = [
   "LateArrival",
   "WrongCharge",
   "Unprofessional",
+  "JobIncomplete",
   "Other",
 ] as const;
 export type DisputeReason = (typeof DISPUTE_REASONS)[number];

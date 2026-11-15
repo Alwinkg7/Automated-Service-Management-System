@@ -1,8 +1,7 @@
 "use client";
-// All requests with search, status + date filters, paging and CSV export.
-// The API returns the full list, so filtering happens here (mirrors the MVC
-// Admin/Requests/Index). Server-side paging is requested in docs/api-requests.md.
-import { useQuery } from "@tanstack/react-query";
+// All requests: search, status + date filters and paging run in SQL on the API;
+// CSV export uses the same filters on the server.
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useMemo } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -17,81 +16,40 @@ import { QueryView } from "@/components/ui/QueryView";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { EmptyState } from "@/components/ui/States";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useDownload } from "@/hooks/useDownload";
 import { useUrlState } from "@/hooks/useUrlState";
 import { adminApi } from "@/lib/api";
-import type { AdminRequestRow } from "@/lib/api/schemas";
-import { toCsv } from "@/lib/csv";
-import { dayKey, formatMoney, parseApiDate, saveBlob } from "@/lib/format";
+import type { AdminRequestFilters } from "@/lib/api/endpoints/admin";
+import { dayKey, formatMoney } from "@/lib/format";
 import { qk } from "@/lib/queryKeys";
-import { CATEGORY_INFO, humanize, REQUEST_STATUSES } from "@/types/enums";
+import { CATEGORY_INFO, humanize, REQUEST_STATUSES, type RequestStatus } from "@/types/enums";
 
 const PAGE_SIZE = 20;
 
-function matches(r: AdminRequestRow, term: string) {
-  if (!term) return true;
-  if (String(r.id) === term.replace("#", "")) return true;
-  return [
-    r.customerName,
-    r.technicianName,
-    r.address,
-    r.pinCode,
-    CATEGORY_INFO[r.category].label,
-  ].some((v) => v?.toLowerCase().includes(term));
-}
-
 export function AdminRequestsView() {
   const url = useUrlState();
-  const status = url.get("status");
+  const status = url.get("status") as RequestStatus | "";
   const search = url.get("q");
   const from = url.get("from");
   const to = url.get("to");
   const page = Math.max(1, Number(url.get("page", "1")) || 1);
-  const term = useDebounce(search.trim().toLowerCase());
+  const debounced = useDebounce(search.trim());
+  const { download, pending: exporting } = useDownload();
 
-  const query = useQuery({ queryKey: qk.admin.requests(), queryFn: () => adminApi.getRequests() });
-  const all = useMemo(() => query.data?.items ?? [], [query.data]);
-
-  const counts = useMemo(() => {
-    const c: Record<string, number> = {};
-    for (const r of all) c[r.status] = (c[r.status] ?? 0) + 1;
-    return c;
-  }, [all]);
-
-  const filtered = useMemo(
-    () =>
-      all.filter((r) => {
-        if (status && r.status !== status) return false;
-        if (!matches(r, term)) return false;
-        if (from || to) {
-          const created = parseApiDate(r.createdAt);
-          if (!created) return false;
-          const key = dayKey(created);
-          if (from && key < from) return false;
-          if (to && key > to) return false;
-        }
-        return true;
-      }),
-    [all, status, term, from, to],
+  const filters = useMemo<AdminRequestFilters>(
+    () => ({
+      status,
+      search: debounced || undefined,
+      from: from || undefined,
+      to: to || undefined,
+    }),
+    [status, debounced, from, to],
   );
-  const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  function exportCsv() {
-    const csv = toCsv(filtered, [
-      { header: "Id", value: (r) => r.id },
-      { header: "Category", value: (r) => CATEGORY_INFO[r.category].label },
-      { header: "Status", value: (r) => r.status },
-      { header: "Customer", value: (r) => r.customerName },
-      { header: "Technician", value: (r) => r.technicianName },
-      { header: "Scheduled", value: (r) => r.scheduledDate },
-      { header: "Created", value: (r) => r.createdAt },
-      { header: "Bill amount", value: (r) => r.billAmount },
-      { header: "Bill paid", value: (r) => (r.hasBill ? (r.billPaid ? "Yes" : "No") : "") },
-    ]);
-    saveBlob(
-      new Blob([csv], { type: "text/csv;charset=utf-8" }),
-      `asms-requests-${dayKey(new Date())}.csv`,
-    );
-  }
+  const query = useQuery({
+    queryKey: qk.admin.requests(filters, page),
+    queryFn: () => adminApi.getRequests(filters, page, PAGE_SIZE),
+    placeholderData: keepPreviousData, // keep the table while the next page loads
+  });
 
   return (
     <>
@@ -101,11 +59,17 @@ export function AdminRequestsView() {
         actions={
           <Button
             variant="outline"
-            onClick={exportCsv}
-            disabled={!filtered.length}
+            loading={exporting}
+            onClick={() =>
+              void download(
+                "/api/admin/requests/export",
+                `asms-requests-${dayKey(new Date())}.csv`,
+                { ...filters },
+              )
+            }
             icon={<Icon name="download" className="size-4" />}
           >
-            Export CSV ({filtered.length})
+            Export CSV
           </Button>
         }
       />
@@ -142,27 +106,23 @@ export function AdminRequestsView() {
           value={status}
           onChange={(s) => url.set({ status: s, page: undefined })}
           options={[
-            { value: "", label: "All", count: all.length },
-            ...REQUEST_STATUSES.map((s) => ({
-              value: s,
-              label: humanize(s),
-              count: counts[s] ?? 0,
-            })),
+            { value: "", label: "All" },
+            ...REQUEST_STATUSES.map((s) => ({ value: s, label: humanize(s) })),
           ]}
         />
       </div>
       <QueryView
         query={query}
-        isEmpty={() => filtered.length === 0}
+        isEmpty={(d) => d.items.length === 0}
         empty={
           <EmptyState title="No matching requests" description="Adjust the search or filters." />
         }
       >
-        {() => (
+        {(d) => (
           <div className="space-y-3">
             <DataTable
               caption="Requests"
-              rows={pageRows}
+              rows={d.items}
               rowKey={(r) => r.id}
               columns={[
                 {
@@ -196,9 +156,9 @@ export function AdminRequestsView() {
               ]}
             />
             <Pagination
-              page={page}
-              pageSize={PAGE_SIZE}
-              totalCount={filtered.length}
+              page={d.page}
+              pageSize={d.pageSize}
+              totalCount={d.totalCount}
               onPageChange={(p) => url.set({ page: p })}
             />
           </div>

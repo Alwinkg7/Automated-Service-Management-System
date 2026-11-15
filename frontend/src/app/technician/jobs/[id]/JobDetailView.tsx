@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Icon } from "@/components/ui/Icon";
 import { QueryView } from "@/components/ui/QueryView";
 import { useAction } from "@/hooks/useAction";
+import { useDownload } from "@/hooks/useDownload";
 import { technicianApi } from "@/lib/api";
 import { formatDate, formatMoney } from "@/lib/format";
 import { qk } from "@/lib/queryKeys";
@@ -28,6 +29,7 @@ export function JobDetailView({ id }: { id: number }) {
   });
   const [confirmReject, setConfirmReject] = useState(false);
   const [confirmCash, setConfirmCash] = useState(false);
+  const { download, pending: downloading } = useDownload();
 
   const accept = useAction({
     fn: () => technicianApi.acceptJob(id),
@@ -95,7 +97,9 @@ export function JobDetailView({ id }: { id: number }) {
                   />
                 </CardBody>
               </Card>
-              {j.status === "InProgress" ? <LocationSharingCard requestId={j.id} /> : null}
+              {(j.canShareLocation ?? j.status === "InProgress") ? (
+                <LocationSharingCard requestId={j.id} />
+              ) : null}
               {j.canBill ? <BillForm jobId={j.id} /> : null}
               {j.status === "Billed" ? (
                 <Card>
@@ -142,8 +146,24 @@ export function JobDetailView({ id }: { id: number }) {
               {j.bill ? (
                 <Card>
                   <CardHeader title="Bill" />
-                  <CardBody>
+                  <CardBody className="space-y-4">
                     <BillSummary bill={j.bill} />
+                    {j.bill.id ? (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        loading={downloading}
+                        icon={<Icon name="download" className="size-4" />}
+                        onClick={() =>
+                          void download(
+                            technicianApi.billPdfPath(j.bill!.id!),
+                            `bill-${j.bill!.id}.pdf`,
+                          )
+                        }
+                      >
+                        Download bill (PDF)
+                      </Button>
+                    ) : null}
                   </CardBody>
                 </Card>
               ) : null}
@@ -162,7 +182,7 @@ export function JobDetailView({ id }: { id: number }) {
           <ConfirmDialog
             open={confirmCash}
             title="Confirm cash collected?"
-            description={`Only confirm if the customer has paid you ${j.bill ? formatMoney(j.bill.amount) : "the bill amount"} in cash. This completes the job.`}
+            description={`Only confirm if the customer has paid you ${j.bill ? formatMoney(j.bill.payable ?? j.bill.amount) : "the bill amount"} in cash. This completes the job.`}
             confirmLabel="Yes, cash received"
             loading={cash.isPending}
             onConfirm={() => cash.mutate()}

@@ -30,17 +30,25 @@ function DisputesList() {
           onChange={(s) => url.set({ status: s })}
           options={[
             { value: "", label: "All" },
-            ...DISPUTE_STATUSES.map((s) => ({ value: s, label: humanize(s) })),
+            ...DISPUTE_STATUSES.map((s) => ({
+              value: s,
+              label: humanize(s),
+              count: query.data?.counts[s],
+            })),
           ]}
         />
+        {query.data?.counts.SlaBreached ? (
+          <p className="text-danger mt-2 text-sm" role="status">
+            {query.data.counts.SlaBreached} dispute(s) past the 48-hour SLA.
+          </p>
+        ) : null}
       </div>
       <QueryView
         query={query}
-        pendingEndpoint="GET /api/admin/disputes"
-        isEmpty={(d) => d.length === 0}
+        isEmpty={(d) => d.data.length === 0}
         empty={<EmptyState title="No disputes" description="Nothing needs your attention." />}
       >
-        {(rows) => (
+        {({ data: rows }) => (
           <DataTable
             caption="Disputes"
             rows={rows}

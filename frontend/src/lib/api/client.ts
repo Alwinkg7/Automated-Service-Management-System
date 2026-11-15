@@ -16,6 +16,11 @@ export interface RequestOptions<T> {
   signal?: AbortSignal;
   /** Validate (and narrow) the unwrapped payload. */
   schema?: z.ZodType<T>;
+  /**
+   * "data" (default): unwrap `{ success, data }` to `data`.
+   * "full": keep siblings such as `counts` – returns the body without `success`.
+   */
+  envelope?: "data" | "full";
   cache?: RequestCache;
   next?: { revalidate?: number | false; tags?: string[] };
 }
@@ -169,7 +174,10 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       throw toApiError(400, raw);
     }
 
-    const data = unwrapEnvelope(raw);
+    const data =
+      options.envelope === "full" && isRecord(raw)
+        ? Object.fromEntries(Object.entries(raw).filter(([k]) => k !== "success"))
+        : unwrapEnvelope(raw);
     if (!options.schema) return data as T;
 
     const parsed = options.schema.safeParse(data);

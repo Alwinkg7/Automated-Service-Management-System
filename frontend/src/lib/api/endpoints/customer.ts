@@ -1,15 +1,19 @@
+// Customer endpoints – see docs/API.md "Customer".
 import { z } from "zod";
 import type { ApiClient } from "../client";
 import {
+  cashChoiceSchema,
   categoryOptionSchema,
   createRequestResponseSchema,
   customerDashboardSchema,
   customerRequestDetailSchema,
   disputeSchema,
+  historySchema,
   paymentOrderSchema,
   paymentResultSchema,
   promoValidationSchema,
   promotionsSchema,
+  quoteSchema,
   requestSummarySchema,
 } from "../schemas";
 import type { RequestStatus, ServiceCategory } from "@/types/enums";
@@ -17,10 +21,16 @@ import type { RequestStatus, ServiceCategory } from "@/types/enums";
 export interface CreateRequestInput {
   category: ServiceCategory;
   description: string;
-  /** ISO local date-time, e.g. 2026-11-20T10:30 */
+  /** Local date-time, e.g. 2026-11-20T10:30 */
   scheduledDate: string;
   address: string;
   pinCode?: string;
+}
+
+export interface RebookInput {
+  scheduledDate: string;
+  description?: string;
+  address?: string;
 }
 
 export interface RazorpayVerifyInput {
@@ -29,16 +39,13 @@ export interface RazorpayVerifyInput {
   razorpaySignature: string;
 }
 
-export interface PaymentOptionsInput {
-  promoCode?: string;
-  redeemPoints?: boolean;
-}
-
 export interface RaiseDisputeInput {
   requestId: number;
   reason: string;
   description: string;
 }
+
+const idempotent = (key: string) => ({ "Idempotency-Key": key });
 
 export function customerEndpoints(api: ApiClient) {
   return {
@@ -56,10 +63,16 @@ export function customerEndpoints(api: ApiClient) {
     getCategories: () =>
       api.get("/api/customer/categories", { schema: z.array(categoryOptionSchema) }),
 
-    /** The idempotency key makes a double-submit return the same request instead of booking twice. */
+    /** A repeated Idempotency-Key returns the original requestId instead of booking twice. */
     createRequest: (input: CreateRequestInput, idempotencyKey: string) =>
       api.post("/api/customer/requests", input, {
-        headers: { "Idempotency-Key": idempotencyKey },
+        headers: idempotent(idempotencyKey),
+        schema: createRequestResponseSchema,
+      }),
+
+    rebook: (id: number, input: RebookInput, idempotencyKey: string) =>
+      api.post(`/api/customer/requests/${id}/rebook`, input, {
+        headers: idempotent(idempotencyKey),
         schema: createRequestResponseSchema,
       }),
 
@@ -68,10 +81,32 @@ export function customerEndpoints(api: ApiClient) {
     rateRequest: (id: number, stars: number, comment?: string) =>
       api.post<void>(`/api/customer/requests/${id}/rate`, { stars, comment }),
 
-    /** Amount always comes from the server-side bill; options are sent for promo/points support. */
-    createRazorpayOrder: (billId: number, options: PaymentOptionsInput, idempotencyKey: string) =>
-      api.post(`/api/customer/bills/${billId}/razorpay/order`, options, {
-        headers: { "Idempotency-Key": idempotencyKey },
+    /** Completed + cancelled requests with totals; filters run in SQL. */
+    getHistory: (search?: string, category?: string) =>
+      api.get("/api/customer/history", { query: { search, category }, schema: historySchema }),
+
+    // ── Bill: discounts and payment ───────────────────────────────
+    getQuote: (billId: number) =>
+      api.get(`/api/customer/bills/${billId}/quote`, { schema: quoteSchema }),
+
+    previewPromo: (billId: number, code: string) =>
+      api.post(`/api/customer/bills/${billId}/promo/preview`, { code }, { schema: quoteSchema }),
+
+    applyPromo: (billId: number, code: string) =>
+      api.post(`/api/customer/bills/${billId}/promo`, { code }, { schema: quoteSchema }),
+
+    /** Multiples of 100 points (100 points = ₹10). */
+    redeemPoints: (billId: number, points: number) =>
+      api.post(`/api/customer/bills/${billId}/points`, { points }, { schema: quoteSchema }),
+
+    /** Records "I'll pay cash"; the technician completes the job when collected. */
+    chooseCash: (billId: number) =>
+      api.post(`/api/customer/bills/${billId}/cash`, undefined, { schema: cashChoiceSchema }),
+
+    /** Amount (paise) is the server-side discounted payable. */
+    createRazorpayOrder: (billId: number, idempotencyKey: string) =>
+      api.post(`/api/customer/bills/${billId}/razorpay/order`, undefined, {
+        headers: idempotent(idempotencyKey),
         schema: paymentOrderSchema,
       }),
 
@@ -82,7 +117,7 @@ export function customerEndpoints(api: ApiClient) {
 
     billPdfPath: (billId: number) => `/api/customer/bills/${billId}/pdf`,
 
-    // TODO(api): promotions + disputes are proposed – not in docs/API.md yet
+    // ── Rewards ───────────────────────────────────────────────────
     getPromotions: () => api.get("/api/customer/promotions", { schema: promotionsSchema }),
 
     validatePromo: (code: string, billAmount: number) =>
@@ -92,6 +127,7 @@ export function customerEndpoints(api: ApiClient) {
         { schema: promoValidationSchema },
       ),
 
+    // ── Disputes ──────────────────────────────────────────────────
     getDisputes: () => api.get("/api/customer/disputes", { schema: z.array(disputeSchema) }),
 
     getDispute: (id: number) => api.get(`/api/customer/disputes/${id}`, { schema: disputeSchema }),

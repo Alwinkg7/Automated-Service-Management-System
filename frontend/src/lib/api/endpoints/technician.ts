@@ -1,3 +1,4 @@
+// Technician endpoints – see docs/API.md "Technician".
 import { z } from "zod";
 import type { ApiClient } from "../client";
 import {
@@ -6,6 +7,7 @@ import {
   technicianDashboardSchema,
   toggleStatusSchema,
   walletSchema,
+  withdrawalSchema,
 } from "../schemas";
 import type { RequestStatus } from "@/types/enums";
 
@@ -42,11 +44,16 @@ export function technicianEndpoints(api: ApiClient) {
         schema: z.object({ billId: z.number() }),
       }),
 
-    // TODO(api): proposed – not in docs/API.md yet (see frontend/docs/api-requests.md)
+    billPdfPath: (billId: number) => `/api/technician/bills/${billId}/pdf`,
+
     getWallet: () => api.get("/api/technician/wallet", { schema: walletSchema }),
 
     requestWithdrawal: (amount: number, upiId: string) =>
-      api.post<void>("/api/technician/wallet/withdrawals", { amount, upiId }),
+      api.post(
+        "/api/technician/wallet/withdrawals",
+        { amount, upiId },
+        { schema: z.object({ id: z.number(), withdrawal: withdrawalSchema.nullish() }) },
+      ),
   };
 }
 

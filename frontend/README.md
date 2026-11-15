@@ -23,14 +23,15 @@ No secrets live in the frontend. The Razorpay **key id** comes from the API's or
 
 ## Scripts
 
-| Command             | What it does                                                        |
-| ------------------- | ------------------------------------------------------------------- |
-| `npm run dev`       | Dev server on port 3000                                             |
-| `npm run build`     | Production build, including the type check                          |
-| `npm run lint`      | ESLint (next/core-web-vitals + TypeScript + Prettier compatibility) |
-| `npm run typecheck` | `tsc --noEmit`                                                      |
-| `npm test`          | Vitest + React Testing Library                                      |
-| `npm run format`    | Prettier, with the Tailwind class sorter                            |
+| Command                    | What it does                                                        |
+| -------------------------- | ------------------------------------------------------------------- |
+| `npm run dev`              | Dev server on port 3000                                             |
+| `npm run build`            | Production build, including the type check                          |
+| `npm run lint`             | ESLint (next/core-web-vitals + TypeScript + Prettier compatibility) |
+| `npm run typecheck`        | `tsc --noEmit`                                                      |
+| `npm test`                 | Vitest + React Testing Library                                      |
+| `npm run test:integration` | Live API + BFF contract suite (see Testing)                         |
+| `npm run format`           | Prettier, with the Tailwind class sorter                            |
 
 ## How auth works (BFF)
 
@@ -92,9 +93,9 @@ The flow is order (amount set by the server) → Razorpay Checkout → `verify` 
 
 The booking form sends an `Idempotency-Key` header. The key is generated once per attempt and reused on retry. The submit button is disabled while the request is in flight.
 
-## Backend gaps
+## API alignment
 
-Some screens (customer disputes and rewards, technician wallet, admin zones, promo codes, disputes and withdrawals) are built against the proposed contracts in [`docs/api-requests.md`](docs/api-requests.md). They show a "Not available yet" state until the API provides them.
+All screens use endpoints documented in `docs/API.md`. [`docs/api-requests.md`](docs/api-requests.md) records the contract differences the frontend adopted, what the live integration run verified, and the remaining non-blocking backend notes.
 
 ## Testing
 
@@ -103,3 +104,18 @@ Some screens (customer disputes and rewards, technician wallet, admin zones, pro
 - `src/lib/api/client.test.ts`: envelope unwrapping, ProblemDetails parsing, 5xx message hiding, `Retry-After`, 401 hook, network errors, schema mismatch, 204.
 - `src/lib/auth/guard.test.ts`: route protection decisions, expired tokens, wrong role, open-redirect protection, JWT claim decoding.
 - `src/lib/format.test.ts`: API date parsing and CSV escaping, including the formula-injection guard.
+- `src/app/(auth)/login/LoginForm.test.tsx`: login form validation, safe redirect, and error display (React Testing Library).
+
+### Live integration suite
+
+`npm run test:integration` (`src/integration/flow.int.test.ts`) drives the real typed endpoint functions and zod schemas through the Next.js BFF against a running API. It covers every role: register, login, refresh, logout, booking with an idempotency key, assignment, billing, quote/promo/points, Razorpay order, cash, disputes, withdrawals and the admin pages. It creates `*@asms.test` users in the target database.
+
+```bash
+# 1. API on :5001 against a dev database (env override only; user-secrets untouched).
+#    Use fake Razorpay and SendGrid values so nothing is charged or emailed.
+ConnectionStrings__DefaultConnection="Server=(localdb)\AsmsQa;Database=ServiceAppDB_Dev;Trusted_Connection=True;TrustServerCertificate=True" Razorpay__KeyId=rzp_test_fake Razorpay__KeySecret=fake SendGrid__ApiKey=SG.invalid Seed__AdminEmail=fe-admin@asms.test Seed__AdminPassword='<choose one>' ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:5001 dotnet run --project ServiceApp.Api --no-launch-profile
+# 2. Frontend
+npm run build && npm start
+# 3. Suite
+INT_ADMIN_EMAIL=fe-admin@asms.test INT_ADMIN_PASSWORD='<same>' npm run test:integration
+```
