@@ -20,7 +20,12 @@ namespace ServiceApp.Services.Implementations
         private readonly string? _adminEmail;
 
         public const int MaxReasonLength = 50;
+        public const int MinDescriptionLength = 20;
         public const int MaxDescriptionLength = 2000;
+
+        /// <summary>Reason codes offered by the MVC and Next.js dispute forms (all within the 50-char column).</summary>
+        public static readonly IReadOnlyList<string> AllowedReasons =
+            ["ServiceQuality", "LateArrival", "WrongCharge", "Unprofessional", "JobIncomplete", "Other"];
 
         public DisputeService(
             IUnitOfWork uow,
@@ -48,20 +53,19 @@ namespace ServiceApp.Services.Implementations
             // Load request
             reason = reason?.Trim() ?? string.Empty;
             description = description?.Trim() ?? string.Empty;
-            if (reason.Length == 0 || reason.Length > MaxReasonLength)
-                return Result<Dispute>.Failure($"Reason is required (max {MaxReasonLength} characters).");
-            if (description.Length < 10 || description.Length > MaxDescriptionLength)
-                return Result<Dispute>.Failure($"Description must be 10-{MaxDescriptionLength} characters.");
+            if (!AllowedReasons.Contains(reason))
+                return Result<Dispute>.Failure($"Reason must be one of: {string.Join(", ", AllowedReasons)}.");
+            if (description.Length < MinDescriptionLength || description.Length > MaxDescriptionLength)
+                return Result<Dispute>.Failure($"Description must be {MinDescriptionLength}-{MaxDescriptionLength} characters.");
 
             var request = await _uow.ServiceRequests
                 .GetWithDetailsAsync(requestId);
             if (request == null)
-                return Result<Dispute>.Failure("Request not found.");
+                return Result<Dispute>.Failure("Request not found.", ErrorType.NotFound);
 
             // Only Completed requests can be disputed
             if (request.Status != RequestStatus.Completed)
-                return Result<Dispute>.Failure(
-                    "Disputes can only be raised on completed requests.");
+                return Result<Dispute>.Failure("Disputes can only be raised on completed requests.", ErrorType.BusinessRule);
 
             // Only the customer or assigned technician can raise
             var isCustomer = request.CustomerId == raisedByUserId;
@@ -69,8 +73,7 @@ namespace ServiceApp.Services.Implementations
                                == raisedByUserId;
 
             if (!isCustomer && !isTechnician)
-                return Result<Dispute>.Failure(
-                    "You can only raise disputes on your own requests.");
+                return Result<Dispute>.Failure("You can only raise disputes on your own requests.", ErrorType.Forbidden);
 
             // Only one active dispute per request
             var existing = await _uow.Disputes
@@ -78,7 +81,7 @@ namespace ServiceApp.Services.Implementations
             if (existing != null && existing.Status != "Resolved")
                 return Result<Dispute>.Failure(
                     "An active dispute already exists for this request. " +
-                    $"Dispute #{existing.DisputeId} is {existing.Status}.");
+                    $"Dispute #{existing.DisputeId} is {existing.Status}.", ErrorType.Conflict);
 
             var dispute = new Dispute
             {
@@ -117,11 +120,11 @@ namespace ServiceApp.Services.Implementations
             var dispute = await _uow.Disputes
                 .GetWithDetailsAsync(disputeId);
             if (dispute == null)
-                return Result<Dispute>.Failure("Dispute not found.");
+                return Result<Dispute>.Failure("Dispute not found.", ErrorType.NotFound);
 
             if (dispute.Status != "Open")
                 return Result<Dispute>.Failure(
-                    $"Dispute is {dispute.Status}, not Open.");
+                    $"Dispute is {dispute.Status}, not Open.", ErrorType.Conflict);
 
             dispute.Status = "UnderReview";
             dispute.AdminNote = adminNote?.Trim();
@@ -142,14 +145,18 @@ namespace ServiceApp.Services.Implementations
             string resolution,
             string adminNote)
         {
+            // Refunds go through IssueRefundAsync; Resolve only closes without money movement.
+            if (resolution is not ("Rejected" or "ClosedNoAction"))
+                return Result<Dispute>.Failure("Resolution must be Rejected or ClosedNoAction.");
+
             var dispute = await _uow.Disputes
                 .GetWithDetailsAsync(disputeId);
             if (dispute == null)
-                return Result<Dispute>.Failure("Dispute not found.");
+                return Result<Dispute>.Failure("Dispute not found.", ErrorType.NotFound);
 
             if (dispute.Status == "Resolved")
                 return Result<Dispute>.Failure(
-                    "Dispute is already resolved.");
+                    "Dispute is already resolved.", ErrorType.Conflict);
 
             dispute.Status = "Resolved";
             dispute.Resolution = resolution;
@@ -180,24 +187,24 @@ namespace ServiceApp.Services.Implementations
             var dispute = await _uow.Disputes
                 .GetWithDetailsAsync(disputeId);
             if (dispute == null)
-                return Result<Dispute>.Failure("Dispute not found.");
+                return Result<Dispute>.Failure("Dispute not found.", ErrorType.NotFound);
 
             if (dispute.RefundIssued)
                 return Result<Dispute>.Failure(
-                    "A refund has already been issued for this dispute.");
+                    "A refund has already been issued for this dispute.", ErrorType.Conflict);
 
             // Load the payment
             var payment = dispute.ServiceRequest?.Bill?.Payment;
             if (payment == null)
                 return Result<Dispute>.Failure(
                     "No payment found for this request. " +
-                    "Cannot issue refund.");
+                    "Cannot issue refund.", ErrorType.BusinessRule);
 
             if (string.IsNullOrEmpty(payment.GatewayTransactionId) ||
                 payment.GatewayTransactionId.StartsWith("CASH"))
                 return Result<Dispute>.Failure(
                     "Refunds can only be issued for online (Razorpay) payments. " +
-                    "This request was paid with cash.");
+                    "This request was paid with cash.", ErrorType.BusinessRule);
 
             var maxRefund = payment.Amount;
             if (refundAmount <= 0 || refundAmount > maxRefund)
@@ -228,7 +235,7 @@ namespace ServiceApp.Services.Implementations
                     disputeId);
                 return Result<Dispute>.Failure(
                     "Razorpay refund failed: " + ex.Message +
-                    " — Check your Razorpay dashboard.");
+                    " — Check your Razorpay dashboard.", ErrorType.Dependency);
             }
 
             // ── Update dispute record ──────────────────────────────
@@ -284,5 +291,17 @@ namespace ServiceApp.Services.Implementations
         public async Task<IEnumerable<Dispute>>
             GetSlaBreachedDisputesAsync() =>
             await _uow.Disputes.GetSlaBreachedAsync();
+
+        public async Task<IEnumerable<Dispute>> GetDisputesRaisedByAsync(string userId) =>
+            await _uow.Disputes.GetByRaisedByAsync(userId);
+
+        public async Task<IReadOnlyDictionary<string, int>> GetCountsAsync()
+        {
+            var counts = new Dictionary<string, int>(await _uow.Disputes.CountByStatusAsync());
+            foreach (var status in new[] { "Open", "UnderReview", "Resolved" })
+                counts.TryAdd(status, 0);
+            counts["SlaBreached"] = (await _uow.Disputes.GetSlaBreachedAsync()).Count();
+            return counts;
+        }
     }
 }

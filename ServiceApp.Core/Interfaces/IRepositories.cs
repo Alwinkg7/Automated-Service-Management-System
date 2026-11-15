@@ -117,6 +117,7 @@ namespace ServiceApp.Core.Interfaces
             string technicianUserId);
 
         Task<IEnumerable<TechnicianWithdrawal>> GetOpenAsync(); // Pending + Approved
+        Task<IEnumerable<TechnicianWithdrawal>> GetAllWithTechnicianAsync(string? status);
 
         Task<decimal> GetTotalWithdrawnAsync(string technicianUserId);
     }
@@ -150,5 +151,7 @@ namespace ServiceApp.Core.Interfaces
         Task<Dispute?> GetWithDetailsAsync(int disputeId);
         Task<IEnumerable<Dispute>> GetSlaBreachedAsync();
         Task<Dispute?> GetByRequestIdAsync(int requestId);
+        Task<IEnumerable<Dispute>> GetByRaisedByAsync(string userId);
+        Task<IReadOnlyDictionary<string, int>> CountByStatusAsync();
     }
 }

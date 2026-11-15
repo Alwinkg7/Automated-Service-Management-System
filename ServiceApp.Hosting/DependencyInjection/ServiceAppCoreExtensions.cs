@@ -12,6 +12,7 @@ using ServiceApp.Core.Entities;
 using ServiceApp.Core.Interfaces;
 using ServiceApp.Data;
 using ServiceApp.Data.Context;
+using ServiceApp.Data.Queries;
 using ServiceApp.Hosting.Options;
 using ServiceApp.Hosting.Realtime;
 using ServiceApp.Infrastructure;
@@ -90,6 +91,16 @@ public static class ServiceAppCoreExtensions
         services.AddScoped<IDisputeService, DisputeService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IWalletService, WalletService>();
+        services.AddScoped<IZoneService, ZoneService>();
+        services.AddScoped<IPromoCodeService, PromoCodeService>();
+        services.AddScoped<IBillDiscountService, BillDiscountService>();
+        services.AddScoped<ITrackingService, TrackingService>();
+        services.AddScoped<IRequestExportService, RequestExportService>();
+
+        // ── Read models (SQL-side filtering, paging and aggregates) ──
+        services.AddScoped<IRequestQueries, RequestQueries>();
+        services.AddScoped<ITechnicianQueries, TechnicianQueries>();
+        services.AddScoped<IAnalyticsQueries, AnalyticsQueries>();
 
         // ── Infrastructure ──
         services.AddHttpClient<IRazorpayService, RazorpayService>(client =>

@@ -296,6 +296,11 @@ namespace ServiceApp.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal>("DiscountAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(10,2)")
+                        .HasDefaultValue(0m);
+
                     b.Property<decimal>("LaborCost")
                         .HasColumnType("decimal(10,2)");
 
@@ -309,6 +314,17 @@ namespace ServiceApp.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("PointsRedeemed")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PreferredPaymentMethod")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PromoCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("RazorpayOrderId")
                         .HasMaxLength(64)

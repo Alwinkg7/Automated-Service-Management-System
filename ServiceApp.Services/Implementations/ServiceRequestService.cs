@@ -71,7 +71,7 @@ namespace ServiceApp.Services.Implementations
             var customer = await _uow.Users.GetByIdAsync(customerId);
             if (customer == null)
                 return Result<ServiceRequest>.Failure(
-                    "Customer account not found.");
+                    "Customer account not found.", ErrorType.NotFound);
 
             description = description?.Trim() ?? string.Empty;
             address = address?.Trim() ?? string.Empty;
@@ -169,7 +169,7 @@ namespace ServiceApp.Services.Implementations
                     "Failed to create request for customer {CustomerId}",
                     customerId);
                 return Result<ServiceRequest>.Failure(
-                    "Failed to create request. Please try again.");
+                    "Failed to create request. Please try again.", ErrorType.Unexpected);
             }
         }
 
@@ -197,26 +197,26 @@ namespace ServiceApp.Services.Implementations
                 .GetByIdAsync(requestId);
             if (request == null)
                 return Result<ServiceRequest>.Failure(
-                    "Service request not found.");
+                    "Service request not found.", ErrorType.NotFound);
 
             // Must be Pending to assign
             if (request.Status != RequestStatus.Pending)
                 return Result<ServiceRequest>.Failure(
                     $"Cannot assign — request is currently {request.Status}. " +
-                    "Only Pending requests can be assigned.");
+                    "Only Pending requests can be assigned.", ErrorType.Conflict);
 
             // Load the technician
             var tech = await _uow.TechnicianProfiles
                 .GetWithUserAsync(technicianProfileId);
             if (tech == null)
                 return Result<ServiceRequest>.Failure(
-                    "Technician not found.");
+                    "Technician not found.", ErrorType.NotFound);
 
             // Must be Available
             if (tech.Status != TechnicianStatus.Available)
                 return Result<ServiceRequest>.Failure(
                     $"{tech.User.FullName} is currently {tech.Status} " +
-                    "and cannot be assigned.");
+                    "and cannot be assigned.", ErrorType.Conflict);
 
             // Skill must match category
             if (tech.Skill != request.Category)
@@ -284,7 +284,7 @@ namespace ServiceApp.Services.Implementations
                     "Failed to assign technician to request #{RequestId}",
                     requestId);
                 return Result<ServiceRequest>.Failure(
-                    "Assignment failed. Please try again.");
+                    "Assignment failed. Please try again.", ErrorType.Unexpected);
             }
         }
 
@@ -314,24 +314,24 @@ namespace ServiceApp.Services.Implementations
                 .GetWithDetailsAsync(requestId);
             if (request == null)
                 return Result<ServiceRequest>.Failure(
-                    "Request not found.");
+                    "Request not found.", ErrorType.NotFound);
 
             // Must be Assigned
             if (request.Status != RequestStatus.Assigned)
                 return Result<ServiceRequest>.Failure(
-                    $"Cannot accept — request is {request.Status}, not Assigned.");
+                    $"Cannot accept — request is {request.Status}, not Assigned.", ErrorType.Conflict);
 
             // Load the technician profile for this user
             var tech = await _uow.TechnicianProfiles
                 .GetByUserIdAsync(technicianUserId);
             if (tech == null)
                 return Result<ServiceRequest>.Failure(
-                    "Technician profile not found.");
+                    "Technician profile not found.", ErrorType.NotFound);
 
             // Verify this technician is the assigned one
             if (request.AssignedTechnicianProfileId != tech.TechnicianProfileId)
                 return Result<ServiceRequest>.Failure(
-                    "You are not assigned to this request.");
+                    "You are not assigned to this request.", ErrorType.Forbidden);
 
             await _uow.BeginTransactionAsync();
             try
@@ -382,7 +382,7 @@ namespace ServiceApp.Services.Implementations
                 _logger.LogError(ex,
                     "Failed to accept job #{RequestId}", requestId);
                 return Result<ServiceRequest>.Failure(
-                    "Failed to accept job. Please try again.");
+                    "Failed to accept job. Please try again.", ErrorType.Unexpected);
             }
         }
 
@@ -400,20 +400,20 @@ namespace ServiceApp.Services.Implementations
             var request = await _uow.ServiceRequests
                 .GetByIdAsync(requestId);
             if (request == null)
-                return Result.Failure("Request not found.");
+                return Result.Failure("Request not found.", ErrorType.NotFound);
 
             if (request.Status != RequestStatus.Assigned)
                 return Result.Failure(
-                    "Can only reject Assigned requests.");
+                    "Can only reject Assigned requests.", ErrorType.Conflict);
 
             var tech = await _uow.TechnicianProfiles
                 .GetByUserIdAsync(technicianUserId);
             if (tech == null)
-                return Result.Failure("Technician profile not found.");
+                return Result.Failure("Technician profile not found.", ErrorType.NotFound);
 
             if (request.AssignedTechnicianProfileId != tech.TechnicianProfileId)
                 return Result.Failure(
-                    "You are not assigned to this request.");
+                    "You are not assigned to this request.", ErrorType.Forbidden);
 
             await _uow.BeginTransactionAsync();
             try
@@ -448,7 +448,7 @@ namespace ServiceApp.Services.Implementations
                 _logger.LogError(ex,
                     "Failed to reject job #{RequestId}", requestId);
                 return Result.Failure(
-                    "Failed to reject job. Please try again.");
+                    "Failed to reject job. Please try again.", ErrorType.Unexpected);
             }
         }
 
@@ -464,14 +464,14 @@ namespace ServiceApp.Services.Implementations
             var request = await _uow.ServiceRequests
                 .GetByIdAsync(requestId);
             if (request == null)
-                return Result.Failure("Request not found.");
+                return Result.Failure("Request not found.", ErrorType.NotFound);
 
             // Only allow cancel before work starts
             if (request.Status != RequestStatus.Pending &&
                 request.Status != RequestStatus.Assigned)
                 return Result.Failure(
                     $"Cannot cancel a request that is {request.Status}. " +
-                    "Work may have already started.");
+                    "Work may have already started.", ErrorType.Conflict);
 
             await _uow.BeginTransactionAsync();
             try
@@ -512,7 +512,7 @@ namespace ServiceApp.Services.Implementations
                 _logger.LogError(ex,
                     "Failed to cancel request #{RequestId}", requestId);
                 return Result.Failure(
-                    "Failed to cancel. Please try again.");
+                    "Failed to cancel. Please try again.", ErrorType.Unexpected);
             }
         }
 
@@ -532,18 +532,18 @@ namespace ServiceApp.Services.Implementations
             var request = await _uow.ServiceRequests
                 .GetWithDetailsAsync(requestId);
             if (request == null)
-                return Result.Failure("Request not found.");
+                return Result.Failure("Request not found.", ErrorType.NotFound);
 
             if (request.CustomerId != customerId)
                 return Result.Failure(
-                    "You can only rate your own requests.");
+                    "You can only rate your own requests.", ErrorType.Forbidden);
 
             if (request.Status != RequestStatus.Completed)
                 return Result.Failure(
-                    "You can only rate completed requests.");
+                    "You can only rate completed requests.", ErrorType.Conflict);
 
             if (request.CustomerRating.HasValue)
-                return Result.Failure("You have already rated this request.");
+                return Result.Failure("You have already rated this request.", ErrorType.Conflict);
 
             await _uow.BeginTransactionAsync();
             try
@@ -592,7 +592,7 @@ namespace ServiceApp.Services.Implementations
                     "Failed to submit rating for request #{RequestId}",
                     requestId);
                 return Result.Failure(
-                    "Failed to submit rating. Please try again.");
+                    "Failed to submit rating. Please try again.", ErrorType.Unexpected);
             }
         }
 
@@ -606,7 +606,7 @@ namespace ServiceApp.Services.Implementations
                 .GetWithDetailsAsync(requestId);
             if (request == null)
                 return Result<ServiceRequest>.Failure(
-                    "Request not found.");
+                    "Request not found.", ErrorType.NotFound);
             return Result<ServiceRequest>.Success(request);
         }
 
@@ -655,6 +655,36 @@ namespace ServiceApp.Services.Implementations
 
             return Result<IEnumerable<TechnicianProfile>>.Success(techs);
         }
+
+        public async Task<Result<ServiceRequest>> RebookAsync(
+            int originalRequestId, string customerId, DateTime preferredDateTime,
+            string? description = null, string? address = null)
+        {
+            var original = await _uow.ServiceRequests.GetByIdAsync(originalRequestId);
+            if (original == null)
+                return Result<ServiceRequest>.Failure("Request not found.", ErrorType.NotFound);
+
+            if (original.CustomerId != customerId)
+                return Result<ServiceRequest>.Failure(
+                    "You can only re-book your own past requests.", ErrorType.Forbidden);
+
+            if (original.Status is not (RequestStatus.Completed or RequestStatus.Cancelled))
+                return Result<ServiceRequest>.Failure(
+                    "You can only re-book completed or cancelled requests.", ErrorType.Conflict);
+
+            var now = preferredDateTime.Kind == DateTimeKind.Utc ? DateTime.UtcNow : DateTime.Now;
+            if (preferredDateTime <= now.AddHours(1))
+                return Result<ServiceRequest>.Failure("Please select a time at least 1 hour from now.");
+
+            return await CreateRequestAsync(
+                customerId,
+                string.IsNullOrWhiteSpace(description) ? original.Description : description,
+                original.Category,
+                string.IsNullOrWhiteSpace(address) ? original.Address : address,
+                original.PinCode,
+                preferredDateTime);
+        }
+
         // =============================================================
         //  PRIVATE HELPER — log a ServiceHistory row
         //

@@ -40,5 +40,13 @@ public interface IServiceRequestService
     Task<Result<IEnumerable<TechnicianProfile>>> GetAvailableTechniciansAsync(
         ServiceCategory category);
 
+    /// <summary>
+    /// Creates a new Pending request from a Completed or Cancelled one owned by the
+    /// customer. Description/address default to the original when null.
+    /// </summary>
+    Task<Result<ServiceRequest>> RebookAsync(
+        int originalRequestId, string customerId, DateTime preferredDateTime,
+        string? description = null, string? address = null);
+
     // ── Added for Flutter rating screen ──────────────────────────
 }

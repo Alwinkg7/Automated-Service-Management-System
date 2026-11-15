@@ -430,6 +430,10 @@ namespace ServiceApp.Data.Context
                 e.Ignore(b => b.IsPaid);
 
                 e.Property(b => b.RazorpayOrderId).HasMaxLength(64);
+                e.Ignore(b => b.PayableAmount);
+                e.Property(b => b.DiscountAmount).HasColumnType("decimal(10,2)").HasDefaultValue(0m);
+                e.Property(b => b.PromoCode).HasMaxLength(30);
+                e.Property(b => b.PreferredPaymentMethod).HasMaxLength(20);
                 e.HasIndex(b => b.RazorpayOrderId)
                     .IsUnique()
                     .HasFilter("[RazorpayOrderId] IS NOT NULL");

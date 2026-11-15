@@ -68,38 +68,34 @@ namespace ServiceApp.Services.Implementations
 
         // ── Cash ──────────────────────────────────────────────────────
 
-        public async Task<Result<Payment>> ProcessCashPaymentAsync(int billId, string customerUserId)
+        public async Task<Result<Bill>> ChooseCashPaymentAsync(int billId, string customerUserId)
         {
             var bill = await _uow.Bills.GetWithItemsAndPaymentAsync(billId);
             if (bill == null)
-                return Result<Payment>.Failure("Bill not found.", ErrorType.NotFound);
-
-            // Idempotency: a second click returns the payment already recorded.
-            var existingPayment = await _uow.Payments.GetByBillIdAsync(billId);
-            if (existingPayment != null)
-                return Result<Payment>.Success(existingPayment);
+                return Result<Bill>.Failure("Bill not found.", ErrorType.NotFound);
 
             var request = await _uow.ServiceRequests.GetByIdAsync(bill.ServiceRequestId);
             if (request == null)
-                return Result<Payment>.Failure("Request not found.", ErrorType.NotFound);
+                return Result<Bill>.Failure("Request not found.", ErrorType.NotFound);
 
             if (request.CustomerId != customerUserId)
-                return Result<Payment>.Failure("You can only pay your own bills.", ErrorType.Forbidden);
+                return Result<Bill>.Failure("You can only pay your own bills.", ErrorType.Forbidden);
+
+            if (bill.PaymentStatus == PaymentStatus.Paid)
+                return Result<Bill>.Failure("This bill has already been paid.", ErrorType.Conflict);
 
             if (request.Status != RequestStatus.Billed)
-                return Result<Payment>.Failure(
-                    $"Cannot process payment — request status is {request.Status}.", ErrorType.Conflict);
+                return Result<Bill>.Failure(
+                    $"Cannot choose a payment method — request status is {request.Status}.", ErrorType.Conflict);
 
-            var now = DateTime.UtcNow;
-            return await CompletePaymentAsync(
-                bill,
-                request,
-                method: "Cash",
-                transactionId: $"CASH-{billId}-{now:yyyyMMddHHmmss}",
-                orderId: null,
-                changedByUserId: customerUserId,
-                historyNote: $"Payment of ₹{bill.TotalAmount:N2} received via Cash. Job completed successfully.",
-                failureMessage: "Payment processing failed. Please try again.");
+            // Only the preference is recorded: no Payment row, no status change.
+            // The assigned technician completes the bill via ConfirmCashCollectedAsync.
+            bill.PreferredPaymentMethod = "Cash";
+            _uow.Bills.Update(bill);
+            await _uow.SaveChangesAsync();
+
+            _logger.LogInformation("Customer chose cash for bill #{BillId}; awaiting technician confirmation", billId);
+            return Result<Bill>.Success(bill);
         }
 
         public async Task<Result<Payment>> ConfirmCashCollectedAsync(int requestId, string technicianUserId)
@@ -135,7 +131,7 @@ namespace ServiceApp.Services.Implementations
                 transactionId: $"CASH-{bill.Id}-{now:yyyyMMddHHmmss}",
                 orderId: null,
                 changedByUserId: technicianUserId,
-                historyNote: $"Cash payment of ₹{bill.TotalAmount:N2} confirmed by technician. Job completed.",
+                historyNote: $"Cash payment of ₹{bill.PayableAmount:N2} confirmed by technician. Job completed.",
                 failureMessage: "Could not record the cash payment. Please try again.");
         }
 
@@ -163,7 +159,7 @@ namespace ServiceApp.Services.Implementations
             try
             {
                 var order = await _razorpay.CreateOrderAsync(
-                    amount: bill.TotalAmount,
+                    amount: bill.PayableAmount,
                     currency: "INR",
                     receiptId: $"bill_{billId}_{DateTime.UtcNow:yyyyMMdd}",
                     billId: billId);
@@ -240,7 +236,7 @@ namespace ServiceApp.Services.Implementations
                 transactionId: razorpayPaymentId,
                 orderId: razorpayOrderId,
                 changedByUserId: customerUserId,
-                historyNote: $"Payment of ₹{bill.TotalAmount:N2} received via Razorpay. Transaction: {razorpayPaymentId}.",
+                historyNote: $"Payment of ₹{bill.PayableAmount:N2} received via Razorpay. Transaction: {razorpayPaymentId}.",
                 failureMessage: "Payment was received but processing failed. " +
                                 "Please contact support with transaction ID: " + razorpayPaymentId);
         }
@@ -269,7 +265,7 @@ namespace ServiceApp.Services.Implementations
             if (bill.PaymentStatus == PaymentStatus.Paid)
                 return Result<Payment>.Failure("This bill has already been paid.", ErrorType.Conflict);
 
-            var expectedPaise = (long)decimal.Round(bill.TotalAmount * 100m, 0, MidpointRounding.AwayFromZero);
+            var expectedPaise = (long)decimal.Round(bill.PayableAmount * 100m, 0, MidpointRounding.AwayFromZero);
             if (webhookEvent.AmountPaise != expectedPaise)
             {
                 _logger.LogWarning(
@@ -291,7 +287,7 @@ namespace ServiceApp.Services.Implementations
                 transactionId: webhookEvent.PaymentId,
                 orderId: webhookEvent.OrderId,
                 changedByUserId: request.CustomerId,
-                historyNote: $"Payment of ₹{bill.TotalAmount:N2} confirmed by Razorpay webhook. " +
+                historyNote: $"Payment of ₹{bill.PayableAmount:N2} confirmed by Razorpay webhook. " +
                              $"Transaction: {webhookEvent.PaymentId}.",
                 failureMessage: "Webhook payment could not be recorded.");
         }
@@ -312,7 +308,7 @@ namespace ServiceApp.Services.Implementations
             var payment = new Payment
             {
                 BillId = bill.Id,
-                Amount = bill.TotalAmount,
+                Amount = bill.PayableAmount,
                 PaymentMethod = method,
                 GatewayTransactionId = transactionId,
                 GatewayOrderId = orderId,
@@ -397,7 +393,7 @@ namespace ServiceApp.Services.Implementations
             // Awaited (not fire-and-forget): it shares this scope's DbContext.
             try
             {
-                await _promotions.AwardPointsAsync(request.CustomerId, bill.ServiceRequestId, bill.TotalAmount);
+                await _promotions.AwardPointsAsync(request.CustomerId, bill.ServiceRequestId, bill.PayableAmount);
             }
             catch (Exception ex)
             {
@@ -415,7 +411,7 @@ namespace ServiceApp.Services.Implementations
                         customer.FullName,
                         bill.ServiceRequestId,
                         bill.Id,
-                        bill.TotalAmount,
+                        payment.Amount,
                         payment.PaymentMethod,
                         payment.GatewayTransactionId ?? "N/A",
                         payment.PaidAt);

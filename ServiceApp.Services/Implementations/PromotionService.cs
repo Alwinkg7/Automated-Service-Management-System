@@ -58,7 +58,7 @@ namespace ServiceApp.Services.Implementations
 
             if (promo == null)
                 return Result<decimal>.Failure(
-                    $"Promo code '{code}' not found.");
+                    $"Promo code '{code}' not found.", ErrorType.Validation);
 
             if (!promo.IsValid())
                 return Result<decimal>.Failure(
@@ -69,7 +69,7 @@ namespace ServiceApp.Services.Implementations
                 .HasCustomerUsedCodeAsync(customerId, promo.PromoCodeId);
             if (alreadyUsed)
                 return Result<decimal>.Failure(
-                    "You have already used this promo code.");
+                    "You have already used this promo code.", ErrorType.Conflict);
 
             // FirstOnly check
             if (promo.DiscountType == "FirstOnly")
@@ -144,7 +144,7 @@ namespace ServiceApp.Services.Implementations
                 _logger.LogError(ex,
                     "Failed to apply promo code {Code}", code);
                 return Result<decimal>.Failure(
-                    "Failed to apply promo code.");
+                    "Failed to apply promo code.", ErrorType.Unexpected);
             }
         }
 
@@ -211,7 +211,7 @@ namespace ServiceApp.Services.Implementations
             var balance = await GetPointsBalanceAsync(customerId);
             if (pointsToRedeem > balance)
                 return Result<decimal>.Failure(
-                    $"You only have {balance} points available.");
+                    $"You only have {balance} points available.", ErrorType.BusinessRule);
 
             var discount = (pointsToRedeem / PointsPerDiscount)
                            * DiscountPerHundred;

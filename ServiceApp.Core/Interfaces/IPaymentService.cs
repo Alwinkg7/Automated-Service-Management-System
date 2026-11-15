@@ -10,9 +10,12 @@ namespace ServiceApp.Core.Interfaces
             int requestId,
             string customerUserId);
 
-        Task<Result<Payment>> ProcessCashPaymentAsync(
-            int billId,
-            string customerUserId);
+        /// <summary>
+        /// Customer chooses to pay the technician in cash. This only records the
+        /// preference; the bill is completed when the assigned technician confirms
+        /// collection (<see cref="ConfirmCashCollectedAsync"/>).
+        /// </summary>
+        Task<Result<Bill>> ChooseCashPaymentAsync(int billId, string customerUserId);
 
         Task<Payment?> GetPaymentByIdAsync(int paymentId);
 

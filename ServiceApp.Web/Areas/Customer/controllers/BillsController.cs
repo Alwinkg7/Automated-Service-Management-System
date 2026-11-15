@@ -74,19 +74,16 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
             return View(result.Data!);
         }
 
-        // =============================================================
-        //  POST /Customer/Bills/PayCash
-        //  No gateway — marks bill as paid with Cash method instantly.
-        // =============================================================
+        // POST /Customer/Bills/PayCash
+        // Records that the customer will pay cash. The bill is completed only
+        // when the assigned technician confirms collection (Technician/Jobs/ConfirmCash).
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> PayCash(int billId)
         {
             var userId = _userManager.GetUserId(User)!;
 
-            var result = await _paymentService
-                .ProcessCashPaymentAsync(billId, userId);
-
+            var result = await _paymentService.ChooseCashPaymentAsync(billId, userId);
             if (!result.IsSuccess)
             {
                 TempData["Error"] = result.ErrorMessage;
@@ -94,11 +91,10 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
             }
 
             TempData["Success"] =
-                "Cash payment confirmed! Request is now complete.";
+                $"Cash selected. Please pay ₹{result.Data!.PayableAmount:N2} to your technician; " +
+                "the job completes once they confirm receipt.";
 
-            return RedirectToAction(
-                nameof(Confirmation),
-                new { paymentId = result.Data!.PaymentId });
+            return RedirectToAction("Details", "Requests", new { id = result.Data.ServiceRequestId });
         }
 
         // =============================================================

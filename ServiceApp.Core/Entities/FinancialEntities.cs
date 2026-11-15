@@ -37,6 +37,21 @@ namespace ServiceApp.Core.Entities
 
         /// <summary>Razorpay order created for this bill; checkout/webhook payments must match it.</summary>
         public string? RazorpayOrderId { get; set; }
+
+        /// <summary>Total discount (promo code + loyalty points) applied before payment.</summary>
+        public decimal DiscountAmount { get; set; }
+
+        /// <summary>Promo code applied to this bill, if any (one per bill).</summary>
+        public string? PromoCode { get; set; }
+
+        /// <summary>Loyalty points redeemed against this bill.</summary>
+        public int PointsRedeemed { get; set; }
+
+        /// <summary>Customer choice when not paying online ("Cash"); the technician confirms collection.</summary>
+        public string? PreferredPaymentMethod { get; set; }
+
+        /// <summary>Amount actually charged: <see cref="TotalAmount"/> minus <see cref="DiscountAmount"/>; not stored.</summary>
+        public decimal PayableAmount => Math.Max(0m, TotalAmount - DiscountAmount);
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? PaidAt { get; set; }
 

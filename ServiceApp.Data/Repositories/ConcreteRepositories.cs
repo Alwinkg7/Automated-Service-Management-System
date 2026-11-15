@@ -129,7 +129,7 @@ namespace ServiceApp.Data.Repositories
                 .Where(r => r.AssignedTechnicianProfileId == technicianProfileId)
                 .OrderByDescending(r => r.CreatedAt)
                 .Include(r => r.Customer)
-                .Include(r => r.Bill)
+                .Include(r => r.Bill).ThenInclude(b => b!.Payment)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -288,6 +288,15 @@ namespace ServiceApp.Data.Repositories
                 .OrderBy(w => w.RequestedAt)
                 .ToListAsync();
 
+        public async Task<IEnumerable<TechnicianWithdrawal>>
+            GetAllWithTechnicianAsync(string? status) =>
+            await _dbSet
+                .Include(w => w.Technician)
+                .Where(w => status == null || w.Status == status)
+                .OrderByDescending(w => w.RequestedAt)
+                .AsNoTracking()
+                .ToListAsync();
+
         public async Task<decimal> GetTotalWithdrawnAsync(
             string technicianUserId) =>
             await _dbSet
@@ -442,5 +451,19 @@ namespace ServiceApp.Data.Repositories
         public async Task<Dispute?> GetByRequestIdAsync(int requestId) =>
             await _dbSet
                 .FirstOrDefaultAsync(d => d.RequestId == requestId);
+
+        public async Task<IEnumerable<Dispute>> GetByRaisedByAsync(string userId) =>
+            await _dbSet
+                .Include(d => d.ServiceRequest)
+                .Where(d => d.RaisedByUserId == userId)
+                .OrderByDescending(d => d.RaisedAt)
+                .AsNoTracking()
+                .ToListAsync();
+
+        public async Task<IReadOnlyDictionary<string, int>> CountByStatusAsync() =>
+            await _dbSet
+                .GroupBy(d => d.Status)
+                .Select(g => new { g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Key, x => x.Count);
     }
 }

@@ -46,5 +46,11 @@ namespace ServiceApp.Core.Interfaces
         Task<Dispute?> GetDisputeDetailsAsync(int disputeId);
         Task<Dispute?> GetDisputeByRequestIdAsync(int requestId);
         Task<IEnumerable<Dispute>> GetSlaBreachedDisputesAsync();
+
+        /// <summary>Disputes raised by a user, newest first.</summary>
+        Task<IEnumerable<Dispute>> GetDisputesRaisedByAsync(string userId);
+
+        /// <summary>Dispute counts per status plus SLA breaches, for admin dashboards.</summary>
+        Task<IReadOnlyDictionary<string, int>> GetCountsAsync();
     }
 }

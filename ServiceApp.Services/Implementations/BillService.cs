@@ -71,13 +71,13 @@ namespace ServiceApp.Services.Implementations
             var request = await _uow.ServiceRequests
                 .GetWithDetailsAsync(requestId);
             if (request == null)
-                return Result<Bill>.Failure("Request not found.");
+                return Result<Bill>.Failure("Request not found.", ErrorType.NotFound);
 
             // Must be InProgress to create a bill
             if (request.Status != RequestStatus.InProgress)
                 return Result<Bill>.Failure(
                     $"Cannot create a bill — request is {request.Status}." +
-                    " Request must be InProgress.");
+                    " Request must be InProgress.", ErrorType.Conflict);
 
             // ── Verify ownership ───────────────────────────────────
 
@@ -85,12 +85,12 @@ namespace ServiceApp.Services.Implementations
                 .GetByUserIdAsync(technicianUserId);
             if (tech == null)
                 return Result<Bill>.Failure(
-                    "Technician profile not found.");
+                    "Technician profile not found.", ErrorType.NotFound);
 
             if (request.AssignedTechnicianProfileId
                 != tech.TechnicianProfileId)
                 return Result<Bill>.Failure(
-                    "You can only create bills for jobs assigned to you.");
+                    "You can only create bills for jobs assigned to you.", ErrorType.Forbidden);
 
             // ── Check no existing bill ─────────────────────────────
 
@@ -99,7 +99,7 @@ namespace ServiceApp.Services.Implementations
             if (existingBill != null)
                 return Result<Bill>.Failure(
                     "A bill already exists for this request. " +
-                    "Cannot create a second bill.");
+                    "Cannot create a second bill.", ErrorType.Conflict);
 
             // ── Build bill + items ─────────────────────────────────
 
@@ -206,7 +206,7 @@ namespace ServiceApp.Services.Implementations
                     "Failed to create bill for request #{RequestId}",
                     requestId);
                 return Result<Bill>.Failure(
-                    "Failed to create bill. Please try again.");
+                    "Failed to create bill. Please try again.", ErrorType.Unexpected);
             }
         }
 
@@ -221,7 +221,7 @@ namespace ServiceApp.Services.Implementations
 
             if (bill == null)
                 return Result<Bill>.Failure(
-                    "No bill found for this request.");
+                    "No bill found for this request.", ErrorType.NotFound);
 
             return Result<Bill>.Success(bill);
         }
@@ -235,7 +235,7 @@ namespace ServiceApp.Services.Implementations
                 .GetWithItemsAndPaymentAsync(billId);
 
             if (bill == null)
-                return Result<Bill>.Failure("Bill not found.");
+                return Result<Bill>.Failure("Bill not found.", ErrorType.NotFound);
 
             return Result<Bill>.Success(bill);
         }
