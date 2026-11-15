@@ -46,7 +46,8 @@ export async function POST(request: Request) {
     setAuthCookies(res.cookies, tokens.data);
     return res;
   } catch (error) {
-    const status = isApiError(error) ? error.status : 502;
+    // status 0 = API unreachable; never echo an invalid HTTP status.
+    const status = isApiError(error) && error.status >= 400 ? error.status : 502;
     return NextResponse.json(
       {
         success: false,

@@ -43,7 +43,8 @@ export async function POST(request: Request) {
     setAuthCookies(res.cookies, result);
     return res;
   } catch (error) {
-    const status = isApiError(error) ? error.status : 502;
+    // status 0 = API unreachable; never echo an invalid HTTP status.
+    const status = isApiError(error) && error.status >= 400 ? error.status : 502;
     const message = isApiError(error) ? error.message : "Login failed. Please try again.";
     const headers: Record<string, string> = {};
     if (isApiError(error) && error.retryAfterSeconds)
