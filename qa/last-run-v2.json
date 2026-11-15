@@ -1,9 +1,9 @@
 {
  "api": "http://localhost:5090",
  "web": "http://localhost:5091",
- "run": "db1711",
- "passed": 262,
- "failed": 9,
+ "run": "d1031a",
+ "passed": 270,
+ "failed": 1,
  "results": [
   {
    "id": "SMOKE-001",
@@ -114,7 +114,7 @@
    "id": "AUTH-040",
    "title": "API register/customer -> 201 AuthResponse",
    "ok": true,
-   "detail": "201 {\"success\":true,\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3YjgxYTEwYi0yYjM3LTQwZWYtYTNkNC0wMzZhMzU4N2M2Mj",
+   "detail": "201 {\"success\":true,\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlMjY3MGMzYy05ZDU3LTQxYjEtYjAyZi0yZDlhYWM0NjE3Y2",
    "bug": null
   },
   {
@@ -156,7 +156,7 @@
    "id": "AUTH-044",
    "title": "/api/auth/me returns caller",
    "ok": true,
-   "detail": "{\"success\":true,\"data\":{\"userId\":\"db0646dd-757a-4dbc-bff8-6b7e06193484\",\"name\":\"QA Customer One\",\"email\":\"qa.c1.db1711@e",
+   "detail": "{\"success\":true,\"data\":{\"userId\":\"616b3c6e-85ae-4b41-b138-290bc1cda76c\",\"name\":\"QA Customer One\",\"email\":\"qa.c1.d1031a@e",
    "bug": null
   },
   {
@@ -273,16 +273,16 @@
   },
   {
    "id": "IDEM-004",
-   "title": "Same key with a DIFFERENT body is rejected (not silently replayed)",
-   "ok": false,
-   "detail": "200 replayed=true id=2",
+   "title": "Same key with a DIFFERENT body -> 422 (not silently replayed)",
+   "ok": true,
+   "detail": "422 replayed=None id=None",
    "bug": "NEW-03"
   },
   {
    "id": "IDEM-005",
    "title": "Over-long Idempotency-Key -> 400 ProblemDetails",
-   "ok": false,
-   "detail": "400 {\"success\":false,\"error\":\"Idempotency-Key must be at most 100 characters.\"}",
+   "ok": true,
+   "detail": "400 {\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.1\",\"title\":\"Bad Request\",\"status\":400,\"det",
    "bug": "NEW-02"
   },
   {
@@ -324,7 +324,7 @@
    "id": "ADMIN-002",
    "title": "Available Plumbing technicians listed",
    "ok": true,
-   "detail": "[{'id': 1, 'name': 'QA Tech One db1711', 'phone': '9876500001', 'rating': 0.0, 'totalJobs': 0, 'skills': 'Plumbing', 'status': 'Available'}, {'id': 2, 'name': 'QA Tech Two db1711', 'phone': '9876500000', 'rating': 0.0, 'totalJobs': 0, 'skills': 'Plumbing', 'status': 'Available'}]",
+   "detail": "[{'id': 1, 'name': 'QA Tech One d1031a', 'phone': '9876500001', 'rating': 0.0, 'totalJobs': 0, 'skills': 'Plumbing', 'status': 'Available'}, {'id': 2, 'name': 'QA Tech Two d1031a', 'phone': '9876500000', 'rating': 0.0, 'totalJobs': 0, 'skills': 'Plumbing', 'status': 'Available'}]",
    "bug": null
   },
   {
@@ -399,9 +399,9 @@
   },
   {
    "id": "JOB-004b",
-   "title": "Toggle-while-Busy status matches docs/API.md (400)",
-   "ok": false,
-   "detail": "409 (docs say 400)",
+   "title": "Toggle-while-Busy -> 409 as documented in docs/API.md",
+   "ok": true,
+   "detail": "409 (docs say 409)",
    "bug": "NEW-04"
   },
   {
@@ -499,7 +499,7 @@
    "id": "BILL-009",
    "title": "Customer list shows hasBill/billAmount",
    "ok": true,
-   "detail": "{'id': 1, 'category': 'Plumbing', 'status': 'Billed', 'description': 'Kitchen sink leaking badly under the cabinet', 'scheduledDate': '16 Nov 2026', 'createdAt': '15 Nov 2026', 'technicianName': 'QA Tech One db1711', 'hasBill': True, 'billPaid': False, 'billAmount': 750.56}",
+   "detail": "{'id': 1, 'category': 'Plumbing', 'status': 'Billed', 'description': 'Kitchen sink leaking badly under the cabinet', 'scheduledDate': '16 Nov 2026', 'createdAt': '15 Nov 2026', 'technicianName': 'QA Tech One d1031a', 'hasBill': True, 'billPaid': False, 'billAmount': 750.56}",
    "bug": "BUG-05"
   },
   {
@@ -547,8 +547,8 @@
   {
    "id": "BILL-014",
    "title": "Owner technician opens bill details (MVC) -> 200",
-   "ok": false,
-   "detail": "500 /Technician/Bills/Details?requestId=1",
+   "ok": true,
+   "detail": "200 /Technician/Bills/Details?requestId=1",
    "bug": "NEW-06"
   },
   {
@@ -569,7 +569,7 @@
    "id": "PROMO-001",
    "title": "Admin creates promo code (API) -> 201",
    "ok": true,
-   "detail": "{\"success\":true,\"data\":{\"id\":1,\"code\":\"QADB1711\",\"description\":\"QA flat 50\",\"discountType\":\"Flat\",\"discountValue\":50,\"ma",
+   "detail": "{\"success\":true,\"data\":{\"id\":1,\"code\":\"QAD1031A\",\"description\":\"QA flat 50\",\"discountType\":\"Flat\",\"discountValue\":50,\"ma",
    "bug": null
   },
   {
@@ -625,7 +625,7 @@
    "id": "PROMO-021",
    "title": "Promo preview shows discount, records nothing",
    "ok": true,
-   "detail": "{\"success\":true,\"data\":{\"billId\":1,\"subtotal\":750.56,\"discount\":50.00,\"payable\":700.56,\"promoCode\":\"QADB1711\",\"pointsRedeemed\":0}}",
+   "detail": "{\"success\":true,\"data\":{\"billId\":1,\"subtotal\":750.56,\"discount\":50.00,\"payable\":700.56,\"promoCode\":\"QAD1031A\",\"pointsRedeemed\":0}}",
    "bug": null
   },
   {
@@ -639,7 +639,7 @@
    "id": "PROMO-005",
    "title": "Apply promo to bill -> payable = subtotal - 50",
    "ok": true,
-   "detail": "{\"success\":true,\"data\":{\"billId\":1,\"subtotal\":750.56,\"discount\":50.00,\"payable\":700.56,\"promoCode\":\"QADB1711\",\"pointsRedeemed\":0}}",
+   "detail": "{\"success\":true,\"data\":{\"billId\":1,\"subtotal\":750.56,\"discount\":50.00,\"payable\":700.56,\"promoCode\":\"QAD1031A\",\"pointsRedeemed\":0}}",
    "bug": "BUG-11"
   },
   {
@@ -702,7 +702,7 @@
    "id": "PAY-025",
    "title": "Verify bound order -> 200, Completed, amount = discounted payable",
    "ok": true,
-   "detail": "200 {\"success\":true,\"data\":{\"paymentId\":1,\"billId\":1,\"amount\":700.56,\"method\":\"Razorpay\",\"transactionId\":\"pay_QAdb1711\",\"paidAt\":\"2026-11-15T16:28:12.8823",
+   "detail": "200 {\"success\":true,\"data\":{\"paymentId\":1,\"billId\":1,\"amount\":700.56,\"method\":\"Razorpay\",\"transactionId\":\"pay_QAd1031a\",\"paidAt\":\"2026-11-15T16:36:13.8399",
    "bug": "BUG-09"
   },
   {
@@ -737,7 +737,7 @@
    "id": "PAY-004",
    "title": "Paid bill reports isPaid=true",
    "ok": true,
-   "detail": "{'id': 1, 'amount': 750.56, 'laborCost': 500.0, 'materialCost': 250.56, 'description': 'Labour charges, PVC pipe', 'isPaid': True, 'createdAt': '15 Nov 2026', 'paidAt': '2026-11-15T16:28:12.8823861', 'discount': 50.0, 'payable': 700.56, 'promoCode': 'QADB1711', 'pointsRedeemed': 0, 'preferredPaymentMethod': None, 'paymentMethod': 'Razorpay', 'items': [{'description': 'Labour charges', 'quantity': ",
+   "detail": "{'id': 1, 'amount': 750.56, 'laborCost': 500.0, 'materialCost': 250.56, 'description': 'Labour charges, PVC pipe', 'isPaid': True, 'createdAt': '15 Nov 2026', 'paidAt': '2026-11-15T16:36:13.8399769', 'discount': 50.0, 'payable': 700.56, 'promoCode': 'QAD1031A', 'pointsRedeemed': 0, 'preferredPaymentMethod': None, 'paymentMethod': 'Razorpay', 'items': [{'description': 'Labour charges', 'quantity': ",
    "bug": "BUG-04"
   },
   {
@@ -1150,7 +1150,7 @@
    "id": "ZONE-001",
    "title": "Create zone (API) -> 201, pinCodes array",
    "ok": true,
-   "detail": "{\"success\":true,\"data\":{\"id\":1,\"zoneName\":\"QA Zone db1711\",\"city\":\"Thrissur\",\"state\":\"Kerala\",\"isActive\":true,\"pinCodes\":[\"642171\",\"735171\"],\"technici",
+   "detail": "{\"success\":true,\"data\":{\"id\":1,\"zoneName\":\"QA Zone d1031a\",\"city\":\"Thrissur\",\"state\":\"Kerala\",\"isActive\":true,\"pinCodes\":[\"641031\",\"731031\"],\"technici",
    "bug": null
   },
   {
@@ -1178,7 +1178,7 @@
    "id": "ZONE-006",
    "title": "Update zone",
    "ok": true,
-   "detail": "{\"success\":true,\"data\":{\"id\":1,\"zoneName\":\"QA Zone db1711\",\"city\":\"Thrissur\",\"state\":\"Kerala\",\"isAct",
+   "detail": "{\"success\":true,\"data\":{\"id\":1,\"zoneName\":\"QA Zone d1031a\",\"city\":\"Thrissur\",\"state\":\"Kerala\",\"isAct",
    "bug": null
   },
   {
@@ -1234,14 +1234,14 @@
    "id": "ASSIGN-011",
    "title": "Auto-assign Electrical -> QA Tech Three",
    "ok": true,
-   "detail": "['QA Tech Three db1711', None]",
+   "detail": "['QA Tech Three d1031a', None]",
    "bug": null
   },
   {
    "id": "ASSIGN-012",
    "title": "Auto-assign does not stack 2 jobs on one tech",
    "ok": true,
-   "detail": "['QA Tech Three db1711', None]",
+   "detail": "['QA Tech Three d1031a', None]",
    "bug": "BUG-12"
   },
   {
@@ -1269,7 +1269,7 @@
    "id": "TECH-002",
    "title": "Paged technician list shape",
    "ok": true,
-   "detail": "{\"success\":true,\"data\":{\"items\":[{\"id\":1,\"userId\":\"ba791134-bd19-451f-b82d-5d08e2131dbc\",\"name\":\"QA Tech One db1711\",\"em",
+   "detail": "{\"success\":true,\"data\":{\"items\":[{\"id\":1,\"userId\":\"e146b0a5-3a0b-423e-b481-ab8abb3c5d78\",\"name\":\"QA Tech One d1031a\",\"em",
    "bug": null
   },
   {
@@ -1388,7 +1388,7 @@
    "id": "ADMIN-028",
    "title": "Admin list shows bill amount + paid for completed request",
    "ok": true,
-   "detail": "{'id': 5, 'category': 'Plumbing', 'status': 'Completed', 'customerName': 'QA Customer One', 'technicianName': 'QA Tech One db1711', 'address': '8dd70d QA Road', 'pinCode': '680001', 'scheduledDate': '17 Nov 2026', 'createdAt': '15 Nov 2026', 'createdAtUtc': '2026-11-15T16:28:07.8520714', 'hasBill': True, 'billPaid': True, 'billAmount': 1200.0, 'paidAt': '2026-11-15T16:28:16.2684906', 'isUnassigned",
+   "detail": "{'id': 5, 'category': 'Plumbing', 'status': 'Completed', 'customerName': 'QA Customer One', 'technicianName': 'QA Tech One d1031a', 'address': '9d3ad7 QA Road', 'pinCode': '680001', 'scheduledDate': '17 Nov 2026', 'createdAt': '15 Nov 2026', 'createdAtUtc': '2026-11-15T16:36:06.5334247', 'hasBill': True, 'billPaid': True, 'billAmount': 1200.0, 'paidAt': '2026-11-15T16:36:17.8897836', 'isUnassigned",
    "bug": "BUG-05"
   },
   {
@@ -1402,21 +1402,21 @@
    "id": "ADMIN-023",
    "title": "CSV includes bill amount + payment status",
    "ok": true,
-   "detail": "01,17 Nov 2026 10:00,QA Tech One db1711,Completed,15 Nov 2026 16:28,1200.00,Paid",
+   "detail": "01,17 Nov 2026 10:00,QA Tech One d1031a,Completed,15 Nov 2026 16:36,1200.00,Paid",
    "bug": "BUG-05"
   },
   {
    "id": "SEC-022",
    "title": "CSV formula injection neutralised (no cell starts with = + - @)",
    "ok": true,
-   "detail": "17,QA Customer Two,9876543211,General,\"'=HYPERLINK(\"\"http://evil.example\"\",\"\"x\"\") db1711\",\"'+SUM(1,2) QA Road\",680001,17 Nov 2026 10:00,,Pending,15 Nov 2026 16:",
+   "detail": "17,QA Customer Two,9876543211,General,\"'=HYPERLINK(\"\"http://evil.example\"\",\"\"x\"\") d1031a\",\"'+SUM(1,2) QA Road\",680001,17 Nov 2026 10:00,,Pending,15 Nov 2026 16:",
    "bug": null
   },
   {
    "id": "SEC-023",
    "title": "MVC CSV formula injection neutralised",
    "ok": true,
-   "detail": "17,QA Customer Two,9876543211,General,\"'=HYPERLINK(\"\"http://evil.example\"\",\"\"x\"\") db1711\",\"'+SUM(1,2) QA Road\",680001,17 Nov 2026 10:00,,Pending,15 Nov 2026 16:",
+   "detail": "17,QA Customer Two,9876543211,General,\"'=HYPERLINK(\"\"http://evil.example\"\",\"\"x\"\") d1031a\",\"'+SUM(1,2) QA Road\",680001,17 Nov 2026 10:00,,Pending,15 Nov 2026 16:",
    "bug": null
   },
   {
@@ -1463,7 +1463,7 @@
   },
   {
    "id": "AUTH-052",
-   "title": "Refresh-token reuse revokes the rotated descendant (theft detection)",
+   "title": "[KNOWN-OPEN hardening] Refresh-token reuse revokes the rotated descendant (theft detection)",
    "ok": false,
    "detail": "descendant still usable after reuse of its parent: 200",
    "bug": "NEW-HARDEN"
@@ -1744,8 +1744,8 @@
   {
    "id": "UI-technician",
    "title": "GET /Technician/Bills/Details?requestId=1 -> 200",
-   "ok": false,
-   "detail": "500 /Technician/Bills/Details?requestId=1",
+   "ok": true,
+   "detail": "200 /Technician/Bills/Details?requestId=1",
    "bug": null
   },
   {
@@ -1850,7 +1850,7 @@
    "id": "RATE-010",
    "title": "Auth endpoint rate-limited -> 429 ProblemDetails + Retry-After",
    "ok": true,
-   "detail": "statuses=[401, 401, 401, 401, 429] retry-after=60",
+   "detail": "statuses=[401, 401, 401, 429] retry-after=60",
    "bug": null
   },
   {
@@ -1863,8 +1863,8 @@
   {
    "id": "API-015",
    "title": "Every error body is served as application/problem+json",
-   "ok": false,
-   "detail": "{401: ['application/json', 'application/problem+json'], 409: ['application/json'], 400: ['application/json'], 403: ['application/json', 'application/problem+json'], 502: ['application/json']}",
+   "ok": true,
+   "detail": "{}",
    "bug": "NEW-01"
   },
   {
@@ -1884,8 +1884,8 @@
   {
    "id": "LOG-EMAIL",
    "title": "No email is sent to an empty recipient",
-   "ok": false,
-   "detail": "5 sends with empty 'to'",
+   "ok": true,
+   "detail": "0 sends with empty 'to'",
    "bug": "NEW-05"
   },
   {
@@ -1898,8 +1898,8 @@
   {
    "id": "LOG-WEB",
    "title": "WEB log has no DbContext concurrency errors / 500s",
-   "ok": false,
-   "detail": "HTTP GET /Technician/Bills/Details responded 500",
+   "ok": true,
+   "detail": "second-operation error",
    "bug": "BUG-09"
   }
  ]

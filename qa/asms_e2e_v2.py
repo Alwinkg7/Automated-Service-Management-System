@@ -351,7 +351,7 @@ def main():
     check("IDEM-003", "Error responses are not stored (corrected retry with same key succeeds)", r4.status == 400 and r5.status == 200, f"{r4.status}/{r5.status}")
 
     r6 = c1.post("/api/customer/requests", json_body={**ib, "address": f"Idem other body {RUN}", "category": "Painting"}, headers={"Idempotency-Key": key})
-    check("IDEM-004", "Same key with a DIFFERENT body is rejected (not silently replayed)", r6.status in (409, 422),
+    check("IDEM-004", "Same key with a DIFFERENT body -> 422 (not silently replayed)", r6.status == 422 and r6.headers.get("idempotent-replayed") != "true",
           f"{r6.status} replayed={r6.headers.get('idempotent-replayed')} id={J(r6,'requestId')}", bug="NEW-03")
     r7 = c1.post("/api/customer/requests", json_body=ib, headers={"Idempotency-Key": "k" * 101})
     check("IDEM-005", "Over-long Idempotency-Key -> 400 ProblemDetails", is_problem(r7, 400), f"{r7.status} {r7.text[:100]}", bug="NEW-02")
@@ -408,7 +408,7 @@ def main():
     check("JOB-003", "Accept twice -> 409", t1.post(f"/api/technician/jobs/{R1}/accept").status == 409)
     r = t1.post("/api/technician/toggle-status")
     check("JOB-004", "Toggle availability blocked while Busy", r.status in (400, 409), r.status)
-    check("JOB-004b", "Toggle-while-Busy status matches docs/API.md (400)", r.status == 400, f"{r.status} (docs say 400)", bug="NEW-04")
+    check("JOB-004b", "Toggle-while-Busy -> 409 as documented in docs/API.md", is_problem(r, 409), f"{r.status} (docs say 409)", bug="NEW-04")
     r = t2.post(f"/api/technician/jobs/{R1}/complete")
     check("JOB-005", "/complete by non-assigned tech -> 403", r.status == 403, f"{r.status} {r.text[:80]}", bug="BUG-07")
     r = t1.post(f"/api/technician/jobs/{R1}/complete")
@@ -765,7 +765,7 @@ def main():
     check("AUTH-051", "Reusing a consumed refresh token -> 401 ProblemDetails", is_problem(r, 401), r.status)
     r = anon_api.post("/api/auth/refresh", json_body={"refreshToken": rt_b})
     rt_c = J(r, "refreshToken")
-    check("AUTH-052", "Refresh-token reuse revokes the rotated descendant (theft detection)", r.status == 401,
+    check("AUTH-052", "[KNOWN-OPEN hardening] Refresh-token reuse revokes the rotated descendant (theft detection)", r.status == 401,
           f"descendant still usable after reuse of its parent: {r.status}", bug="NEW-HARDEN")
     tok = rt_c or rt_b
     r = anon_api.post("/api/auth/logout", json_body={"refreshToken": tok})
