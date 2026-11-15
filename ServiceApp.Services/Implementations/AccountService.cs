@@ -83,6 +83,40 @@ public class AccountService : IAccountService
         return Result<ApplicationUser>.Success(user);
     }
 
+    public async Task<Result<ApplicationUser>> SetActiveAsync(string userId, bool isActive, string actingAdminUserId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return Result<ApplicationUser>.Failure("User not found.", ErrorType.NotFound);
+
+        if (user.IsActive == isActive)
+            return Result<ApplicationUser>.Success(user);
+
+        if (!isActive)
+        {
+            if (user.Id == actingAdminUserId)
+                return Result<ApplicationUser>.Failure("You cannot deactivate your own account.", ErrorType.Conflict);
+
+            if (user.Role == UserRole.Admin)
+            {
+                var activeAdmins = (await _userManager.GetUsersInRoleAsync("Admin")).Count(u => u.IsActive);
+                if (activeAdmins <= 1)
+                    return Result<ApplicationUser>.Failure("The last active admin cannot be deactivated.", ErrorType.Conflict);
+            }
+        }
+
+        user.IsActive = isActive;
+        var update = await _userManager.UpdateAsync(user);
+        if (!update.Succeeded)
+            return Result<ApplicationUser>.Failure("Could not update the user.", ErrorType.Unexpected);
+
+        if (!isActive)
+            await _userManager.UpdateSecurityStampAsync(user);
+
+        _logger.LogInformation("User {UserId} set active={IsActive} by admin {AdminId}", user.Id, isActive, actingAdminUserId);
+        return Result<ApplicationUser>.Success(user);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────
 
     private async Task<Result<ApplicationUser>> CreateUserAsync(

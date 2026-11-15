@@ -112,6 +112,14 @@ namespace ServiceApp.Web.Controllers
         {
             if (!ModelState.IsValid) return View(model);
 
+            // Deactivated accounts cannot sign in (same generic message: no account enumeration).
+            var account = await _signInManager.UserManager.FindByEmailAsync(model.Email);
+            if (account is { IsActive: false })
+            {
+                ModelState.AddModelError(string.Empty, "Invalid email or password.");
+                return View(model);
+            }
+
             var result = await _signInManager.PasswordSignInAsync(
                 model.Email, model.Password, model.RememberMe, lockoutOnFailure: true);
 

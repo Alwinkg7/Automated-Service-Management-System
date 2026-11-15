@@ -24,18 +24,21 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
         private readonly IUnitOfWork _uow;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<WalletController> _logger;
+        private readonly IWalletService _wallet;
 
         // Standard commission rate — 12%
-        private const decimal CommissionRate = 0.12m;
+        private decimal CommissionRate => _wallet.CommissionRate;
 
         public WalletController(
             IUnitOfWork uow,
             UserManager<ApplicationUser> userManager,
-            ILogger<WalletController> logger)
+            ILogger<WalletController> logger,
+            IWalletService wallet)
         {
             _uow = uow;
             _userManager = userManager;
             _logger = logger;
+            _wallet = wallet;
         }
 
         // =============================================================
@@ -196,99 +199,35 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
         public async Task<IActionResult> Withdraw()
         {
             var userId = _userManager.GetUserId(User)!;
-            var tech = await _uow.TechnicianProfiles
-                .GetByUserIdAsync(userId);
-
-            if (tech == null)
+            if (await _uow.TechnicianProfiles.GetByUserIdAsync(userId) == null)
                 return RedirectToAction(nameof(Index));
 
-            var jobs = (await _uow.ServiceRequests
-                .GetByTechnicianIdAsync(tech.TechnicianProfileId))
-                .Where(j => j.Status == RequestStatus.Completed
-                         && j.Bill != null
-                         && j.Bill.PaymentStatus == PaymentStatus.Paid)
-                .ToList();
-
-            var grossTotal = jobs.Sum(j => j.Bill!.TotalAmount);
-            var netTotal = Math.Round(
-                grossTotal * (1 - CommissionRate), 2);
-
-            var withdrawn = await _uow.Withdrawals
-                .GetTotalWithdrawnAsync(userId);
-
-            var pending = (await _uow.Withdrawals
-                .GetByTechnicianAsync(userId))
-                .Where(w => w.Status == "Pending" ||
-                            w.Status == "Approved")
-                .Sum(w => w.Amount);
-
-            var available = Math.Max(0,
-                netTotal - withdrawn - pending);
-
-            var vm = new WithdrawViewModel
+            return View(new WithdrawViewModel
             {
-                AvailableAmount = available
-            };
-
-            return View(vm);
+                AvailableAmount = await _wallet.GetAvailableBalanceAsync(userId)
+            });
         }
 
-        // =============================================================
-        //  POST /Technician/Wallet/Withdraw
-        //  Submit a withdrawal request.
-        // =============================================================
+        // The available amount is always recomputed server-side; the posted
+        // AvailableAmount is display-only and never trusted.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Withdraw(WithdrawViewModel vm)
         {
             var userId = _userManager.GetUserId(User)!;
-
-            if (vm.RequestAmount <= 0)
-            {
-                ModelState.AddModelError(
-                    nameof(vm.RequestAmount),
-                    "Enter an amount greater than zero.");
-                return View(vm);
-            }
-
-            if (vm.RequestAmount > vm.AvailableAmount)
-            {
-                ModelState.AddModelError(
-                    nameof(vm.RequestAmount),
-                    $"Maximum available: ₹{vm.AvailableAmount:N2}");
-                return View(vm);
-            }
-
-            if (string.IsNullOrWhiteSpace(vm.UpiId))
-            {
-                ModelState.AddModelError(
-                    nameof(vm.UpiId),
-                    "UPI ID is required.");
-                return View(vm);
-            }
+            vm.AvailableAmount = await _wallet.GetAvailableBalanceAsync(userId);
 
             if (!ModelState.IsValid) return View(vm);
 
-            var withdrawal = new TechnicianWithdrawal
+            var result = await _wallet.RequestWithdrawalAsync(userId, vm.RequestAmount, vm.UpiId ?? string.Empty);
+            if (!result.IsSuccess)
             {
-                TechnicianUserId = userId,
-                Amount = Math.Round(vm.RequestAmount, 2),
-                Status = "Pending",
-                UpiId = vm.UpiId.Trim(),
-                RequestedAt = DateTime.UtcNow
-            };
-
-            await _uow.Withdrawals.AddAsync(withdrawal);
-            await _uow.SaveChangesAsync();
-
-            _logger.LogInformation(
-                "Withdrawal request ₹{Amount} by tech {UserId}",
-                withdrawal.Amount, userId);
+                ModelState.AddModelError(nameof(vm.RequestAmount), result.ErrorMessage!);
+                return View(vm);
+            }
 
             TempData["Success"] =
-                $"Withdrawal request of ₹{withdrawal.Amount:N2} " +
-                "submitted. Admin will process within 24 hours.";
-
+                $"Withdrawal request of ₹{result.Data!.Amount:N2} submitted. Admin will process within 24 hours.";
             return RedirectToAction(nameof(Index));
         }
     }

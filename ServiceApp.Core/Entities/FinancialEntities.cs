@@ -32,7 +32,11 @@ namespace ServiceApp.Core.Entities
         public decimal MaterialCost { get; set; }
         public decimal TotalAmount { get; set; }
         public string Description { get; set; } = string.Empty;
-        public bool IsPaid { get; set; }
+        /// <summary>Derived from <see cref="PaymentStatus"/>; not stored.</summary>
+        public bool IsPaid => PaymentStatus == PaymentStatus.Paid;
+
+        /// <summary>Razorpay order created for this bill; checkout/webhook payments must match it.</summary>
+        public string? RazorpayOrderId { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? PaidAt { get; set; }
 

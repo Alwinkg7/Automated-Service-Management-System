@@ -57,7 +57,7 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
                 // Display fields from User table (read-only)
                 FullName = user.FullName,
                 Email = user.Email ?? string.Empty,
-                Phone = user.Phone,
+                Phone = user.Phone ?? string.Empty,
 
                 // Editable fields from CustomerProfiles table
                 // Use empty string/null if no profile yet
@@ -90,7 +90,7 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
                 {
                     vm.FullName = currentUser.FullName;
                     vm.Email = currentUser.Email ?? string.Empty;
-                    vm.Phone = currentUser.Phone;
+                    vm.Phone = currentUser.Phone ?? string.Empty;
                 }
                 return View(vm);
             }

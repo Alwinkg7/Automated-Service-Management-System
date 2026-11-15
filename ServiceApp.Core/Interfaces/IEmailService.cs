@@ -81,5 +81,13 @@ namespace ServiceApp.Core.Interfaces
             string technicianName,
             int requestId,
             decimal amount);
+
+        // Admin alert when a customer or technician raises a dispute
+        Task SendDisputeRaisedToAdminAsync(
+            string toEmail,
+            int disputeId,
+            int requestId,
+            string reason,
+            string description);
     }
 }

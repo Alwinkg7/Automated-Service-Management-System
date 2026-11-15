@@ -58,10 +58,10 @@ namespace ServiceApp.Infrastructure
             var subject = $"Request #{requestId} received — ServiceApp";
             var body = ComposeWrapper(
                 heading: $"We received your request!",
-                preheader: $"Your {category} request #{requestId} is in the queue.",
+                preheader: $"Your {H(category)} request #{requestId} is in the queue.",
                 bodyHtml: $@"
-<p>Hi <strong>{customerName}</strong>,</p>
-<p>Your <strong>{category}</strong> service request has been submitted successfully.</p>
+<p>Hi <strong>{H(customerName)}</strong>,</p>
+<p>Your <strong>{H(category)}</strong> service request has been submitted successfully.</p>
 <table style='width:100%;border-collapse:collapse;margin:16px 0'>
   <tr>
     <td style='padding:8px;color:#6B7280;font-size:13px'>Request ID</td>
@@ -69,11 +69,11 @@ namespace ServiceApp.Infrastructure
   </tr>
   <tr style='background:#F9FAFB'>
     <td style='padding:8px;color:#6B7280;font-size:13px'>Service</td>
-    <td style='padding:8px;font-weight:500'>{category}</td>
+    <td style='padding:8px;font-weight:500'>{H(category)}</td>
   </tr>
   <tr>
     <td style='padding:8px;color:#6B7280;font-size:13px'>Preferred time</td>
-    <td style='padding:8px;font-weight:500'>{preferredDateTime}</td>
+    <td style='padding:8px;font-weight:500'>{H(preferredDateTime)}</td>
   </tr>
 </table>
 <p>Our team will assign a verified technician shortly. 
@@ -98,15 +98,15 @@ namespace ServiceApp.Infrastructure
             var subject = $"Technician assigned for request #{requestId}";
             var body = ComposeWrapper(
                 heading: "Your technician is assigned!",
-                preheader: $"{technicianName} will handle your {category} request.",
+                preheader: $"{H(technicianName)} will handle your {H(category)} request.",
                 bodyHtml: $@"
-<p>Hi <strong>{customerName}</strong>,</p>
+<p>Hi <strong>{H(customerName)}</strong>,</p>
 <p>Great news! A verified technician has been assigned to your request.</p>
 <div style='background:#EEF2FF;border-radius:8px;padding:16px;margin:16px 0'>
   <p style='margin:0 0 4px;font-size:13px;color:#6B7280'>Your technician</p>
-  <p style='margin:0;font-size:18px;font-weight:600;color:#1E1B4B'>{technicianName}</p>
-  <p style='margin:4px 0 0;font-size:14px;color:#4F46E5'>{category} expert</p>
-  <p style='margin:8px 0 0;font-size:14px'>📞 {technicianPhone}</p>
+  <p style='margin:0;font-size:18px;font-weight:600;color:#1E1B4B'>{H(technicianName)}</p>
+  <p style='margin:4px 0 0;font-size:14px;color:#4F46E5'>{H(category)} expert</p>
+  <p style='margin:8px 0 0;font-size:14px'>📞 {H(technicianPhone)}</p>
 </div>
 <p>The technician will accept the job shortly and head to your location. 
    You will be notified when they're on the way.</p>",
@@ -132,10 +132,10 @@ namespace ServiceApp.Infrastructure
             var subject = $"New job assigned — Request #{requestId}";
             var body = ComposeWrapper(
                 heading: "New job assigned to you!",
-                preheader: $"{category} job for {customerName}.",
+                preheader: $"{H(category)} job for {H(customerName)}.",
                 bodyHtml: $@"
-<p>Hi <strong>{technicianName}</strong>,</p>
-<p>A new <strong>{category}</strong> job has been assigned to you. 
+<p>Hi <strong>{H(technicianName)}</strong>,</p>
+<p>A new <strong>{H(category)}</strong> job has been assigned to you. 
    Please accept or reject it from your dashboard.</p>
 <table style='width:100%;border-collapse:collapse;margin:16px 0'>
   <tr>
@@ -144,19 +144,19 @@ namespace ServiceApp.Infrastructure
   </tr>
   <tr style='background:#F9FAFB'>
     <td style='padding:8px;color:#6B7280;font-size:13px'>Customer</td>
-    <td style='padding:8px;font-weight:500'>{customerName}</td>
+    <td style='padding:8px;font-weight:500'>{H(customerName)}</td>
   </tr>
   <tr>
     <td style='padding:8px;color:#6B7280;font-size:13px'>Customer phone</td>
-    <td style='padding:8px;font-weight:500'>{customerPhone}</td>
+    <td style='padding:8px;font-weight:500'>{H(customerPhone)}</td>
   </tr>
   <tr style='background:#F9FAFB'>
     <td style='padding:8px;color:#6B7280;font-size:13px'>Address</td>
-    <td style='padding:8px;font-weight:500'>{address}</td>
+    <td style='padding:8px;font-weight:500'>{H(address)}</td>
   </tr>
   <tr>
     <td style='padding:8px;color:#6B7280;font-size:13px'>Preferred time</td>
-    <td style='padding:8px;font-weight:500'>{preferredDateTime}</td>
+    <td style='padding:8px;font-weight:500'>{H(preferredDateTime)}</td>
   </tr>
 </table>
 <p>Log in to accept the job and view full details.</p>",
@@ -179,10 +179,10 @@ namespace ServiceApp.Infrastructure
             var subject = $"Your technician is on the way — Request #{requestId}";
             var body = ComposeWrapper(
                 heading: "Your technician accepted the job!",
-                preheader: $"{technicianName} is on the way to your location.",
+                preheader: $"{H(technicianName)} is on the way to your location.",
                 bodyHtml: $@"
-<p>Hi <strong>{customerName}</strong>,</p>
-<p><strong>{technicianName}</strong> has accepted your service request 
+<p>Hi <strong>{H(customerName)}</strong>,</p>
+<p><strong>{H(technicianName)}</strong> has accepted your service request 
    and is on the way to your location.</p>
 <div style='background:#F0FDF4;border:1px solid #BBF7D0;
             border-radius:8px;padding:16px;margin:16px 0'>
@@ -190,7 +190,7 @@ namespace ServiceApp.Infrastructure
     ✓ Technician is on the way
   </p>
   <p style='margin:8px 0 0;font-size:14px;color:#166534'>
-    📞 You can reach them at: {technicianPhone}
+    📞 You can reach them at: {H(technicianPhone)}
   </p>
 </div>
 <p>Please make sure someone is available at the service address. 
@@ -216,7 +216,7 @@ namespace ServiceApp.Infrastructure
                 heading: "Your bill is ready to pay",
                 preheader: $"₹{totalAmount:N2} due for request #{requestId}.",
                 bodyHtml: $@"
-<p>Hi <strong>{customerName}</strong>,</p>
+<p>Hi <strong>{H(customerName)}</strong>,</p>
 <p>Your technician has completed the work and created a bill. 
    Please review and pay to close this request.</p>
 <div style='background:#EEF2FF;border-radius:8px;
@@ -255,7 +255,7 @@ namespace ServiceApp.Infrastructure
                 heading: "Payment confirmed!",
                 preheader: $"₹{amount:N2} received. Request #{requestId} is complete.",
                 bodyHtml: $@"
-<p>Hi <strong>{customerName}</strong>,</p>
+<p>Hi <strong>{H(customerName)}</strong>,</p>
 <p>Your payment has been received and your service request is now complete. 
    Thank you for using ServiceApp!</p>
 <div style='background:#F0FDF4;border:1px solid #BBF7D0;
@@ -273,12 +273,12 @@ namespace ServiceApp.Infrastructure
   </tr>
   <tr style='background:#F9FAFB'>
     <td style='padding:8px;color:#6B7280;font-size:13px'>Payment method</td>
-    <td style='padding:8px;font-weight:500'>{paymentMethod}</td>
+    <td style='padding:8px;font-weight:500'>{H(paymentMethod)}</td>
   </tr>
   <tr>
     <td style='padding:8px;color:#6B7280;font-size:13px'>Transaction ref</td>
     <td style='padding:8px;font-size:12px;font-family:monospace'>
-      {transactionId}
+      {H(transactionId)}
     </td>
   </tr>
   <tr style='background:#F9FAFB'>
@@ -317,7 +317,7 @@ namespace ServiceApp.Infrastructure
                 heading: "Payment received!",
                 preheader: $"₹{amount:N2} earned for job #{requestId}.",
                 bodyHtml: $@"
-<p>Hi <strong>{technicianName}</strong>,</p>
+<p>Hi <strong>{H(technicianName)}</strong>,</p>
 <p>The customer has paid for job #{requestId}. 
    Your earnings will be credited to your wallet within 24 hours.</p>
 <div style='background:#EEF2FF;border-radius:8px;
@@ -342,6 +342,28 @@ namespace ServiceApp.Infrastructure
         //  CORE SEND METHOD
         //  All email methods funnel through here.
         // =============================================================
+        public async Task SendDisputeRaisedToAdminAsync(
+            string toEmail,
+            int disputeId,
+            int requestId,
+            string reason,
+            string description)
+        {
+            var subject = $"Dispute #{disputeId} raised on request #{requestId}";
+            var body = ComposeWrapper(
+                heading: "New dispute raised",
+                preheader: $"Dispute #{disputeId} needs review within 48 hours.",
+                bodyHtml: $@"
+<p>Dispute <strong>#{disputeId}</strong> was raised on request #{requestId}.</p>
+<p><strong>Reason:</strong> {H(reason)}</p>
+<p style='white-space:pre-wrap'>{H(description)}</p>
+<p>Please review it within the 48-hour SLA.</p>",
+                ctaText: "Review disputes",
+                ctaUrl: "https://serviceapp.com/Admin/Disputes/Index");
+
+            await SendAsync(toEmail, "Admin", subject, body);
+        }
+
         private async Task SendAsync(
             string toEmail,
             string toName,
@@ -391,6 +413,9 @@ namespace ServiceApp.Infrastructure
         //  strip <style> tags and class attributes. Every style must
         //  be inline on the element itself.
         // =============================================================
+        /// <summary>HTML-encodes user-supplied values interpolated into e-mail bodies.</summary>
+        private static string H(string? value) => System.Net.WebUtility.HtmlEncode(value ?? string.Empty);
+
         private static string ComposeWrapper(
             string heading,
             string preheader,

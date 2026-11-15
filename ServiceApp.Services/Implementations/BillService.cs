@@ -115,11 +115,20 @@ namespace ServiceApp.Services.Implementations
             try
             {
                 // Create the Bill header
+                // Items described as labour count as labour; everything else is material.
+                static bool IsLabour(BillItemInput i) =>
+                    i.Description.TrimStart().StartsWith("Labour", StringComparison.OrdinalIgnoreCase)
+                    || i.Description.TrimStart().StartsWith("Labor", StringComparison.OrdinalIgnoreCase);
+                var laborCost = validItems.Where(IsLabour).Sum(i => i.Quantity * i.UnitPrice);
+
                 var bill = new Bill
                 {
                     ServiceRequestId = requestId,
                     TechnicianProfileId = tech.TechnicianProfileId,
                     TotalAmount = Math.Round(totalAmount, 2),
+                    LaborCost = Math.Round(laborCost, 2),
+                    MaterialCost = Math.Round(totalAmount - laborCost, 2),
+                    Description = string.Join(", ", validItems.Select(i => i.Description.Trim())),
                     PaymentStatus = PaymentStatus.Unpaid,
                     CreatedAt = DateTime.UtcNow
                 };

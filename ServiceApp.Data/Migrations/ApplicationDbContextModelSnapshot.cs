@@ -17,7 +17,7 @@ namespace ServiceApp.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.30")
+                .HasAnnotation("ProductVersion", "8.0.34")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -310,6 +310,10 @@ namespace ServiceApp.Data.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("RazorpayOrderId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<int>("ServiceRequestId")
                         .HasColumnType("int");
 
@@ -322,6 +326,10 @@ namespace ServiceApp.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PaymentStatus");
+
+                    b.HasIndex("RazorpayOrderId")
+                        .IsUnique()
+                        .HasFilter("[RazorpayOrderId] IS NOT NULL");
 
                     b.HasIndex("ServiceRequestId")
                         .IsUnique();
@@ -769,6 +777,11 @@ namespace ServiceApp.Data.Migrations
 
                     b.Property<DateTime>("PreferredDateTime")
                         .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("Status")
                         .IsRequired()

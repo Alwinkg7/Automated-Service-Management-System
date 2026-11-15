@@ -46,7 +46,7 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
             {
                 FullName = user.FullName,
                 Email = user.Email ?? string.Empty,
-                Phone = user.Phone,
+                Phone = user.Phone ?? string.Empty,
                 Department = profile?.Department,
                 Designation = profile?.Designation,
                 EmployeeId = profile?.EmployeeId,

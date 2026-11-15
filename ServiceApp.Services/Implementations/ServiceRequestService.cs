@@ -73,6 +73,22 @@ namespace ServiceApp.Services.Implementations
                 return Result<ServiceRequest>.Failure(
                     "Customer account not found.");
 
+            description = description?.Trim() ?? string.Empty;
+            address = address?.Trim() ?? string.Empty;
+            pinCode = pinCode?.Trim() ?? string.Empty;
+
+            if (description.Length < 5)
+                return Result<ServiceRequest>.Failure("Please describe the problem (at least 5 characters).");
+            if (address.Length < 5)
+                return Result<ServiceRequest>.Failure("Please enter the full service address.");
+
+            // Clients send local wall-clock time (Kind Unspecified/Local) or UTC.
+            var now = preferredDateTime.Kind == DateTimeKind.Utc ? DateTime.UtcNow : DateTime.Now;
+            if (preferredDateTime < now.AddMinutes(-5))
+                return Result<ServiceRequest>.Failure("The preferred date and time must be in the future.");
+            if (preferredDateTime > now.AddMonths(6))
+                return Result<ServiceRequest>.Failure("The preferred date must be within the next 6 months.");
+
             // ── Duplicate check ────────────────────────────────────────
             // Prevent double-submit: if customer already has a Pending
             // request for the same category + address created within
@@ -81,7 +97,7 @@ namespace ServiceApp.Services.Implementations
                 .FirstOrDefaultAsync(r =>
                     r.CustomerId == customerId &&
                     r.Category == category &&
-                    r.Address == address.Trim() &&
+                    r.Address == address &&
                     r.Status == RequestStatus.Pending &&
                     r.CreatedAt >= DateTime.UtcNow.AddSeconds(-30));
 
@@ -217,6 +233,10 @@ namespace ServiceApp.Services.Implementations
                 request.UpdatedAt = DateTime.UtcNow;
                 _uow.ServiceRequests.Update(request);
 
+                // Reserve the technician: one active assignment at a time.
+                tech.Status = TechnicianStatus.Busy;
+                _uow.TechnicianProfiles.Update(tech);
+
                 // Log history
                 await LogHistoryAsync(
                     requestId,
@@ -236,7 +256,7 @@ namespace ServiceApp.Services.Implementations
                     request.Customer?.FullName ?? "",
                     requestId,
                     tech.User.FullName,
-                    tech.User.Phone,
+                    tech.User.Phone ?? string.Empty,
                     request.Category.ToString());
 
                 // Email technician
@@ -347,7 +367,7 @@ namespace ServiceApp.Services.Implementations
                     request.Customer?.FullName ?? "",
                     requestId,
                     tech.User.FullName,
-                    tech.User.Phone);
+                    tech.User.Phone ?? string.Empty);
 
                 _logger.LogInformation(
                     "Request #{RequestId} accepted by technician {TechId}. " +
@@ -403,6 +423,9 @@ namespace ServiceApp.Services.Implementations
                 request.AssignedTechnicianProfileId = null;
                 request.UpdatedAt = DateTime.UtcNow;
                 _uow.ServiceRequests.Update(request);
+
+                tech.Status = TechnicianStatus.Available;
+                _uow.TechnicianProfiles.Update(tech);
 
                 await LogHistoryAsync(
                     requestId,
@@ -632,45 +655,6 @@ namespace ServiceApp.Services.Implementations
 
             return Result<IEnumerable<TechnicianProfile>>.Success(techs);
         }
-
-        // Add inside your existing ServiceRequestService class
-        public async Task<Result<bool>> RateRequestAsync(int requestId, int stars, string? comment)
-        {
-            if (stars < 1 || stars > 5)
-                return Result<bool>.Failure("Rating must be between 1 and 5.");
-
-            var request = await _uow.ServiceRequests.GetWithDetailsAsync(requestId);
-            if (request == null)
-                return Result<bool>.Failure("Request not found.");
-
-            if (request.Status != RequestStatus.Completed)
-                return Result<bool>.Failure("Only completed requests can be rated.");
-
-            if (request.CustomerRating.HasValue)
-                return Result<bool>.Failure("Already rated.");
-
-            request.CustomerRating = stars;
-            request.CustomerFeedback = comment;
-
-            if (request.AssignedTechnicianProfileId.HasValue)
-            {
-                var tech = await _uow.TechnicianProfiles
-                    .GetByIdAsync(request.AssignedTechnicianProfileId.Value);
-                if (tech != null)
-                {
-                    var total = tech.TotalJobsCompleted;
-                    tech.Rating = total > 0
-                        ? Math.Round(((tech.Rating * total) + stars) / (total + 1), 2)
-                        : stars;
-                    _uow.TechnicianProfiles.Update(tech);
-                }
-            }
-
-            _uow.ServiceRequests.Update(request);
-            await _uow.SaveChangesAsync();
-            return Result<bool>.Success(true);
-        }
-
         // =============================================================
         //  PRIVATE HELPER — log a ServiceHistory row
         //

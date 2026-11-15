@@ -16,6 +16,9 @@ public class ServiceRequest
     public DateTime PreferredDateTime { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>Optimistic concurrency token (admin assignment vs. Hangfire auto-assign).</summary>
+    public byte[]? RowVersion { get; set; }
     public int? CustomerRating { get; set; }
     public string? CustomerFeedback { get; set; }
 

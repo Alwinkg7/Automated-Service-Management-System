@@ -29,6 +29,8 @@
 // =================================================================
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using ServiceApp.Core.Common;
 using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
 using ServiceApp.Core.Interfaces;
@@ -40,6 +42,7 @@ namespace ServiceApp.Services.Implementations
         private readonly IUnitOfWork _uow;
         private readonly INotificationService _notifications;
         private readonly ILogger<AutoAssignmentService> _logger;
+        private readonly AutoAssignmentSettings _settings;
 
         // Max requests to process per Hangfire cycle
         // Prevents long-running jobs if there is a huge backlog
@@ -48,11 +51,13 @@ namespace ServiceApp.Services.Implementations
         public AutoAssignmentService(
             IUnitOfWork uow,
             INotificationService notifications,
-            ILogger<AutoAssignmentService> logger)
+            ILogger<AutoAssignmentService> logger,
+            IOptions<AutoAssignmentSettings> settings)
         {
             _uow = uow;
             _notifications = notifications;
             _logger = logger;
+            _settings = settings.Value;
         }
 
         // =============================================================
@@ -151,7 +156,14 @@ namespace ServiceApp.Services.Implementations
                         .ToList();
                 }
 
-                // Last resort: any available tech (zone override)
+                // Last resort (opt-in): any available tech outside the zone
+                if (!zoneMatched.Any() && !_settings.AllowOutOfZoneFallback)
+                {
+                    _logger.LogInformation(
+                        "Auto-assign: no technician in zone {Zone} for request #{RequestId}; left Pending.",
+                        requestZone.ZoneName, requestId);
+                    return false;
+                }
                 if (!zoneMatched.Any())
                 {
                     _logger.LogWarning(
@@ -185,6 +197,14 @@ namespace ServiceApp.Services.Implementations
                 request.UpdatedAt = DateTime.UtcNow;
                 _uow.ServiceRequests.Update(request);
 
+                // Reserve the technician so the next request in this cycle (or an
+                // admin assigning concurrently) cannot pick them as well.
+                var trackedTech = await _uow.TechnicianProfiles.GetByIdAsync(bestTech.TechnicianProfileId);
+                if (trackedTech == null || trackedTech.Status != TechnicianStatus.Available)
+                    throw new InvalidOperationException("Technician is no longer available.");
+                trackedTech.Status = TechnicianStatus.Busy;
+                _uow.TechnicianProfiles.Update(trackedTech);
+
                 var zoneNote = requestZone != null
                     ? $" (Zone: {requestZone.ZoneName})"
                     : "";
@@ -214,6 +234,7 @@ namespace ServiceApp.Services.Implementations
             catch (Exception ex)
             {
                 await _uow.RollbackTransactionAsync();
+                _uow.ClearChanges();
                 _logger.LogError(ex,
                     "Auto-assign failed for request #{RequestId}", requestId);
                 return false;

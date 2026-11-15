@@ -62,6 +62,9 @@ public static class ServiceAppCoreExtensions
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
+        // Deactivation rotates the security stamp; re-validate cookies every minute.
+        services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.FromMinutes(1));
+
         // Same application name (and optionally a shared key ring) lets both hosts
         // read each other's Identity cookie, e.g. for the Hangfire dashboard.
         var dataProtection = services.AddDataProtection().SetApplicationName("ASMS");
@@ -74,6 +77,7 @@ public static class ServiceAppCoreExtensions
         // StartupDiagnostics logs a warning for every missing secret instead.
         services.Configure<RazorpaySettings>(configuration.GetSection(RazorpaySettings.SectionName));
         services.Configure<SendGridSettings>(configuration.GetSection(SendGridSettings.SectionName));
+        services.Configure<AutoAssignmentSettings>(configuration.GetSection(AutoAssignmentSettings.SectionName));
         services.Configure<SeedSettings>(configuration.GetSection(SeedSettings.SectionName));
 
         // ── Domain services ──
@@ -85,6 +89,7 @@ public static class ServiceAppCoreExtensions
         services.AddScoped<IPromotionService, PromotionService>();
         services.AddScoped<IDisputeService, DisputeService>();
         services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<IWalletService, WalletService>();
 
         // ── Infrastructure ──
         services.AddHttpClient<IRazorpayService, RazorpayService>(client =>

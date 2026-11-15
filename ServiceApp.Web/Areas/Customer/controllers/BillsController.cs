@@ -213,6 +213,17 @@ namespace ServiceApp.Web.Areas.Customer.Controllers
                 return RedirectToAction("Index", "Requests");
             }
 
+            // Ownership: the payment must belong to one of the caller's requests.
+            var paidBill = await _billService.GetBillByIdAsync(payment.BillId);
+            var owner = paidBill.IsSuccess
+                ? await _uow.ServiceRequests.GetByIdAsync(paidBill.Data!.ServiceRequestId)
+                : null;
+            if (owner == null || owner.CustomerId != _userManager.GetUserId(User))
+            {
+                TempData["Error"] = "Payment record not found.";
+                return RedirectToAction("Index", "Requests");
+            }
+
             return View(payment);
         }
 

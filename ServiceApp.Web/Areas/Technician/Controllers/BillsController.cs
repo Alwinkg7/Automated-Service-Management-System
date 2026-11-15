@@ -175,6 +175,14 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
                 return RedirectToAction("Index", "Jobs");
             }
 
+            // Ownership: only the technician who created the bill may view it.
+            var tech = await _uow.TechnicianProfiles.GetByUserIdAsync(_userManager.GetUserId(User)!);
+            if (tech == null || result.Data!.TechnicianProfileId != tech.TechnicianProfileId)
+            {
+                TempData["Error"] = "You can only view bills you created.";
+                return RedirectToAction("Index", "Jobs");
+            }
+
             return View(result.Data!);
         }
 

@@ -255,5 +255,5 @@ public class TechnicianApiController : ApiControllerBase
     }
 
     private static bool IsPaid(Bill? bill) =>
-        bill != null && (bill.IsPaid || bill.PaymentStatus == PaymentStatus.Paid);
+        bill?.IsPaid == true;
 }

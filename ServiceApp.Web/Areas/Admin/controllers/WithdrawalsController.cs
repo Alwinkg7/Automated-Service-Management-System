@@ -1,105 +1,54 @@
-﻿// =================================================================
-//  WithdrawalsController.cs (Admin area)
-//
-//  GET  /Admin/Withdrawals/Index     → all pending withdrawals
-//  POST /Admin/Withdrawals/Approve   → approve + mark for payout
-//  POST /Admin/Withdrawals/Pay       → mark as paid
-//  POST /Admin/Withdrawals/Reject    → reject with note
-// =================================================================
-
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using ServiceApp.Core.Common;
+using ServiceApp.Core.Entities;
 using ServiceApp.Core.Interfaces;
 
 namespace ServiceApp.Web.Areas.Admin.Controllers
 {
+    /// <summary>Admin processing of technician withdrawals (Pending → Approved → Paid, or Rejected).</summary>
     [Area("Admin")]
     [Authorize(Roles = "Admin")]
     public class WithdrawalsController : Controller
     {
-        private readonly IUnitOfWork _uow;
-        private readonly ILogger<WithdrawalsController> _logger;
+        private readonly IWalletService _wallet;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public WithdrawalsController(
-            IUnitOfWork uow,
-            ILogger<WithdrawalsController> logger)
+        public WithdrawalsController(IWalletService wallet, UserManager<ApplicationUser> userManager)
         {
-            _uow = uow;
-            _logger = logger;
+            _wallet = wallet;
+            _userManager = userManager;
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index()
-        {
-            var pending = (await _uow.Withdrawals
-                .GetAllPendingAsync()).ToList();
-            return View(pending);
-        }
+        public async Task<IActionResult> Index() =>
+            View((await _wallet.GetOpenWithdrawalsAsync()).ToList());
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Approve(int id)
-        {
-            var w = await _uow.Withdrawals.GetByIdAsync(id);
-            if (w == null)
-            {
-                TempData["Error"] = "Withdrawal not found.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            w.Status = "Approved";
-            _uow.Withdrawals.Update(w);
-            await _uow.SaveChangesAsync();
-
-            TempData["Success"] =
-                $"Withdrawal #{id} approved. Process payment to {w.UpiId}.";
-            return RedirectToAction(nameof(Index));
-        }
+        public async Task<IActionResult> Approve(int id) =>
+            Done(await _wallet.ApproveAsync(id, AdminId), w => $"Withdrawal #{id} approved. Process payment to {w.UpiId}.");
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Pay(int id)
-        {
-            var w = await _uow.Withdrawals.GetByIdAsync(id);
-            if (w == null)
-            {
-                TempData["Error"] = "Withdrawal not found.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            w.Status = "Paid";
-            w.ProcessedAt = DateTime.UtcNow;
-            _uow.Withdrawals.Update(w);
-            await _uow.SaveChangesAsync();
-
-            _logger.LogInformation(
-                "Withdrawal #{Id} ₹{Amount} marked Paid by admin {Admin}",
-                id, w.Amount, User.Identity?.Name);
-
-            TempData["Success"] =
-                $"₹{w.Amount:N2} marked as paid to {w.UpiId}.";
-            return RedirectToAction(nameof(Index));
-        }
+        public async Task<IActionResult> Pay(int id) =>
+            Done(await _wallet.MarkPaidAsync(id, AdminId), w => $"₹{w.Amount:N2} marked as paid to {w.UpiId}.");
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Reject(int id, string adminNote)
+        public async Task<IActionResult> Reject(int id, string? adminNote) =>
+            Done(await _wallet.RejectAsync(id, AdminId, adminNote), _ => $"Withdrawal #{id} rejected.");
+
+        private string AdminId => _userManager.GetUserId(User)!;
+
+        private IActionResult Done(Result<TechnicianWithdrawal> result, Func<TechnicianWithdrawal, string> success)
         {
-            var w = await _uow.Withdrawals.GetByIdAsync(id);
-            if (w == null)
-            {
-                TempData["Error"] = "Withdrawal not found.";
-                return RedirectToAction(nameof(Index));
-            }
+            if (result.IsSuccess)
+                TempData["Success"] = success(result.Data!);
+            else
+                TempData["Error"] = result.ErrorMessage;
 
-            w.Status = "Rejected";
-            w.AdminNote = adminNote?.Trim();
-            w.ProcessedAt = DateTime.UtcNow;
-            _uow.Withdrawals.Update(w);
-            await _uow.SaveChangesAsync();
-
-            TempData["Success"] =
-                $"Withdrawal #{id} rejected.";
             return RedirectToAction(nameof(Index));
         }
     }

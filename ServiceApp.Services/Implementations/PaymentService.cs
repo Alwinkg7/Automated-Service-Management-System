@@ -168,6 +168,11 @@ namespace ServiceApp.Services.Implementations
                     receiptId: $"bill_{billId}_{DateTime.UtcNow:yyyyMMdd}",
                     billId: billId);
 
+                // Bind the order to the bill: checkout/webhook payments must carry this order id.
+                bill.RazorpayOrderId = order.OrderId;
+                _uow.Bills.Update(bill);
+                await _uow.SaveChangesAsync();
+
                 _logger.LogInformation("Razorpay order {OrderId} created for bill #{BillId}", order.OrderId, billId);
                 return Result<RazorpayOrderResult>.Success(order);
             }
@@ -217,6 +222,17 @@ namespace ServiceApp.Services.Implementations
             if (bill.PaymentStatus == PaymentStatus.Paid)
                 return Result<Payment>.Failure("This bill has already been paid.", ErrorType.Conflict);
 
+            if (request.Status != RequestStatus.Billed)
+                return Result<Payment>.Failure("This request is not awaiting payment.", ErrorType.Conflict);
+
+            if (string.IsNullOrEmpty(bill.RazorpayOrderId) || !string.Equals(bill.RazorpayOrderId, razorpayOrderId, StringComparison.Ordinal))
+            {
+                _logger.LogWarning(
+                    "Razorpay order {OrderId} does not belong to bill #{BillId}", razorpayOrderId, billId);
+                return Result<Payment>.Failure(
+                    "This payment does not belong to this bill.", ErrorType.Validation);
+            }
+
             return await CompletePaymentAsync(
                 bill,
                 request,
@@ -240,13 +256,15 @@ namespace ServiceApp.Services.Implementations
             if (existingPayment != null)
                 return Result<Payment>.Success(existingPayment);
 
-            if (webhookEvent.BillId is not int billId)
+            if (string.IsNullOrEmpty(webhookEvent.OrderId))
+                return Result<Payment>.Failure("Webhook has no order id.", ErrorType.BusinessRule);
+
+            // The order id stored at order creation is authoritative; notes/receipt are a fallback hint only.
+            var bill = await _uow.Bills.GetByRazorpayOrderIdAsync(webhookEvent.OrderId);
+            if (bill == null)
                 return Result<Payment>.Failure(
                     "Webhook payment cannot be correlated to a bill.", ErrorType.BusinessRule);
-
-            var bill = await _uow.Bills.GetWithItemsAndPaymentAsync(billId);
-            if (bill == null)
-                return Result<Payment>.Failure("Bill not found.", ErrorType.NotFound);
+            var billId = bill.Id;
 
             if (bill.PaymentStatus == PaymentStatus.Paid)
                 return Result<Payment>.Failure("This bill has already been paid.", ErrorType.Conflict);
@@ -263,6 +281,8 @@ namespace ServiceApp.Services.Implementations
             var request = await _uow.ServiceRequests.GetByIdAsync(bill.ServiceRequestId);
             if (request == null)
                 return Result<Payment>.Failure("Request not found.", ErrorType.NotFound);
+            if (request.Status != RequestStatus.Billed)
+                return Result<Payment>.Failure("This request is not awaiting payment.", ErrorType.Conflict);
 
             return await CompletePaymentAsync(
                 bill,
@@ -307,7 +327,6 @@ namespace ServiceApp.Services.Implementations
                 await _uow.Payments.AddAsync(payment);
 
                 bill.PaymentStatus = PaymentStatus.Paid;
-                bill.IsPaid = true;
                 bill.PaidAt = now;
                 _uow.Bills.Update(bill);
 

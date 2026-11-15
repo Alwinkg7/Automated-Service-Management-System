@@ -111,7 +111,7 @@ public class CustomerApiController : ApiControllerBase
                 address = r.Address,
                 scheduledDate = r.PreferredDateTime.ToString("dd MMM yyyy, hh:mm tt"),
                 createdAt = r.CreatedAt.ToString("dd MMM yyyy, hh:mm tt"),
-                canCancel = r.Status == RequestStatus.Pending,
+                canCancel = r.Status is RequestStatus.Pending or RequestStatus.Assigned,
                 rating = r.CustomerRating,
 
                 technician = r.AssignedTechnician == null ? null : new
@@ -317,7 +317,7 @@ public class CustomerApiController : ApiControllerBase
         return null;
     }
 
-    private static bool IsPaid(Bill bill) => bill.IsPaid || bill.PaymentStatus == PaymentStatus.Paid;
+    private static bool IsPaid(Bill bill) => bill.IsPaid;
 
     private static object Summary(ServiceRequest r) => new
     {

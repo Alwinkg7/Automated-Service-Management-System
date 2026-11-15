@@ -41,5 +41,4 @@ public interface IServiceRequestService
         ServiceCategory category);
 
     // ── Added for Flutter rating screen ──────────────────────────
-    Task<Result<bool>> RateRequestAsync(int requestId, int stars, string? comment);
 }

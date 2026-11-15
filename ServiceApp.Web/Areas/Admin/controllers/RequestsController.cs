@@ -379,11 +379,17 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
         }
 
         // Escape a value for CSV — wrap in quotes if it has comma/quote/newline
+        // Values starting with = + - @ (or tab/CR) get a leading apostrophe so
+        // spreadsheet apps do not evaluate them as formulas (CSV injection).
         private static string CsvEscape(string value)
         {
+            if (value.Length > 0 && "=+-@\t\r".Contains(value[0]))
+                value = "'" + value;
+
             if (value.Contains(',') ||
                 value.Contains('"') ||
-                value.Contains('\n'))
+                value.Contains('\n') ||
+                value.Contains('\r'))
                 return $"\"{value.Replace("\"", "\"\"")}\"";
             return value;
         }

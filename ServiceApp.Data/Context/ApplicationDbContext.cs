@@ -339,6 +339,8 @@ namespace ServiceApp.Data.Context
             {
                 e.HasKey(r => r.RequestId);
 
+                e.Property(r => r.RowVersion).IsRowVersion();
+
                 e.Property(r => r.Description)
                     .HasMaxLength(1000)
                     .IsRequired();
@@ -425,8 +427,12 @@ namespace ServiceApp.Data.Context
             {
                 e.HasKey(b => b.Id);
 
-                // ── ADD: ignore computed property ─────────────────────
                 e.Ignore(b => b.IsPaid);
+
+                e.Property(b => b.RazorpayOrderId).HasMaxLength(64);
+                e.HasIndex(b => b.RazorpayOrderId)
+                    .IsUnique()
+                    .HasFilter("[RazorpayOrderId] IS NOT NULL");
 
                 e.Property(b => b.TotalAmount)
                     .HasColumnType("decimal(10,2)")

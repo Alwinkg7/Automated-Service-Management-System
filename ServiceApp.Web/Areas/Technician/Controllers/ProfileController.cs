@@ -55,7 +55,7 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
                 // Read-only fields
                 FullName = user.FullName,
                 Email = user.Email ?? string.Empty,
-                Phone = user.Phone,
+                Phone = user.Phone ?? string.Empty,
                 Skill = profile.Skill,
                 Rating = profile.Rating,
                 TotalJobsCompleted = profile.TotalJobsCompleted,
@@ -87,7 +87,7 @@ namespace ServiceApp.Web.Areas.Technician.Controllers
 
                 vm.FullName = currentUser.FullName;
                 vm.Email = currentUser.Email ?? string.Empty;
-                vm.Phone = currentUser.Phone;
+                vm.Phone = currentUser.Phone ?? string.Empty;
                 vm.Skill = currentProfile!.Skill;
                 vm.Rating = currentProfile.Rating;
                 vm.TotalJobsCompleted = currentProfile.TotalJobsCompleted;

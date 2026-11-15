@@ -16,7 +16,6 @@ using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
 using ServiceApp.Core.Interfaces;
 using ServiceApp.Web.Areas.Technician.Models;
-using Microsoft.AspNetCore.Authentication;
 
 namespace ServiceApp.Web.Areas.Technician.Controllers
 {

@@ -31,18 +31,6 @@ namespace ServiceApp.Data.Repositories
         public async Task<ApplicationUser?> GetByIdAsync(string id) =>
         await _dbSet.FindAsync(id);
 
-        public async Task<ApplicationUser?> GetByEmailAsync(string email) =>
-            await _dbSet.FirstOrDefaultAsync(u => u.Email == email);
-
-        // Load user with whichever profile exists
-        // Uses conditional Include via AsSplitQuery for performance
-        public async Task<ApplicationUser?> GetWithProfileAsync(string userId) =>
-            await _dbSet
-                .Include(u => u.CustomerProfile)
-                .Include(u => u.TechnicianProfile)
-                .Include(u => u.AdminProfile)
-                .FirstOrDefaultAsync(u => u.Id == userId);
-
         public async Task<IEnumerable<ApplicationUser>> GetAllByRoleAsync(UserRole role) =>
             await _dbSet
                 .Where(u => u.Role == role && u.IsActive)
@@ -82,7 +70,8 @@ namespace ServiceApp.Data.Repositories
             ServiceCategory skill) =>
             await _dbSet
                 .Where(t => t.Status == TechnicianStatus.Available
-                         && t.Skill == skill)
+                         && t.Skill == skill
+                         && t.User.IsActive)
                 .OrderByDescending(t => t.Rating)
                 .Include(t => t.User)
                 .AsNoTracking()
@@ -129,6 +118,7 @@ namespace ServiceApp.Data.Repositories
                 .OrderByDescending(r => r.CreatedAt)
                 .Include(r => r.AssignedTechnician)
                     .ThenInclude(t => t!.User)
+                .Include(r => r.Bill)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -139,6 +129,7 @@ namespace ServiceApp.Data.Repositories
                 .Where(r => r.AssignedTechnicianProfileId == technicianProfileId)
                 .OrderByDescending(r => r.CreatedAt)
                 .Include(r => r.Customer)
+                .Include(r => r.Bill)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -151,6 +142,7 @@ namespace ServiceApp.Data.Repositories
                 .Include(r => r.Customer)
                 .Include(r => r.AssignedTechnician)
                     .ThenInclude(t => t!.User)
+                .Include(r => r.Bill)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -185,6 +177,7 @@ namespace ServiceApp.Data.Repositories
                 .Include(r => r.Customer)
                 .Include(r => r.AssignedTechnician)
                     .ThenInclude(t => t!.User)
+                .Include(r => r.Bill)
                 .AsNoTracking()
                 .ToListAsync();
     }
@@ -226,6 +219,12 @@ namespace ServiceApp.Data.Repositories
                 .Include(b => b.Technician)
                     .ThenInclude(t => t.User)
                 .FirstOrDefaultAsync(b => b.Id == billId);
+
+        public async Task<Bill?> GetByRazorpayOrderIdAsync(string orderId) =>
+            await _dbSet
+                .Include(b => b.Payment)
+                .FirstOrDefaultAsync(b => b.RazorpayOrderId == orderId);
+
         public async Task AddItemAsync(BillItem item) =>
         await _context.BillItems.AddAsync(item);
     }
@@ -282,10 +281,10 @@ namespace ServiceApp.Data.Repositories
                 .ToListAsync();
 
         public async Task<IEnumerable<TechnicianWithdrawal>>
-            GetAllPendingAsync() =>
+            GetOpenAsync() =>
             await _dbSet
                 .Include(w => w.Technician)
-                .Where(w => w.Status == "Pending")
+                .Where(w => w.Status == "Pending" || w.Status == "Approved")
                 .OrderBy(w => w.RequestedAt)
                 .ToListAsync();
 
@@ -345,34 +344,6 @@ namespace ServiceApp.Data.Repositories
                 .Where(l => l.CustomerId == customerId)
                 .OrderByDescending(l => l.TransactedAt)
                 .ToListAsync();
-
-        public async Task ExpireOldPointsAsync()
-        {
-            var now = DateTime.UtcNow;
-            var expired = await _dbSet
-                .Where(l => l.ExpiresAt <= now && l.Points > 0)
-                .ToListAsync();
-
-            foreach (var e in expired)
-            {
-                // Add a negative row to expire the points
-                var expiry = new LoyaltyLedger
-                {
-                    CustomerId = e.CustomerId,
-                    Points = -e.Points,
-                    TransactionType = "Expired",
-                    Note = $"Points from " +
-                                      $"{e.TransactedAt:dd MMM yyyy} expired.",
-                    TransactedAt = now,
-                    ExpiresAt = now.AddYears(100) // never expire
-                };
-                await _dbSet.AddAsync(expiry);
-
-                // Mark the original as expired
-                e.ExpiresAt = now.AddDays(-1);
-            }
-            await _context.SaveChangesAsync();
-        }
     }
 
     public class ReferralRepository

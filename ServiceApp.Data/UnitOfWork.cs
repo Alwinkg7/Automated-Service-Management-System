@@ -115,6 +115,8 @@ namespace ServiceApp.Data
         }
 
         // Called automatically at end of HTTP request (Scoped lifetime)
+        public void ClearChanges() => _context.ChangeTracker.Clear();
+
         public void Dispose()
         {
             _transaction?.Dispose();

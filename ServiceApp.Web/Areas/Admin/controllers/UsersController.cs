@@ -189,70 +189,23 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
         // =============================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Deactivate(string id)
-        {
-            // Prevent self-deactivation
-            var currentUserId = _userManager.GetUserId(User);
-            if (id == currentUserId)
-            {
-                TempData["Error"] =
-                    "You cannot deactivate your own account.";
-                return RedirectToAction(nameof(Index));
-            }
+        public Task<IActionResult> Deactivate(string id, [FromServices] IAccountService accounts) =>
+            SetActiveAsync(id, false, accounts, "deactivated");
 
-            var user = await _userManager.FindByIdAsync(id);
-            if (user == null)
-            {
-                TempData["Error"] = "User not found.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            // Prevent deactivating the seeded system admin
-            if (user.Email == "admin@serviceapp.com")
-            {
-                TempData["Error"] =
-                    "The system admin account cannot be deactivated.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            user.IsActive = false;
-            var result = await _userManager.UpdateAsync(user);
-
-            if (!result.Succeeded)
-            {
-                TempData["Error"] = "Failed to deactivate account.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            _logger.LogInformation(
-                "User {Email} deactivated by admin {Admin}",
-                user.Email, User.Identity?.Name);
-
-            TempData["Success"] =
-                $"{user.FullName}'s account has been deactivated.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        // =============================================================
-        //  POST /Admin/Users/Reactivate/{id}
-        //  Re-enable a deactivated account.
-        // =============================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Reactivate(string id)
+        public Task<IActionResult> Reactivate(string id, [FromServices] IAccountService accounts) =>
+            SetActiveAsync(id, true, accounts, "reactivated");
+
+        // Self / last-admin protection lives in IAccountService.SetActiveAsync.
+        private async Task<IActionResult> SetActiveAsync(string id, bool active, IAccountService accounts, string verb)
         {
-            var user = await _userManager.FindByIdAsync(id);
-            if (user == null)
-            {
-                TempData["Error"] = "User not found.";
-                return RedirectToAction(nameof(Index));
-            }
+            var result = await accounts.SetActiveAsync(id, active, _userManager.GetUserId(User)!);
+            if (result.IsSuccess)
+                TempData["Success"] = $"{result.Data!.FullName}'s account has been {verb}.";
+            else
+                TempData["Error"] = result.ErrorMessage;
 
-            user.IsActive = true;
-            await _userManager.UpdateAsync(user);
-
-            TempData["Success"] =
-                $"{user.FullName}'s account has been reactivated.";
             return RedirectToAction(nameof(Index));
         }
     }

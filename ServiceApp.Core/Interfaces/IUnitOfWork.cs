@@ -55,5 +55,8 @@ namespace ServiceApp.Core.Interfaces
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();    // saves + finalizes
         Task RollbackTransactionAsync();  // undoes everything since Begin
+
+        /// <summary>Discards all tracked, unsaved changes (e.g. after a failed save in a loop).</summary>
+        void ClearChanges();
     }
 }

@@ -209,47 +209,31 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
         // =============================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Deactivate(int id)
-        {
-            var tech = await _uow.TechnicianProfiles
-                .GetWithUserAsync(id);
-
-            if (tech == null)
-            {
-                TempData["Error"] = "Technician not found.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            tech.User.IsActive = false;
-            await _userManager.UpdateAsync(tech.User);
-
-            TempData["Success"] =
-                $"{tech.User.FullName} has been deactivated.";
-
-            return RedirectToAction(nameof(Index));
-        }
+        public Task<IActionResult> Deactivate(int id, [FromServices] IAccountService accounts) =>
+            SetActiveAsync(id, false, accounts, "deactivated");
 
         // =============================================================
         //  POST /Admin/Technicians/Reactivate/{id}
         // =============================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Reactivate(int id)
-        {
-            var tech = await _uow.TechnicianProfiles
-                .GetWithUserAsync(id);
+        public Task<IActionResult> Reactivate(int id, [FromServices] IAccountService accounts) =>
+            SetActiveAsync(id, true, accounts, "reactivated");
 
+        private async Task<IActionResult> SetActiveAsync(int technicianProfileId, bool active, IAccountService accounts, string verb)
+        {
+            var tech = await _uow.TechnicianProfiles.GetWithUserAsync(technicianProfileId);
             if (tech == null)
             {
                 TempData["Error"] = "Technician not found.";
                 return RedirectToAction(nameof(Index));
             }
 
-            tech.User.IsActive = true;
-            await _userManager.UpdateAsync(tech.User);
-
-            TempData["Success"] =
-                $"{tech.User.FullName} has been reactivated.";
+            var result = await accounts.SetActiveAsync(tech.UserId, active, _userManager.GetUserId(User)!);
+            if (result.IsSuccess)
+                TempData["Success"] = $"{tech.User.FullName} has been {verb}.";
+            else
+                TempData["Error"] = result.ErrorMessage;
 
             return RedirectToAction(nameof(Index));
         }
@@ -281,7 +265,7 @@ namespace ServiceApp.Web.Areas.Admin.Controllers
                 UserId = tech.UserId,
                 FullName = tech.User.FullName,
                 Email = tech.User.Email ?? "",
-                Phone = tech.User.Phone,
+                Phone = tech.User.Phone ?? string.Empty,
                 Skill = tech.Skill,
                 Status = tech.Status,
                 Rating = tech.Rating,

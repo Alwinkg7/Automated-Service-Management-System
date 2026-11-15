@@ -222,22 +222,19 @@ public class AdminApiController : ApiControllerBase
     [HttpPost("users/{id}/toggle-active")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ToggleActive(string id)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ToggleActive(string id, [FromServices] IAccountService accounts)
     {
-        if (id == UserId)
-            return Fail(StatusCodes.Status409Conflict, "You cannot deactivate your own account.");
-
         var user = await _users.FindByIdAsync(id);
         if (user == null)
             return Fail(StatusCodes.Status404NotFound, "User not found.");
 
-        user.IsActive = !user.IsActive;
-        var update = await _users.UpdateAsync(user);
-        if (!update.Succeeded)
-            return Fail(StatusCodes.Status500InternalServerError, "Could not update the user.");
+        var result = await accounts.SetActiveAsync(id, !user.IsActive, UserId);
+        if (!result.IsSuccess)
+            return Fail(result);
 
-        return Ok(new { success = true, isActive = user.IsActive });
+        return Ok(new { success = true, isActive = result.Data!.IsActive });
     }
 
-    private static bool IsPaid(Bill bill) => bill.IsPaid || bill.PaymentStatus == PaymentStatus.Paid;
+    private static bool IsPaid(Bill bill) => bill.IsPaid;
 }

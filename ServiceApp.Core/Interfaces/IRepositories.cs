@@ -19,13 +19,6 @@ namespace ServiceApp.Core.Interfaces
     // ── Users ─────────────────────────────────────────────────────
     public interface IUserRepository : IRepository<ApplicationUser>
     {
-        // Find user by email — used during login validation
-        Task<ApplicationUser?> GetByEmailAsync(string email);
-
-        // Load user with their profile in one query
-        // Avoids a second round-trip to load the profile separately
-        Task<ApplicationUser?> GetWithProfileAsync(string userId);
-
         // Admin "All Users" management list
         Task<IEnumerable<ApplicationUser>> GetAllByRoleAsync(UserRole role);
         Task<ApplicationUser?> GetByIdAsync(string customerId);
@@ -101,6 +94,9 @@ namespace ServiceApp.Core.Interfaces
 
         // Full bill with items + payment — for View Bill / Pay pages
         Task<Bill?> GetWithItemsAndPaymentAsync(int billId);
+
+        // Bill bound to a Razorpay order (set when the order is created)
+        Task<Bill?> GetByRazorpayOrderIdAsync(string orderId);
         Task AddItemAsync(BillItem item);
     }
 
@@ -120,7 +116,7 @@ namespace ServiceApp.Core.Interfaces
         Task<IEnumerable<TechnicianWithdrawal>> GetByTechnicianAsync(
             string technicianUserId);
 
-        Task<IEnumerable<TechnicianWithdrawal>> GetAllPendingAsync();
+        Task<IEnumerable<TechnicianWithdrawal>> GetOpenAsync(); // Pending + Approved
 
         Task<decimal> GetTotalWithdrawnAsync(string technicianUserId);
     }
@@ -138,7 +134,6 @@ namespace ServiceApp.Core.Interfaces
         Task<int> GetPointsBalanceAsync(string customerId);
         Task<IEnumerable<LoyaltyLedger>> GetHistoryAsync(
             string customerId);
-        Task ExpireOldPointsAsync();
     }
 
     public interface IReferralRepository : IRepository<ReferralCode>

@@ -17,6 +17,10 @@ namespace ServiceApp.Services.Implementations
         private readonly IRazorpayService _razorpay;
         private readonly IEmailService _email;
         private readonly ILogger<DisputeService> _logger;
+        private readonly string? _adminEmail;
+
+        public const int MaxReasonLength = 50;
+        public const int MaxDescriptionLength = 2000;
 
         public DisputeService(
             IUnitOfWork uow,
@@ -27,11 +31,9 @@ namespace ServiceApp.Services.Implementations
         {
             _uow = uow;
             _razorpay = razorpay;
-            _email = logger as IEmailService ?? email;
-            _logger = logger;
-
-            // Correct assignment
             _email = email;
+            _logger = logger;
+            _adminEmail = config["Notifications:AdminEmail"];
         }
 
         // =============================================================
@@ -44,6 +46,13 @@ namespace ServiceApp.Services.Implementations
             string description)
         {
             // Load request
+            reason = reason?.Trim() ?? string.Empty;
+            description = description?.Trim() ?? string.Empty;
+            if (reason.Length == 0 || reason.Length > MaxReasonLength)
+                return Result<Dispute>.Failure($"Reason is required (max {MaxReasonLength} characters).");
+            if (description.Length < 10 || description.Length > MaxDescriptionLength)
+                return Result<Dispute>.Failure($"Description must be 10-{MaxDescriptionLength} characters.");
+
             var request = await _uow.ServiceRequests
                 .GetWithDetailsAsync(requestId);
             if (request == null)
@@ -91,12 +100,9 @@ namespace ServiceApp.Services.Implementations
                 dispute.DisputeId, requestId, raisedByUserId, reason);
 
             // Email admin notification (fire and forget)
-            _ = _email.SendRequestConfirmationAsync(
-                "admin@serviceapp.com",
-                "Admin",
-                requestId,
-                $"DISPUTE #{dispute.DisputeId} — {reason}",
-                DateTime.UtcNow.ToString("dd MMM yyyy, hh:mm tt"));
+            if (!string.IsNullOrWhiteSpace(_adminEmail))
+                _ = _email.SendDisputeRaisedToAdminAsync(
+                    _adminEmail, dispute.DisputeId, requestId, reason, dispute.Description);
 
             return Result<Dispute>.Success(dispute);
         }
