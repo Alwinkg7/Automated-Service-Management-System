@@ -14,6 +14,8 @@ export const browserApi = createApiClient({
     const next = encodeURIComponent(window.location.pathname + window.location.search);
     // Clear cookies server-side, then go to login.
     void fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+      // Full reload on purpose: drops all in-memory state (query cache, socket).
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign(`/login?next=${next}&expired=1`);
     });
   },

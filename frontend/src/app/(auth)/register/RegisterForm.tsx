@@ -2,7 +2,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { useForm, type FieldErrors } from "react-hook-form";
+import { useForm, useWatch, type FieldErrors } from "react-hook-form";
 import { Button } from "@/components/ui/Button";
 import { Field, FormError, Input, Select } from "@/components/ui/Field";
 import { FilterChips } from "@/components/ui/FilterChips";
@@ -23,7 +23,7 @@ export function RegisterForm() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     setError,
     formState: { errors, isSubmitting },
@@ -31,7 +31,7 @@ export function RegisterForm() {
     resolver: zodResolver(registerSchema),
     defaultValues: { role: initialRole } as RegisterValues,
   });
-  const role = watch("role");
+  const role = useWatch({ control, name: "role" });
   // Field errors differ per role; widen for display.
   const fieldErrors = errors as FieldErrors<{
     fullName: string;
