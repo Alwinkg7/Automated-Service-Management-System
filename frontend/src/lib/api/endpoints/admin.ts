@@ -1,28 +1,17 @@
 import { z } from "zod";
-import type { ApiClient, QueryValue } from "../client";
+import type { ApiClient } from "../client";
 import {
   adminDashboardSchema,
   adminRequestDetailSchema,
   adminRequestsSchema,
-  adminTechniciansSchema,
   adminUsersSchema,
-  analyticsSchema,
   availableTechnicianSchema,
   disputeSchema,
   promoCodeSchema,
   withdrawalSchema,
   zoneSchema,
 } from "../schemas";
-import type { RequestStatus, ServiceCategory, TechnicianStatus, UserRole } from "@/types/enums";
-
-export interface AdminRequestFilters {
-  search?: string;
-  status?: RequestStatus | "";
-  from?: string;
-  to?: string;
-  page?: number;
-  pageSize?: number;
-}
+import type { RequestStatus, ServiceCategory, UserRole } from "@/types/enums";
 
 export interface ZoneInput {
   zoneName: string;
@@ -44,34 +33,14 @@ export interface PromoCodeInput {
   isActive: boolean;
 }
 
-function filtersToQuery(f: AdminRequestFilters): Record<string, QueryValue> {
-  return {
-    search: f.search,
-    status: f.status,
-    from: f.from,
-    to: f.to,
-    page: f.page,
-    pageSize: f.pageSize,
-  };
-}
-
 export function adminEndpoints(api: ApiClient) {
   return {
     getDashboard: () => api.get("/api/admin/dashboard", { schema: adminDashboardSchema }),
 
-    getAnalytics: () => api.get("/api/admin/analytics", { schema: analyticsSchema }),
-
-    runAutoAssign: () =>
-      api.post("/api/admin/auto-assign", undefined, {
-        schema: z.object({ assigned: z.number().nullish() }).nullish(),
-      }),
-
     // Requests
-    getRequests: (filters: AdminRequestFilters) =>
-      api.get("/api/admin/requests", { query: filtersToQuery(filters), schema: adminRequestsSchema }),
-
-    exportRequestsCsv: (filters: AdminRequestFilters) =>
-      api.download("/api/admin/requests/export", { query: filtersToQuery({ ...filters, page: undefined }) }),
+    /** All requests (the API doesn't page yet); search/date/paging happen client-side. */
+    getRequests: (status?: RequestStatus) =>
+      api.get("/api/admin/requests", { query: { status }, schema: adminRequestsSchema }),
 
     getRequest: (id: number) => api.get(`/api/admin/requests/${id}`, { schema: adminRequestDetailSchema }),
 
@@ -84,19 +53,6 @@ export function adminEndpoints(api: ApiClient) {
     assignTechnician: (requestId: number, technicianProfileId: number) =>
       api.post<void>(`/api/admin/requests/${requestId}/assign`, { technicianProfileId }),
 
-    cancelRequest: (requestId: number) => api.post<void>(`/api/admin/requests/${requestId}/cancel`),
-
-    // Technicians
-    getTechnicians: (skill?: ServiceCategory | "", status?: TechnicianStatus | "") =>
-      api.get("/api/admin/technicians", { query: { skill, status }, schema: adminTechniciansSchema }),
-
-    setTechnicianStatus: (id: number, status: TechnicianStatus) =>
-      api.post<void>(`/api/admin/technicians/${id}/status`, { status }),
-
-    deactivateTechnician: (id: number) => api.post<void>(`/api/admin/technicians/${id}/deactivate`),
-
-    reactivateTechnician: (id: number) => api.post<void>(`/api/admin/technicians/${id}/reactivate`),
-
     // Users
     getUsers: (role?: UserRole | "") =>
       api.get("/api/admin/users", { query: { role }, schema: adminUsersSchema }),
@@ -106,6 +62,7 @@ export function adminEndpoints(api: ApiClient) {
         schema: z.object({ isActive: z.boolean() }).partial(),
       }),
 
+    // ── TODO(api): everything below is proposed – not in docs/API.md yet ──
     // Zones
     getZones: () => api.get("/api/admin/zones", { schema: z.array(zoneSchema) }),
     createZone: (input: ZoneInput) => api.post<void>("/api/admin/zones", input),

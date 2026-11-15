@@ -18,6 +18,7 @@ export function DisputesView() {
       <PageHeader title="My disputes" description="Raise a dispute from a completed request. We respond within 48 hours." />
       <QueryView
         query={query}
+        pendingEndpoint="GET /api/customer/disputes"
         isEmpty={(d) => d.length === 0}
         empty={<EmptyState title="No disputes" description="If something went wrong with a completed job, open the request and choose “Raise dispute”." />}
       >

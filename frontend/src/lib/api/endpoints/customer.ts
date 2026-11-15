@@ -76,6 +76,7 @@ export function customerEndpoints(api: ApiClient) {
 
     billPdfPath: (billId: number) => `/api/customer/bills/${billId}/pdf`,
 
+    // TODO(api): promotions + disputes are proposed – not in docs/API.md yet
     getPromotions: () => api.get("/api/customer/promotions", { schema: promotionsSchema }),
 
     validatePromo: (code: string, billAmount: number) =>

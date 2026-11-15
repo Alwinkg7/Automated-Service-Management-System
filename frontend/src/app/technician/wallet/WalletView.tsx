@@ -82,7 +82,7 @@ export function WalletView() {
   const [open, setOpen] = useState(false);
 
   return (
-    <QueryView query={query} loading={<SkeletonStats />}>
+    <QueryView query={query} loading={<SkeletonStats />} pendingEndpoint="GET /api/technician/wallet">
       {(w) => (
         <>
           <PageHeader

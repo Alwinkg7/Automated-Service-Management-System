@@ -14,7 +14,7 @@ import { Icon } from "@/components/ui/Icon";
 import { QueryView } from "@/components/ui/QueryView";
 import { useAction } from "@/hooks/useAction";
 import { technicianApi } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { qk } from "@/lib/queryKeys";
 import { CATEGORY_INFO } from "@/types/enums";
 import { BillForm } from "./BillForm";
@@ -24,6 +24,7 @@ export function JobDetailView({ id }: { id: number }) {
   const router = useRouter();
   const query = useQuery({ queryKey: qk.technician.job(id), queryFn: () => technicianApi.getJob(id) });
   const [confirmReject, setConfirmReject] = useState(false);
+  const [confirmCash, setConfirmCash] = useState(false);
 
   const accept = useAction({
     fn: () => technicianApi.acceptJob(id),
@@ -35,6 +36,12 @@ export function JobDetailView({ id }: { id: number }) {
     invalidate: [qk.technician.all],
     success: "Job declined. It will be reassigned.",
     onSuccess: () => router.push("/technician/jobs"),
+  });
+  const cash = useAction({
+    fn: () => technicianApi.confirmCashCollected(id),
+    invalidate: [qk.technician.all],
+    success: "Cash payment recorded. Job completed.",
+    onSuccess: () => setConfirmCash(false),
   });
 
   return (
@@ -81,9 +88,16 @@ export function JobDetailView({ id }: { id: number }) {
               {j.canBill ? <BillForm jobId={j.id} /> : null}
               {j.status === "Billed" ? (
                 <Card>
-                  <CardBody className="flex items-center gap-3 text-sm">
+                  <CardBody className="flex flex-wrap items-center gap-3 text-sm">
                     <Icon name="card" className="text-info" />
-                    Bill sent. The job completes automatically when the customer pays.
+                    <span className="min-w-0 flex-1">
+                      Bill sent. The job completes when the customer pays online, or when you confirm you collected cash.
+                    </span>
+                    {j.canComplete ? (
+                      <Button variant="outline" onClick={() => setConfirmCash(true)}>
+                        Confirm cash collected
+                      </Button>
+                    ) : null}
                   </CardBody>
                 </Card>
               ) : null}
@@ -129,6 +143,15 @@ export function JobDetailView({ id }: { id: number }) {
             loading={reject.isPending}
             onConfirm={() => reject.mutate()}
             onClose={() => setConfirmReject(false)}
+          />
+          <ConfirmDialog
+            open={confirmCash}
+            title="Confirm cash collected?"
+            description={`Only confirm if the customer has paid you ${j.bill ? formatMoney(j.bill.amount) : "the bill amount"} in cash. This completes the job.`}
+            confirmLabel="Yes, cash received"
+            loading={cash.isPending}
+            onConfirm={() => cash.mutate()}
+            onClose={() => setConfirmCash(false)}
           />
         </>
       )}

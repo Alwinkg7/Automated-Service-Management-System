@@ -123,6 +123,8 @@ export function PayView({ requestId }: { requestId: number }) {
               </Card>
 
               <div className="space-y-4">
+                {/* Only shown once the API exposes promotions (see docs/api-requests.md). */}
+                {promotions.isSuccess ? (
                 <Card>
                   <CardHeader title="Discounts" description="Applied by the server when your order is created." />
                   <CardBody className="space-y-4">
@@ -157,6 +159,7 @@ export function PayView({ requestId }: { requestId: number }) {
                     ) : null}
                   </CardBody>
                 </Card>
+                ) : null}
 
                 <Card>
                   <CardBody className="space-y-3">

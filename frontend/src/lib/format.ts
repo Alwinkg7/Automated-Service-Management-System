@@ -23,11 +23,32 @@ export function formatDate(value: string | null | undefined, withTime = false): 
   });
 }
 
-/** Best-effort parse for sorting/filtering by date (ISO or "dd MMM yyyy"). */
-export function parseDate(value: string | null | undefined): number | null {
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const API_DATE = /^(\d{1,2}) ([A-Za-z]{3}) (\d{4})(?:, (\d{1,2}):(\d{2}) ([AP]M))?$/;
+
+/**
+ * Parse ISO strings and the API's legacy display format
+ * ("05 Nov 2026" / "05 Nov 2026, 02:30 PM", local time). Null when unparseable.
+ */
+export function parseApiDate(value: string | null | undefined): Date | null {
   if (!value) return null;
-  const t = Date.parse(value);
-  return Number.isNaN(t) ? null : t;
+  const m = API_DATE.exec(value.trim());
+  if (m) {
+    const month = MONTHS.indexOf(m[2]!.toLowerCase());
+    if (month < 0) return null;
+    let hours = m[4] ? Number(m[4]) % 12 : 0;
+    if (m[6] === "PM") hours += 12;
+    return new Date(Number(m[3]), month, Number(m[1]), hours, m[5] ? Number(m[5]) : 0);
+  }
+  if (!ISO_LIKE.test(value)) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** yyyy-mm-dd in local time (for <input type="date"> and day buckets). */
+export function dayKey(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 export function formatRating(value: number | null | undefined): string {

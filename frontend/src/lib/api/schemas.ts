@@ -418,24 +418,6 @@ export const adminUserSchema = z.object({
 export type AdminUser = z.infer<typeof adminUserSchema>;
 export const adminUsersSchema = pagedOrArray(adminUserSchema);
 
-export const adminTechnicianSchema = z.object({
-  id,
-  userId: optStr,
-  name: optStr,
-  email: optStr,
-  phone: optStr,
-  skill: category,
-  status: techStatus,
-  rating: z.number(),
-  totalJobsCompleted: z.number(),
-  isActive: z.boolean().nullish(),
-  zoneName: optStr,
-  totalEarned: optMoney,
-  activeJobs: z.number().nullish(),
-});
-export type AdminTechnician = z.infer<typeof adminTechnicianSchema>;
-export const adminTechniciansSchema = pagedOrArray(adminTechnicianSchema);
-
 export const zoneSchema = z.object({
   id,
   zoneName: str,
@@ -470,42 +452,3 @@ export const promoCodeSchema = z.object({
   createdAt: optStr,
 });
 export type PromoCode = z.infer<typeof promoCodeSchema>;
-
-export const analyticsSchema = z.object({
-  totals: z.object({
-    totalRequests: z.number(),
-    completedRequests: z.number(),
-    pendingRequests: z.number(),
-    totalCustomers: z.number(),
-    totalTechnicians: z.number(),
-    totalRevenue: z.number(),
-  }),
-  statusBreakdown: z.record(z.string(), z.number()),
-  revenueByDay: z.array(z.object({ date: str, amount: z.number() })),
-  requestsByDay: z.array(z.object({ date: str, count: z.number() })),
-  categories: z.array(z.object({ category: str, count: z.number() })),
-  topTechnicians: z
-    .array(
-      z.object({
-        name: optStr,
-        skill: str,
-        totalJobsCompleted: z.number(),
-        rating: z.number(),
-        status: str,
-        totalEarned: z.number(),
-      }),
-    )
-    .default([]),
-  recentActivity: z
-    .array(
-      z.object({
-        requestId: id,
-        status: str,
-        note: optStr,
-        changedAt: str,
-        category: optStr,
-      }),
-    )
-    .default([]),
-});
-export type Analytics = z.infer<typeof analyticsSchema>;

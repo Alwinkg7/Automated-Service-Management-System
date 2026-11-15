@@ -30,11 +30,18 @@ export function technicianEndpoints(api: ApiClient) {
 
     rejectJob: (id: number) => api.post<void>(`/api/technician/jobs/${id}/reject`),
 
+    /** Technician confirms CASH was collected: records a cash payment, Billed -> Completed. */
+    confirmCashCollected: (id: number) =>
+      api.post(`/api/technician/jobs/${id}/complete`, undefined, {
+        schema: z.object({ paymentId: z.number().nullish() }).nullish(),
+      }),
+
     createBill: (id: number, input: CreateBillInput) =>
       api.post(`/api/technician/jobs/${id}/bill`, input, {
         schema: z.object({ billId: z.number() }),
       }),
 
+    // TODO(api): proposed – not in docs/API.md yet (see frontend/docs/api-requests.md)
     getWallet: () => api.get("/api/technician/wallet", { schema: walletSchema }),
 
     requestWithdrawal: (amount: number, upiId: string) =>

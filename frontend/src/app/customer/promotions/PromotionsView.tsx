@@ -41,7 +41,7 @@ export function PromotionsView() {
   return (
     <>
       <PageHeader title="Rewards" description="Loyalty points, referrals and promo codes." />
-      <QueryView query={query} loading={<SkeletonStats count={3} />}>
+      <QueryView query={query} loading={<SkeletonStats count={3} />} pendingEndpoint="GET /api/customer/promotions">
         {(p) => (
           <div className="space-y-6">
             <StatGrid>
