@@ -9,6 +9,6 @@ public static class RateLimitPolicies
     /// <summary>Razorpay order/verify: token bucket per user.</summary>
     public const string Payments = "payments";
 
-    /// <summary>Default for all API controllers: 120 requests/minute per user or IP.</summary>
+    /// <summary>Global limiter for /api/*: 120 requests/minute per user or IP (not an endpoint policy).</summary>
     public const string GeneralApi = "general-api";
 }

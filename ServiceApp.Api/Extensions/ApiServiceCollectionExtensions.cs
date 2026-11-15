@@ -164,8 +164,12 @@ public static class ApiServiceCollectionExtensions
                     QueueLimit = 0
                 }));
 
-            options.AddPolicy(RateLimitPolicies.GeneralApi, ctx =>
-                RateLimitPartition.GetSlidingWindowLimiter(UserOrIp(ctx), _ => new SlidingWindowRateLimiterOptions
+            // Global limiter for /api/* (chains with the named endpoint policies above).
+            // Hubs, health, Swagger, Hangfire and the webhook are not limited.
+            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
+                !ctx.Request.Path.StartsWithSegments("/api") || ctx.Request.Path.StartsWithSegments("/api/payments/webhook")
+                    ? RateLimitPartition.GetNoLimiter("unlimited")
+                    : RateLimitPartition.GetSlidingWindowLimiter(UserOrIp(ctx), _ => new SlidingWindowRateLimiterOptions
                 {
                     PermitLimit = 120,
                     Window = TimeSpan.FromMinutes(1),

@@ -60,7 +60,7 @@ await SerilogHostExtensions.RunServiceAppHostAsync("ServiceApp.Api", async () =>
     });
     RecurringJobs.Register(app.Services, app.Logger);
 
-    app.MapControllers().RequireRateLimiting(RateLimitPolicies.GeneralApi);
+    app.MapControllers();
     app.MapHub<ServiceHub>("/hubs/service");
     app.MapHealthChecks("/health");
 

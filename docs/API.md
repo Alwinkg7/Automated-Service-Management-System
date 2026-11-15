@@ -73,7 +73,7 @@ Every error has this shape (validation, auth, business rules, rate limits, unhan
 |---|---|---|
 | `auth` | `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout`, `/api/auth/register/*` | 10 requests per minute per IP |
 | `payments` | `/api/customer/bills/{id}/razorpay/*` | Token bucket per user: 10 burst, refill 5 per minute |
-| `general-api` | every other controller endpoint | 120 requests per minute per user (or per IP when anonymous) |
+| global | every `/api/*` request, in addition to the policies above | 120 requests per minute per user (or per IP when anonymous) |
 
 The limits do not apply to `/hubs/service`, `/health`, `/hangfire`, `/api/auth/me` or `/api/payments/webhook`.
 
@@ -169,7 +169,7 @@ Errors:
 | GET | `/requests/{id}` | none | `{ success, data: RequestDetail }`. 404 if missing, 403 if it belongs to someone else |
 | GET | `/categories` | none (**anonymous allowed**) | `{ success, data: [{ value, label, description, icon }] }` |
 | POST | `/requests` | `CreateRequest` | 200 `{ success, requestId }` |
-| POST | `/requests/{id}/cancel` | none | 200 `{ success }`. Fails (400) unless the service allows cancelling in the current state |
+| POST | `/requests/{id}/cancel` | none | 200 `{ success }`. Allowed while `Pending` or `Assigned` (the same rule as `canCancel`), otherwise 400 |
 | POST | `/requests/{id}/rate` | `{ "stars": 1-5, "comment": "optional" }` | 200 `{ success }` |
 | POST | `/bills/{id}/razorpay/order` | none | 200 `{ success, data: { billId, orderId, amount, currency, keyId } }` |
 | POST | `/bills/{id}/razorpay/verify` | `VerifyPayment` | 200 `{ success, data: { paymentId, billId, amount, method, transactionId, paidAt } }` |
