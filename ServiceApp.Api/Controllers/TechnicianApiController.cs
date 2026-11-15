@@ -97,19 +97,20 @@ public class TechnicianApiController : ApiControllerBase
 
     [HttpGet("jobs")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetJobs([FromQuery] string? status)
+    public async Task<IActionResult> GetJobs(
+        [FromQuery] string? status, [FromServices] IRequestQueries queries, CancellationToken ct)
     {
         var techResult = await _techSvc.GetByUserIdAsync(UserId);
         if (!techResult.IsSuccess)
             return Fail(StatusCodes.Status404NotFound, techResult.ErrorMessage);
 
-        var result = await _svc.GetTechnicianJobsAsync(techResult.Data!.TechnicianProfileId);
-        if (!result.IsSuccess)
-            return Fail(StatusCodes.Status500InternalServerError, result.ErrorMessage);
-
-        var jobs = result.Data!;
-        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<RequestStatus>(status, true, out var s))
-            jobs = jobs.Where(j => j.Status == s);
+        // Filtered in SQL; legacy response is the full (unpaged) list.
+        var jobs = (await queries.SearchAsync(new Core.Models.Queries.RequestSearchCriteria
+        {
+            TechnicianProfileId = techResult.Data!.TechnicianProfileId,
+            Statuses = Enum.TryParse<RequestStatus>(status, true, out var s) ? [s] : null,
+            PageSize = 0
+        }, ct)).Items;
 
         return Ok(new
         {
@@ -162,6 +163,8 @@ public class TechnicianApiController : ApiControllerBase
                 canAccept = j.Status == RequestStatus.Assigned,
                 canBill = j.Status == RequestStatus.InProgress,
                 canComplete = j.Status == RequestStatus.Billed,
+                canShareLocation = j.Status == RequestStatus.InProgress,
+                pinCode = j.PinCode,
 
                 customer = new
                 {
@@ -172,7 +175,13 @@ public class TechnicianApiController : ApiControllerBase
 
                 bill = j.Bill == null ? null : new
                 {
+                    id = j.Bill.Id,
                     amount = j.Bill.TotalAmount,
+                    payable = j.Bill.PayableAmount,
+                    discount = j.Bill.DiscountAmount,
+                    preferredPaymentMethod = j.Bill.PreferredPaymentMethod,
+                    paidAt = j.Bill.PaidAt,
+                    items = j.Bill.BillItems.Select(ResponseMappers.BillItem),
                     laborCost = j.Bill.LaborCost,
                     materialCost = j.Bill.MaterialCost,
                     description = j.Bill.Description,
@@ -252,6 +261,39 @@ public class TechnicianApiController : ApiControllerBase
             return Fail(result);
 
         return Ok(new { success = true, billId = result.Data!.Id });
+    }
+
+    /// <summary>Pushes the technician location to the customer of an own InProgress job (REST alternative to the hub).</summary>
+    [HttpPost("jobs/{id:int}/location")]
+    [Consumes("application/json")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UpdateLocation(
+        int id, [FromBody] LocationUpdateRequest dto, [FromServices] ITrackingService tracking)
+    {
+        var result = await tracking.PushLocationAsync(UserId, id, dto.Lat, dto.Lng);
+        return result.IsSuccess ? Ok(new { success = true }) : Fail(result);
+    }
+
+    /// <summary>Downloads a bill PDF created by the caller.</summary>
+    [HttpGet("bills/{id:int}/pdf")]
+    [Produces("application/pdf", "application/problem+json")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadBillPdf(int id, [FromServices] IBillPdfService pdf)
+    {
+        var tech = await _techSvc.GetByUserIdAsync(UserId);
+        if (!tech.IsSuccess)
+            return Fail(tech);
+
+        var bill = await _billing.GetBillByIdAsync(id);
+        if (!bill.IsSuccess)
+            return Fail(bill);
+        if (bill.Data!.TechnicianProfileId != tech.Data!.TechnicianProfileId)
+            return Fail(StatusCodes.Status403Forbidden, "You can only download bills you created.");
+
+        return File(await pdf.GenerateBillPdfAsync(id), "application/pdf", $"bill-{id}.pdf");
     }
 
     private static bool IsPaid(Bill? bill) =>

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using ServiceApp.Api.Contracts;
 using ServiceApp.Api.Extensions;
+using ServiceApp.Api.Infrastructure;
 using ServiceApp.Core.Common;
 using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
@@ -21,6 +22,8 @@ public class CustomerApiController : ApiControllerBase
     private readonly IBillService _billing;
     private readonly IPaymentService _payments;
     private readonly IBillPdfService _pdf;
+    private readonly IRequestQueries _queries;
+    private readonly IBillDiscountService _discounts;
     private readonly RazorpaySettings _razorpay;
 
     public CustomerApiController(
@@ -28,12 +31,16 @@ public class CustomerApiController : ApiControllerBase
         IBillService billing,
         IPaymentService payments,
         IBillPdfService pdf,
+        IRequestQueries queries,
+        IBillDiscountService discounts,
         IOptions<RazorpaySettings> razorpay)
     {
         _svc = svc;
         _billing = billing;
         _payments = payments;
         _pdf = pdf;
+        _queries = queries;
+        _discounts = discounts;
         _razorpay = razorpay.Value;
     }
 
@@ -69,20 +76,20 @@ public class CustomerApiController : ApiControllerBase
     /// <summary>Lists the caller's requests, optionally filtered by status name (e.g. <c>Pending</c>).</summary>
     [HttpGet("requests")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetRequests([FromQuery] string? status)
+    public async Task<IActionResult> GetRequests([FromQuery] string? status, CancellationToken ct)
     {
-        var result = await _svc.GetCustomerRequestsAsync(UserId);
-        if (!result.IsSuccess)
-            return Fail(StatusCodes.Status500InternalServerError, result.ErrorMessage);
-
-        var data = result.Data!;
-        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<RequestStatus>(status, true, out var s))
-            data = data.Where(r => r.Status == s);
+        // Filtered in SQL; the legacy response is the full (unpaged) list.
+        var page = await _queries.SearchAsync(new Core.Models.Queries.RequestSearchCriteria
+        {
+            CustomerId = UserId,
+            Statuses = Enum.TryParse<RequestStatus>(status, true, out var s) ? [s] : null,
+            PageSize = 0
+        }, ct);
 
         return Ok(new
         {
             success = true,
-            data = data.OrderByDescending(r => r.CreatedAt).Select(Summary)
+            data = page.Items.Select(Summary)
         });
     }
 
@@ -113,6 +120,9 @@ public class CustomerApiController : ApiControllerBase
                 createdAt = r.CreatedAt.ToString("dd MMM yyyy, hh:mm tt"),
                 canCancel = r.Status is RequestStatus.Pending or RequestStatus.Assigned,
                 rating = r.CustomerRating,
+                feedback = r.CustomerFeedback,
+                pinCode = r.PinCode,
+                canRebook = r.Status is RequestStatus.Completed or RequestStatus.Cancelled,
 
                 technician = r.AssignedTechnician == null ? null : new
                 {
@@ -131,6 +141,14 @@ public class CustomerApiController : ApiControllerBase
                     description = r.Bill.Description,
                     isPaid = IsPaid(r.Bill),
                     createdAt = r.Bill.CreatedAt.ToString("dd MMM yyyy"),
+                    paidAt = r.Bill.PaidAt,
+                    discount = r.Bill.DiscountAmount,
+                    payable = r.Bill.PayableAmount,
+                    promoCode = r.Bill.PromoCode,
+                    pointsRedeemed = r.Bill.PointsRedeemed,
+                    preferredPaymentMethod = r.Bill.PreferredPaymentMethod,
+                    paymentMethod = r.Bill.Payment?.PaymentMethod,
+                    items = r.Bill.BillItems.Select(ResponseMappers.BillItem),
                 },
 
                 statusHistory = r.History
@@ -162,6 +180,7 @@ public class CustomerApiController : ApiControllerBase
         });
 
     [HttpPost("requests")]
+    [Idempotent]
     [Consumes("application/json")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -235,13 +254,22 @@ public class CustomerApiController : ApiControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
-    public async Task<IActionResult> CreateRazorpayOrder(int id)
+    [Idempotent]
+    public async Task<IActionResult> CreateRazorpayOrder(
+        int id, [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] RazorpayOrderRequest? body)
     {
+        // Optional checkout discounts are applied (idempotently) before the order is
+        // created, so the order amount is the discounted payable amount.
+        var quote = await _discounts.PrepareCheckoutAsync(id, UserId, body?.PromoCode, body?.RedeemPoints == true);
+        if (!quote.IsSuccess)
+            return Fail(quote);
+
         var result = await _payments.CreateRazorpayOrderAsync(id, UserId);
         if (!result.IsSuccess)
             return Fail(result);
 
         var order = result.Data!;
+        var q = quote.Data!;
         return Ok(new
         {
             success = true,
@@ -251,7 +279,12 @@ public class CustomerApiController : ApiControllerBase
                 orderId = order.OrderId,
                 amount = order.Amount,
                 currency = order.Currency,
-                keyId = _razorpay.KeyId
+                keyId = _razorpay.KeyId,
+                subtotal = q.Subtotal,
+                discount = q.Discount,
+                payable = q.Payable,
+                promoCode = q.PromoCode,
+                pointsRedeemed = q.PointsRedeemed
             }
         });
     }
@@ -302,6 +335,80 @@ public class CustomerApiController : ApiControllerBase
 
         var bytes = await _pdf.GenerateBillPdfAsync(id);
         return File(bytes, "application/pdf", $"bill-{id}.pdf");
+    }
+
+    /// <summary>
+    /// Customer chooses to pay in cash. Nothing is marked paid: the assigned
+    /// technician completes the job with POST /api/technician/jobs/{id}/complete.
+    /// </summary>
+    [HttpPost("bills/{id:int}/cash")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ChooseCash(int id)
+    {
+        var result = await _payments.ChooseCashPaymentAsync(id, UserId);
+        if (!result.IsSuccess)
+            return Fail(result);
+
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                billId = id,
+                preferredPaymentMethod = result.Data!.PreferredPaymentMethod,
+                payable = result.Data.PayableAmount,
+                message = "Pay the technician in cash; the job completes when they confirm receipt."
+            }
+        });
+    }
+
+    // ── History & re-booking ──────────────────────────────────────────
+
+    /// <summary>Completed and Cancelled requests with totals; search and category filter run in SQL.</summary>
+    [HttpGet("history")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> History([FromQuery] string? search, [FromQuery] string? category, CancellationToken ct)
+    {
+        var page = await _queries.SearchAsync(new Core.Models.Queries.RequestSearchCriteria
+        {
+            CustomerId = UserId,
+            Statuses = [RequestStatus.Completed, RequestStatus.Cancelled],
+            Category = Enum.TryParse<ServiceCategory>(category, true, out var c) ? c : null,
+            Search = search,
+            PageSize = 0
+        }, ct);
+        var summary = await _queries.GetCustomerHistorySummaryAsync(UserId, ct);
+
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                totalJobs = summary.TotalJobs,
+                completedJobs = summary.CompletedJobs,
+                cancelledJobs = summary.CancelledJobs,
+                totalSpent = summary.TotalSpent,
+                averageRating = Math.Round(summary.AverageRating, 2),
+                items = page.Items.Select(Summary)
+            }
+        });
+    }
+
+    /// <summary>Creates a new Pending request from an own Completed or Cancelled request.</summary>
+    [HttpPost("requests/{id:int}/rebook")]
+    [Idempotent]
+    [Consumes("application/json")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Rebook(int id, [FromBody] RebookRequest dto)
+    {
+        var result = await _svc.RebookAsync(id, UserId, dto.ScheduledDate, dto.Description, dto.Address);
+        if (!result.IsSuccess)
+            return Fail(result);
+
+        return CreatedAtAction(nameof(GetDetail), new { id = result.Data!.RequestId },
+            new { success = true, requestId = result.Data.RequestId });
     }
 
     // ── Helpers ───────────────────────────────────────────────────────
