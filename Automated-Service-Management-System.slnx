@@ -8,4 +8,7 @@
     <Project Path="ServiceApp.Api/ServiceApp.Api.csproj" />
     <Project Path="ServiceApp.Web/ServiceApp.Web.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ServiceApp.Tests/ServiceApp.Tests.csproj" />
+  </Folder>
 </Solution>
