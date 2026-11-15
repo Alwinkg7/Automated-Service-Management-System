@@ -34,7 +34,7 @@ export async function POST(request: Request) {
         },
       },
     });
-    setAuthCookies(res, result.token, result.refreshToken);
+    setAuthCookies(res.cookies, result);
     return res;
   } catch (error) {
     const status = isApiError(error) ? error.status : 502;

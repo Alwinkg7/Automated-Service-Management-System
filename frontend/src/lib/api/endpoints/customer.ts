@@ -64,9 +64,7 @@ export function customerEndpoints(api: ApiClient) {
     rateRequest: (id: number, stars: number, comment?: string) =>
       api.post<void>(`/api/customer/requests/${id}/rate`, { stars, comment }),
 
-    /** Cash / offline payment (existing endpoint). */
-    payBillCash: (billId: number) => api.post<void>(`/api/customer/bills/${billId}/pay`),
-
+    /** Amount always comes from the server-side bill; options are sent for promo/points support. */
     createRazorpayOrder: (billId: number, options: PaymentOptionsInput, idempotencyKey: string) =>
       api.post(`/api/customer/bills/${billId}/razorpay/order`, options, {
         headers: { "Idempotency-Key": idempotencyKey },

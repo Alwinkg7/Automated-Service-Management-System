@@ -1,26 +1,130 @@
 @import "tailwindcss";
 
+/* Dark mode follows the `dark` class that next-themes puts on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens: change colors here, every component picks them up. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --surface-muted: #f1f3f6;
+  --border: #e3e6eb;
+  --fg: #111827;
+  --fg-muted: #5b6474;
+  --primary: #2453d6;
+  --primary-hover: #1c43b3;
+  --primary-fg: #ffffff;
+  --primary-soft: #e8eefc;
+  --success: #12805c;
+  --success-soft: #e3f5ee;
+  --warning: #9a6200;
+  --warning-soft: #fdf2dc;
+  --danger: #c6283b;
+  --danger-soft: #fde8eb;
+  --info: #0b6aa2;
+  --info-soft: #e1f1fa;
+  --ring: #2453d6;
+}
+
+.dark {
+  --bg: #0d1117;
+  --surface: #151b23;
+  --surface-muted: #1c2430;
+  --border: #2a3441;
+  --fg: #e6e9ee;
+  --fg-muted: #9aa4b2;
+  --primary: #6d93ff;
+  --primary-hover: #8aa8ff;
+  --primary-fg: #0b1020;
+  --primary-soft: #1b2747;
+  --success: #3ccf98;
+  --success-soft: #11291f;
+  --warning: #f0b44c;
+  --warning-soft: #2b2110;
+  --danger: #ff7685;
+  --danger-soft: #331519;
+  --info: #5fc1f5;
+  --info-soft: #0f2633;
+  --ring: #8aa8ff;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --radius-card: 0.875rem;
+  --animate-fade-in: fade-in 200ms ease-out both;
+  --animate-slide-up: slide-up 220ms ease-out both;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Leaflet needs its own stylesheet; the map container needs a height. */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  border-radius: var(--radius-card);
 }

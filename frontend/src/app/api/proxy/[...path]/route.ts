@@ -6,6 +6,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { refreshTokens } from "@/lib/auth/backend";
 import { clearAuthCookies, isSameOrigin, setAuthCookies } from "@/lib/auth/cookies";
 import { REFRESH_COOKIE, TOKEN_COOKIE } from "@/lib/auth/constants";
+import { decodeJwt, isExpired } from "@/lib/auth/jwt";
 import { serverApiUrl } from "@/lib/env";
 
 const FORWARD_REQUEST_HEADERS = ["accept", "content-type", "idempotency-key", "x-request-id"];
@@ -47,9 +48,18 @@ async function handle(request: NextRequest, { params }: Context) {
   const refresh = jar.get(REFRESH_COOKIE)?.value;
   const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
 
+  // Access token already expired (short-lived JWTs): refresh before calling.
+  let renewed: Awaited<ReturnType<typeof refreshTokens>> = null;
+  let accessToken = token;
+  const current = decodeJwt(token);
+  if (refresh && (!current || isExpired(current))) {
+    renewed = await refreshTokens(refresh);
+    if (renewed) accessToken = renewed.token;
+  }
+
   let upstream: Response;
   try {
-    upstream = await forward(request, path, body, token);
+    upstream = await forward(request, path, body, accessToken);
   } catch {
     return NextResponse.json(
       { success: false, error: "The service is unreachable. Please try again shortly." },
@@ -57,9 +67,8 @@ async function handle(request: NextRequest, { params }: Context) {
     );
   }
 
-  // Access token expired: try one silent refresh, then retry the call.
-  let renewed: Awaited<ReturnType<typeof refreshTokens>> = null;
-  if (upstream.status === 401 && refresh) {
+  // Rejected anyway (revoked/rotated): try one silent refresh, then retry.
+  if (upstream.status === 401 && refresh && !renewed) {
     renewed = await refreshTokens(refresh);
     if (renewed) upstream = await forward(request, path, body, renewed.token);
   }
@@ -72,8 +81,8 @@ async function handle(request: NextRequest, { params }: Context) {
   headers.set("cache-control", "no-store");
 
   const res = new NextResponse(upstream.body, { status: upstream.status, headers });
-  if (renewed) setAuthCookies(res, renewed.token, renewed.refreshToken);
-  else if (upstream.status === 401) clearAuthCookies(res);
+  if (renewed) setAuthCookies(res.cookies, renewed);
+  else if (upstream.status === 401) clearAuthCookies(res.cookies);
   return res;
 }
 

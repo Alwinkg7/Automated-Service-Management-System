@@ -48,7 +48,9 @@ export function pagedOrArray<T extends z.ZodType>(item: T) {
 // ── Auth ─────────────────────────────────────────────────────────
 export const loginResponseSchema = z.object({
   token: str,
+  expiresAt: optStr,
   refreshToken: optStr,
+  refreshTokenExpiresAt: optStr,
   role: z.enum(USER_ROLES),
   userId: str,
   name: optStr,

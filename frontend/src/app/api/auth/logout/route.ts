@@ -10,6 +10,6 @@ export async function POST() {
   if (refresh) await revokeRefreshToken(refresh, jar.get(TOKEN_COOKIE)?.value);
 
   const res = NextResponse.json({ success: true });
-  clearAuthCookies(res);
+  clearAuthCookies(res.cookies);
   return res;
 }

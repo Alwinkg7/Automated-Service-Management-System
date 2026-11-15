@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isApiError } from "@/lib/api/errors";
-import { AUTH_PATHS, loginWithPassword, register } from "@/lib/auth/backend";
+import { loginResponseSchema } from "@/lib/api/schemas";
+import { AUTH_PATHS, register } from "@/lib/auth/backend";
 import { isSameOrigin, setAuthCookies } from "@/lib/auth/cookies";
 import { registerSchema } from "@/lib/validation/auth";
 
@@ -22,7 +23,15 @@ export async function POST(request: Request) {
   const path = role === "Technician" ? AUTH_PATHS.registerTechnician : AUTH_PATHS.registerCustomer;
 
   try {
-    await register(path, rest);
+    // The API registers and signs the user in, returning the same body as /login.
+    const body = await register(path, rest);
+    const tokens = loginResponseSchema.safeParse(body);
+    if (!tokens.success) {
+      return NextResponse.json({ success: true, data: { role, requiresLogin: true } }, { status: 201 });
+    }
+    const res = NextResponse.json({ success: true, data: { role: tokens.data.role } }, { status: 201 });
+    setAuthCookies(res.cookies, tokens.data);
+    return res;
   } catch (error) {
     const status = isApiError(error) ? error.status : 502;
     return NextResponse.json(
@@ -33,16 +42,5 @@ export async function POST(request: Request) {
       },
       { status },
     );
-  }
-
-  // Sign the new user in straight away.
-  try {
-    const login = await loginWithPassword(rest.email, rest.password);
-    const res = NextResponse.json({ success: true, data: { role: login.role } }, { status: 201 });
-    setAuthCookies(res, login.token, login.refreshToken);
-    return res;
-  } catch {
-    // Account exists but auto-login failed (e.g. needs approval) – let them sign in manually.
-    return NextResponse.json({ success: true, data: { role, requiresLogin: true } }, { status: 201 });
   }
 }

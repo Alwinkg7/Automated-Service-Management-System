@@ -37,10 +37,6 @@ export function technicianEndpoints(api: ApiClient) {
         schema: z.object({ billId: z.number() }),
       }),
 
-    /** Push a GPS fix; the API relays it to the customer over SignalR. */
-    updateLocation: (id: number, lat: number, lng: number) =>
-      api.post<void>(`/api/technician/jobs/${id}/location`, { lat, lng }),
-
     billPdfPath: (billId: number) => `/api/technician/bills/${billId}/pdf`,
 
     getWallet: () => api.get("/api/technician/wallet", { schema: walletSchema }),

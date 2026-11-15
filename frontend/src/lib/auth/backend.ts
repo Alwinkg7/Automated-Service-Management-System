@@ -1,5 +1,4 @@
-import "server-only";
-// Server-only calls to the API's /api/auth/* endpoints, used by our route handlers.
+// Server-side calls (route handlers and proxy.ts; no secrets here) to the API's /api/auth/* endpoints, used by our route handlers.
 import { serverApiUrl } from "@/lib/env";
 import { createApiClient } from "@/lib/api/client";
 import { loginResponseSchema, type LoginResponse } from "@/lib/api/schemas";
