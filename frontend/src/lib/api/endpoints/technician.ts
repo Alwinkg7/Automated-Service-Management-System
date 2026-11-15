@@ -30,14 +30,10 @@ export function technicianEndpoints(api: ApiClient) {
 
     rejectJob: (id: number) => api.post<void>(`/api/technician/jobs/${id}/reject`),
 
-    completeJob: (id: number) => api.post<void>(`/api/technician/jobs/${id}/complete`),
-
     createBill: (id: number, input: CreateBillInput) =>
       api.post(`/api/technician/jobs/${id}/bill`, input, {
         schema: z.object({ billId: z.number() }),
       }),
-
-    billPdfPath: (billId: number) => `/api/technician/bills/${billId}/pdf`,
 
     getWallet: () => api.get("/api/technician/wallet", { schema: walletSchema }),
 
