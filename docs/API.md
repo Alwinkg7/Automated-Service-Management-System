@@ -228,7 +228,7 @@ Errors:
 | Method | Route | Body | Success |
 |---|---|---|---|
 | GET | `/dashboard` | none | `{ success, technician: { name, status, rating, totalJobs, completedJobs, pendingBills }, activeJob: {...} \| null, recentJobs: [{ id, category, customerName, completedAt, billPaid }] }` |
-| POST | `/toggle-status` | none | `{ success, newStatus: "Available" \| "Offline" }`. 400 while `Busy` |
+| POST | `/toggle-status` | none | `{ success, newStatus: "Available" \| "Offline" }`. 409 while `Busy` |
 | GET | `/jobs?status=Assigned` | none | `{ success, data: [{ id, category, status, description, address, scheduledDate, customerName, customerPhone, hasBill, billPaid }] }` |
 | GET | `/jobs/{id}` | none | `{ success, data: { id, category, status, description, address, pinCode, scheduledDate, createdAt, canAccept, canBill, canComplete, canShareLocation, customer: { name, phone, email }, bill: { id, amount, payable, discount, laborCost, materialCost, description, isPaid, paidAt, preferredPaymentMethod, items } | null } }`. 403 if the job is not yours |
 | POST | `/jobs/{id}/accept` | none | `{ success }` (`Assigned` becomes `InProgress`) |

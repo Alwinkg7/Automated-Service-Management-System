@@ -1,8 +1,11 @@
 using System.Collections.Concurrent;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
@@ -38,7 +41,7 @@ public sealed class IdempotentAttribute : Attribute, IAsyncActionFilter
 
         if (key.Length > 100)
         {
-            context.Result = new BadRequestObjectResult(new { success = false, error = $"{HeaderName} must be at most 100 characters." });
+            context.Result = Problem(context, StatusCodes.Status400BadRequest, $"{HeaderName} must be at most 100 characters.");
             return;
         }
 
@@ -50,8 +53,19 @@ public sealed class IdempotentAttribute : Attribute, IAsyncActionFilter
         await gate.WaitAsync(http.RequestAborted);
         try
         {
+            var json = http.RequestServices.GetRequiredService<IOptions<JsonOptions>>().Value.JsonSerializerOptions;
+            var fingerprint = Convert.ToHexString(SHA256.HashData(
+                Encoding.UTF8.GetBytes(JsonSerializer.Serialize(context.ActionArguments, json))));
+
             if (cache.TryGetValue(cacheKey, out StoredResponse? stored) && stored != null)
             {
+                if (stored.Fingerprint != fingerprint)
+                {
+                    context.Result = Problem(context, StatusCodes.Status422UnprocessableEntity,
+                        $"This {HeaderName} was already used with a different request body.");
+                    return;
+                }
+
                 http.Response.Headers["Idempotent-Replayed"] = "true";
                 context.Result = new ContentResult
                 {
@@ -66,9 +80,8 @@ public sealed class IdempotentAttribute : Attribute, IAsyncActionFilter
             if (executed.Exception == null
                 && executed.Result is ObjectResult { StatusCode: null or >= 200 and < 300 } ok)
             {
-                var json = http.RequestServices.GetRequiredService<IOptions<JsonOptions>>().Value.JsonSerializerOptions;
                 var body = JsonSerializer.Serialize(ok.Value, json);
-                cache.Set(cacheKey, new StoredResponse(ok.StatusCode ?? 200, body),
+                cache.Set(cacheKey, new StoredResponse(ok.StatusCode ?? 200, body, fingerprint),
                     new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = Ttl, Size = 1 });
             }
         }
@@ -81,5 +94,16 @@ public sealed class IdempotentAttribute : Attribute, IAsyncActionFilter
         }
     }
 
-    private sealed record StoredResponse(int StatusCode, string Body);
+    private static ObjectResult Problem(ActionExecutingContext context, int statusCode, string detail)
+    {
+        var factory = context.HttpContext.RequestServices.GetRequiredService<ProblemDetailsFactory>();
+        var result = new ObjectResult(factory.CreateProblemDetails(context.HttpContext, statusCode, detail: detail))
+        {
+            StatusCode = statusCode
+        };
+        result.ContentTypes.Add("application/problem+json");
+        return result;
+    }
+
+    private sealed record StoredResponse(int StatusCode, string Body, string Fingerprint);
 }

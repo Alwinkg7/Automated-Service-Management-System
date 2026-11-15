@@ -11,7 +11,6 @@ namespace ServiceApp.Api.Controllers;
 /// (added in <c>ProblemDetailsOptions.CustomizeProblemDetails</c>).
 /// </summary>
 [ApiController]
-[Produces("application/json")]
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
@@ -25,7 +24,9 @@ public abstract class ApiControllerBase : ControllerBase
     protected ObjectResult Fail(int statusCode, string? message)
     {
         var problem = ProblemDetailsFactory.CreateProblemDetails(HttpContext, statusCode, detail: message);
-        return new ObjectResult(problem) { StatusCode = statusCode };
+        var result = new ObjectResult(problem) { StatusCode = statusCode };
+        result.ContentTypes.Add("application/problem+json");
+        return result;
     }
 
     /// <summary>ProblemDetails response for a failed <see cref="Result"/>.</summary>

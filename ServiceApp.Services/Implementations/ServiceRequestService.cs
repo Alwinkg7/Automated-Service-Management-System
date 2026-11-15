@@ -1,4 +1,4 @@
-﻿// =================================================================
+// =================================================================
 //  ServiceRequestService.cs — ServiceApp.Services/Implementations
 //
 //  Concrete implementation of IServiceRequestService.
@@ -194,7 +194,7 @@ namespace ServiceApp.Services.Implementations
         {
             // Load the request
             var request = await _uow.ServiceRequests
-                .GetByIdAsync(requestId);
+                .GetWithDetailsAsync(requestId);
             if (request == null)
                 return Result<ServiceRequest>.Failure(
                     "Service request not found.", ErrorType.NotFound);

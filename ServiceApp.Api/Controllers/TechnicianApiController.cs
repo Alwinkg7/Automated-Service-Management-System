@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ServiceApp.Api.Contracts;
@@ -85,7 +85,7 @@ public class TechnicianApiController : ApiControllerBase
     /// <summary>Toggles Available/Offline. Fails while Busy.</summary>
     [HttpPost("toggle-status")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> ToggleStatus()
     {
         var result = await _techSvc.ToggleAvailabilityAsync(UserId);

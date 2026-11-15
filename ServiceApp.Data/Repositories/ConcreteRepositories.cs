@@ -1,4 +1,4 @@
-﻿// =================================================================
+// =================================================================
 //  ConcreteRepositories.cs — ServiceApp.Data/Repositories
 //
 //  Concrete implementations of all entity-specific interfaces.
@@ -209,6 +209,8 @@ namespace ServiceApp.Data.Repositories
         public async Task<Bill?> GetByRequestIdAsync(int requestId) =>
             await _dbSet
                 .Include(b => b.BillItems)
+                .Include(b => b.Technician)
+                    .ThenInclude(t => t.User)
                 .FirstOrDefaultAsync(b => b.ServiceRequestId == requestId);
 
         // Full detail — for customer "View Bill" and "Pay" pages
