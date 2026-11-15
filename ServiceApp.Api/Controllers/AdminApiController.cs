@@ -2,40 +2,37 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ServiceApp.Api.Contracts;
 using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
 using ServiceApp.Core.Interfaces;
-using System.Security.Claims;
 
-namespace ServiceApp.Web.Controllers.Api;
+namespace ServiceApp.Api.Controllers;
 
-[ApiController]
+/// <summary>Admin endpoints: dashboard, request assignment and user management.</summary>
 [Route("api/admin")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme,
-           Roles = "Admin")]
-public class AdminApiController : ControllerBase
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
+public class AdminApiController : ApiControllerBase
 {
     private readonly IServiceRequestService _svc;
     private readonly UserManager<ApplicationUser> _users;
 
-    public AdminApiController(
-        IServiceRequestService svc,
-        UserManager<ApplicationUser> users)
+    public AdminApiController(IServiceRequestService svc, UserManager<ApplicationUser> users)
     {
         _svc = svc;
         _users = users;
     }
 
-    private string AdminId =>
-        User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-
-    // ── GET /api/admin/dashboard ──────────────────────────────────
     [HttpGet("dashboard")]
-    public async Task<IActionResult> Dashboard()
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Dashboard(CancellationToken ct)
     {
         var all = await _svc.GetAllRequestsAsync();
-        var requests = all.IsSuccess ? all.Data!.ToList() : new();
-        var allUsers = _users.Users.ToList();
+        var requests = all.IsSuccess ? all.Data!.ToList() : new List<ServiceRequest>();
+
+        var totalCustomers = await _users.Users.CountAsync(u => u.Role == UserRole.Customer, ct);
+        var totalTechnicians = await _users.Users.CountAsync(u => u.Role == UserRole.Technician, ct);
 
         return Ok(new
         {
@@ -46,10 +43,10 @@ public class AdminApiController : ControllerBase
                 pending = requests.Count(r => r.Status == RequestStatus.Pending),
                 inProgress = requests.Count(r => r.Status == RequestStatus.InProgress),
                 completed = requests.Count(r => r.Status == RequestStatus.Completed),
-                totalCustomers = allUsers.Count(u => u.Role == UserRole.Customer),
-                totalTechnicians = allUsers.Count(u => u.Role == UserRole.Technician),
+                totalCustomers,
+                totalTechnicians,
                 revenue = requests
-                    .Where(r => r.Bill != null && r.Bill.IsPaid)
+                    .Where(r => r.Bill != null && IsPaid(r.Bill))
                     .Sum(r => r.Bill!.TotalAmount),
             },
             pendingRequests = requests
@@ -69,19 +66,17 @@ public class AdminApiController : ControllerBase
         });
     }
 
-    // ── GET /api/admin/requests ───────────────────────────────────
     [HttpGet("requests")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRequests([FromQuery] string? status)
     {
         RequestStatus? filter = null;
-        if (!string.IsNullOrWhiteSpace(status) &&
-            Enum.TryParse<RequestStatus>(status, out var s))
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<RequestStatus>(status, true, out var s))
             filter = s;
 
         var result = await _svc.GetAllRequestsAsync(filter);
         if (!result.IsSuccess)
-            return StatusCode(500,
-                new { success = false, error = result.ErrorMessage });
+            return Fail(StatusCodes.Status500InternalServerError, result.ErrorMessage);
 
         return Ok(new
         {
@@ -98,21 +93,21 @@ public class AdminApiController : ControllerBase
                     scheduledDate = r.PreferredDateTime.ToString("dd MMM yyyy"),
                     createdAt = r.CreatedAt.ToString("dd MMM yyyy"),
                     hasBill = r.Bill != null,
-                    billPaid = r.Bill?.IsPaid ?? false,
+                    billPaid = r.Bill != null && IsPaid(r.Bill),
                     billAmount = r.Bill?.TotalAmount,
-                    isUnassigned = r.AssignedTechnicianProfileId == null
-                                     && r.Status == RequestStatus.Pending,
+                    isUnassigned = r.AssignedTechnicianProfileId == null && r.Status == RequestStatus.Pending,
                 })
         });
     }
 
-    // ── GET /api/admin/requests/{id} ──────────────────────────────
-    [HttpGet("requests/{id}")]
+    [HttpGet("requests/{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetDetail(int id)
     {
         var result = await _svc.GetRequestDetailsAsync(id);
         if (!result.IsSuccess)
-            return NotFound(new { success = false, error = result.ErrorMessage });
+            return Fail(StatusCodes.Status404NotFound, result.ErrorMessage);
 
         var r = result.Data!;
         return Ok(new
@@ -148,23 +143,21 @@ public class AdminApiController : ControllerBase
                 bill = r.Bill == null ? null : new
                 {
                     amount = r.Bill.TotalAmount,
-                    isPaid = r.Bill.IsPaid,
+                    isPaid = IsPaid(r.Bill),
                 },
             }
         });
     }
 
-    // ── GET /api/admin/technicians/available ──────────────────────
+    /// <summary>Available technicians for a category (defaults to General when missing/invalid).</summary>
     [HttpGet("technicians/available")]
-    public async Task<IActionResult> GetAvailableTechnicians(
-        [FromQuery] string? category)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAvailableTechnicians([FromQuery] string? category)
     {
-        if (!Enum.TryParse<ServiceCategory>(category, out var cat))
+        if (!Enum.TryParse<ServiceCategory>(category, true, out var cat))
             cat = ServiceCategory.General;
 
         var result = await _svc.GetAvailableTechniciansAsync(cat);
-
-        // Return empty list if none — not an error
         var data = result.IsSuccess ? result.Data! : Enumerable.Empty<TechnicianProfile>();
 
         return Ok(new
@@ -183,32 +176,37 @@ public class AdminApiController : ControllerBase
         });
     }
 
-    // ── POST /api/admin/requests/{id}/assign ─────────────────────
-    [HttpPost("requests/{id}/assign")]
+    [HttpPost("requests/{id:int}/assign")]
+    [Consumes("application/json")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Assign(int id, [FromBody] AssignDto dto)
     {
-        var result = await _svc.AssignTechnicianAsync(
-            id, dto.TechnicianProfileId, AdminId);
-
+        var result = await _svc.AssignTechnicianAsync(id, dto.TechnicianProfileId, UserId);
         if (!result.IsSuccess)
-            return BadRequest(new { success = false, error = result.ErrorMessage });
+            return Fail(result);
 
         return Ok(new { success = true });
     }
 
-    // ── GET /api/admin/users ──────────────────────────────────────
+    /// <summary>Lists users, optionally filtered by role name (Admin, Customer, Technician).</summary>
     [HttpGet("users")]
-    public IActionResult GetUsers([FromQuery] string? role)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUsers([FromQuery] string? role, CancellationToken ct)
     {
-        var q = _users.Users.AsQueryable();
-        if (!string.IsNullOrWhiteSpace(role) &&
-            Enum.TryParse<UserRole>(role, out var r))
+        var q = _users.Users.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(role) && Enum.TryParse<UserRole>(role, true, out var r))
             q = q.Where(u => u.Role == r);
+
+        var users = await q
+            .OrderByDescending(u => u.CreatedAt)
+            .Select(u => new { u.Id, u.FullName, u.Email, u.Phone, u.Role, u.IsActive, u.CreatedAt })
+            .ToListAsync(ct);
 
         return Ok(new
         {
             success = true,
-            data = q.OrderByDescending(u => u.CreatedAt).Select(u => new
+            data = users.Select(u => new
             {
                 id = u.Id,
                 name = u.FullName,
@@ -217,22 +215,29 @@ public class AdminApiController : ControllerBase
                 role = u.Role.ToString(),
                 isActive = u.IsActive,
                 createdAt = u.CreatedAt.ToString("dd MMM yyyy"),
-            }).ToList()
+            })
         });
     }
 
-    // ── POST /api/admin/users/{id}/toggle-active ─────────────────
     [HttpPost("users/{id}/toggle-active")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ToggleActive(string id)
     {
+        if (id == UserId)
+            return Fail(StatusCodes.Status409Conflict, "You cannot deactivate your own account.");
+
         var user = await _users.FindByIdAsync(id);
         if (user == null)
-            return NotFound(new { success = false, error = "User not found." });
+            return Fail(StatusCodes.Status404NotFound, "User not found.");
 
         user.IsActive = !user.IsActive;
-        await _users.UpdateAsync(user);
+        var update = await _users.UpdateAsync(user);
+        if (!update.Succeeded)
+            return Fail(StatusCodes.Status500InternalServerError, "Could not update the user.");
+
         return Ok(new { success = true, isActive = user.IsActive });
     }
-}
 
-public record AssignDto(int TechnicianProfileId);
+    private static bool IsPaid(Bill bill) => bill.IsPaid || bill.PaymentStatus == PaymentStatus.Paid;
+}

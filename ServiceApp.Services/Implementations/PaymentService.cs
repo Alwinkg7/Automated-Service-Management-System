@@ -1,26 +1,4 @@
-﻿// =================================================================
-//  PaymentService.cs — ServiceApp.Services/Implementations
-//
-//  Implements IPaymentService.
-//
-//  WHAT MAKES THIS CRITICAL:
-//  The completion flow touches 4 tables in one transaction:
-//    1. Payments (INSERT)
-//    2. Bills (UPDATE PaymentStatus + PaidAt)
-//    3. ServiceRequests (UPDATE Status → Completed)
-//    4. TechnicianProfiles (UPDATE Status + TotalJobsCompleted)
-//    5. ServiceHistories (INSERT)
-//
-//  If ANY step fails, ALL are rolled back.
-//  This is why UnitOfWork transactions exist.
-//
-//  IDEMPOTENCY:
-//  We check if a Payment already exists for this bill before
-//  creating one. If it does → return the existing payment.
-//  This prevents double-charging if the user clicks Pay twice.
-// =================================================================
-
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using ServiceApp.Core.Common;
 using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
@@ -28,6 +6,12 @@ using ServiceApp.Core.Interfaces;
 
 namespace ServiceApp.Services.Implementations
 {
+    /// <summary>
+    /// Payment workflows. Every successful payment runs the same completion
+    /// transaction (Payment insert, Bill paid, Request completed, Technician freed,
+    /// ServiceHistory insert); side effects (loyalty points, e-mails, SignalR) run
+    /// only after the commit and never turn a committed payment into a failure.
+    /// </summary>
     public class PaymentService : IPaymentService
     {
         private readonly IUnitOfWork _uow;
@@ -37,7 +21,13 @@ namespace ServiceApp.Services.Implementations
         private readonly IEmailService _email;
         private readonly IPromotionService _promotions;
 
-        public PaymentService(IUnitOfWork uow, ILogger<PaymentService> logger, IRazorpayService razorpay, INotificationService notifications, IEmailService email, IPromotionService promotions)
+        public PaymentService(
+            IUnitOfWork uow,
+            ILogger<PaymentService> logger,
+            IRazorpayService razorpay,
+            INotificationService notifications,
+            IEmailService email,
+            IPromotionService promotions)
         {
             _uow = uow;
             _logger = logger;
@@ -47,299 +37,148 @@ namespace ServiceApp.Services.Implementations
             _promotions = promotions;
         }
 
-        // =============================================================
-        //  GET BILL FOR PAYMENT PAGE
-        //  Validates ownership and status before showing Pay page.
-        // =============================================================
-        public async Task<Result<Bill>> GetBillForPaymentAsync(
-            int requestId,
-            string customerUserId)
+        // ── Queries ───────────────────────────────────────────────────
+
+        public async Task<Result<Bill>> GetBillForPaymentAsync(int requestId, string customerUserId)
         {
-            // Load the bill with all details
             var bill = await _uow.Bills.GetByRequestIdAsync(requestId);
             if (bill == null)
-                return Result<Bill>.Failure(
-                    "No bill found for this request.");
+                return Result<Bill>.Failure("No bill found for this request.", ErrorType.NotFound);
 
-            // Load the request to verify ownership
-            var request = await _uow.ServiceRequests
-                .GetByIdAsync(requestId);
+            var request = await _uow.ServiceRequests.GetByIdAsync(requestId);
             if (request == null)
-                return Result<Bill>.Failure("Request not found.");
+                return Result<Bill>.Failure("Request not found.", ErrorType.NotFound);
 
-            // Security: only the customer who owns the request can pay
             if (request.CustomerId != customerUserId)
-                return Result<Bill>.Failure(
-                    "You can only pay bills for your own requests.");
+                return Result<Bill>.Failure("You can only pay bills for your own requests.", ErrorType.Forbidden);
 
-            // Must be in Billed status to pay
+            if (bill.PaymentStatus == PaymentStatus.Paid)
+                return Result<Bill>.Failure("This bill has already been paid.", ErrorType.Conflict);
+
             if (request.Status != RequestStatus.Billed)
                 return Result<Bill>.Failure(
-                    $"This request is {request.Status} " +
-                    "and does not have a pending payment.");
-
-            // Already paid? Return success with existing bill
-            if (bill.PaymentStatus == PaymentStatus.Paid)
-                return Result<Bill>.Failure(
-                    "This bill has already been paid.");
+                    $"This request is {request.Status} and does not have a pending payment.",
+                    ErrorType.Conflict);
 
             return Result<Bill>.Success(bill);
         }
 
-        // =============================================================
-        //  PROCESS CASH PAYMENT
-        //
-        //  Atomic transaction — all 5 steps succeed or all fail:
-        //  1. Create Payment record
-        //  2. Update Bill → Paid
-        //  3. Update Request → Completed
-        //  4. Update Technician → Available + increment job count
-        //  5. Log ServiceHistory
-        // =============================================================
-        public async Task<Result<Payment>> ProcessCashPaymentAsync(
-            int billId,
-            string customerUserId)
+        public Task<Payment?> GetPaymentByIdAsync(int paymentId) =>
+            _uow.Payments.GetByIdAsync(paymentId);
+
+        // ── Cash ──────────────────────────────────────────────────────
+
+        public async Task<Result<Payment>> ProcessCashPaymentAsync(int billId, string customerUserId)
         {
-            // Load bill with full details
             var bill = await _uow.Bills.GetWithItemsAndPaymentAsync(billId);
             if (bill == null)
-                return Result<Payment>.Failure("Bill not found.");
+                return Result<Payment>.Failure("Bill not found.", ErrorType.NotFound);
 
-            // ── Idempotency check ──────────────────────────────────
-            // If payment already exists for this bill → skip
-            // Prevents double-payment if user submits form twice
-            var existingPayment = await _uow.Payments
-                .GetByBillIdAsync(billId);
+            // Idempotency: a second click returns the payment already recorded.
+            var existingPayment = await _uow.Payments.GetByBillIdAsync(billId);
             if (existingPayment != null)
                 return Result<Payment>.Success(existingPayment);
 
-            // Load the request
-            var request = await _uow.ServiceRequests
-                .GetByIdAsync(bill.ServiceRequestId);
+            var request = await _uow.ServiceRequests.GetByIdAsync(bill.ServiceRequestId);
             if (request == null)
-                return Result<Payment>.Failure("Request not found.");
+                return Result<Payment>.Failure("Request not found.", ErrorType.NotFound);
 
-            // Verify ownership
             if (request.CustomerId != customerUserId)
-                return Result<Payment>.Failure(
-                    "You can only pay your own bills.");
+                return Result<Payment>.Failure("You can only pay your own bills.", ErrorType.Forbidden);
 
-            // Verify status
             if (request.Status != RequestStatus.Billed)
                 return Result<Payment>.Failure(
-                    $"Cannot process payment — " +
-                    $"request status is {request.Status}.");
+                    $"Cannot process payment — request status is {request.Status}.", ErrorType.Conflict);
 
-            await _uow.BeginTransactionAsync();
-            try
-            {
-                var now = DateTime.UtcNow;
+            var now = DateTime.UtcNow;
+            return await CompletePaymentAsync(
+                bill,
+                request,
+                method: "Cash",
+                transactionId: $"CASH-{billId}-{now:yyyyMMddHHmmss}",
+                orderId: null,
+                changedByUserId: customerUserId,
+                historyNote: $"Payment of ₹{bill.TotalAmount:N2} received via Cash. Job completed successfully.",
+                failureMessage: "Payment processing failed. Please try again.");
+        }
 
-                // ── Step 1: Create Payment record ──────────────────
-                var payment = new Payment
-                {
-                    BillId = billId,
-                    Amount = bill.TotalAmount,
-                    PaymentMethod = "Cash",
-                    GatewayTransactionId = $"CASH-{billId}-{now:yyyyMMddHHmmss}",
-                    GatewayOrderId = null,
-                    PaidAt = now
-                };
-                await _uow.Payments.AddAsync(payment);
+        public async Task<Result<Payment>> ConfirmCashCollectedAsync(int requestId, string technicianUserId)
+        {
+            var tech = await _uow.TechnicianProfiles.GetByUserIdAsync(technicianUserId);
+            if (tech == null)
+                return Result<Payment>.Failure("Technician profile not found.", ErrorType.NotFound);
 
-                // Save to get PaymentId
-                await _uow.SaveChangesAsync();
+            var request = await _uow.ServiceRequests.GetByIdAsync(requestId);
+            if (request == null)
+                return Result<Payment>.Failure("Request not found.", ErrorType.NotFound);
 
-                // ── Step 2: Update Bill → Paid ──────────────────────
-                bill.PaymentStatus = PaymentStatus.Paid;
-                bill.PaidAt = now;
-                _uow.Bills.Update(bill);
+            if (request.AssignedTechnicianProfileId != tech.TechnicianProfileId)
+                return Result<Payment>.Failure("This job is not assigned to you.", ErrorType.Forbidden);
 
-                // ── Step 3: Update Request → Completed ─────────────
-                request.Status = RequestStatus.Completed;
-                request.UpdatedAt = now;
-                _uow.ServiceRequests.Update(request);
+            var bill = await _uow.Bills.GetByRequestIdAsync(requestId);
+            if (bill == null)
+                return Result<Payment>.Failure("No bill exists for this job yet.", ErrorType.Conflict);
 
-                // ── Step 4: Free the technician ─────────────────────
-                if (request.AssignedTechnicianProfileId.HasValue)
-                {
-                    var tech = await _uow.TechnicianProfiles
-                        .GetByIdAsync(
-                            request.AssignedTechnicianProfileId.Value);
+            var existingPayment = await _uow.Payments.GetByBillIdAsync(bill.Id);
+            if (existingPayment != null || bill.PaymentStatus == PaymentStatus.Paid)
+                return Result<Payment>.Failure("This bill has already been paid.", ErrorType.Conflict);
 
-                    if (tech != null)
-                    {
-                        // Back to Available — can receive new jobs
-                        tech.Status = TechnicianStatus.Available;
-
-                        // Increment lifetime jobs counter
-                        tech.TotalJobsCompleted += 1;
-
-                        _uow.TechnicianProfiles.Update(tech);
-                    }
-                }
-
-                // ── Step 5: Log ServiceHistory ──────────────────────
-                var history = new ServiceHistory
-                {
-                    RequestId = bill.ServiceRequestId,
-                    Status = RequestStatus.Completed,
-                    ChangedByUserId = customerUserId,
-                    Note = $"Payment of ₹{bill.TotalAmount:N2} " +
-                                      $"received via Cash. " +
-                                      "Job completed successfully.",
-                    ChangedAt = now
-                };
-                await _uow.ServiceHistories.AddAsync(history);
-
-                // ── Commit all 5 steps together ─────────────────────
-                await _uow.CommitTransactionAsync();
-
-                _ = _promotions.AwardPointsAsync(
-                    request.CustomerId,
-                    bill.ServiceRequestId,
-                    bill.TotalAmount);
-
-                // Load customer and technician info for emails
-                var customerUser = await _uow.Users.GetByIdAsync(request.CustomerId);
-
-                // Email customer receipt
-                if (customerUser != null)
-                {
-                    _ = _email.SendPaymentReceiptToCustomerAsync(
-                        customerUser.Email!,
-                        customerUser.FullName,
-                        bill.ServiceRequestId,
-                        bill.Id,
-                        bill.TotalAmount,
-                        payment.PaymentMethod,
-                        payment.GatewayTransactionId ?? "N/A",
-                        payment.PaidAt);
-                }
-
-                // Email technician
-                if (request.AssignedTechnicianProfileId.HasValue)
-                {
-                    var tech = await _uow.TechnicianProfiles
-                        .GetWithUserAsync(
-                            request.AssignedTechnicianProfileId.Value);
-
-                    if (tech?.User != null)
-                    {
-                        _ = _email.SendPaymentReceiptToTechnicianAsync(
-                            tech.User.Email!,
-                            tech.User.FullName,
-                            bill.ServiceRequestId,
-                            bill.TotalAmount);
-                    }
-                }
-
-                // Notify technician — job done, they're available again
-                if (request.AssignedTechnicianProfileId.HasValue)
-                {
-                    var tech = await _uow.TechnicianProfiles
-                        .GetByIdAsync(request.AssignedTechnicianProfileId.Value);
-                    if (tech != null)
-                    {
-                        await _notifications.NotifyTechnicianJobCompletedAsync(
-                            tech.UserId,
-                            bill.ServiceRequestId,
-                            bill.TotalAmount);
-                    }
-                }
-
-                await _notifications.NotifyAdminStatusChangedAsync(
-                    bill.ServiceRequestId, "Completed");
-
-                _logger.LogInformation(
-                    "Payment processed for bill #{BillId}. " +
-                    "Request #{RequestId} completed. " +
-                    "Amount: ₹{Amount}",
-                    billId, bill.ServiceRequestId, bill.TotalAmount);
-
-                return Result<Payment>.Success(payment);
-            }
-            catch (Exception ex)
-            {
-                await _uow.RollbackTransactionAsync();
-                _logger.LogError(ex,
-                    "Payment failed for bill #{BillId}", billId);
+            if (request.Status != RequestStatus.Billed)
                 return Result<Payment>.Failure(
-                    "Payment processing failed. Please try again.");
-            }
-        }
-        public async Task<Payment?> GetPaymentByIdAsync(int paymentId)
-        {
-            var payment = await _uow.Payments.GetByIdAsync(paymentId);
-            return payment;
+                    $"Only Billed jobs can be completed (current status: {request.Status}).", ErrorType.Conflict);
+
+            var now = DateTime.UtcNow;
+            return await CompletePaymentAsync(
+                bill,
+                request,
+                method: "Cash",
+                transactionId: $"CASH-{bill.Id}-{now:yyyyMMddHHmmss}",
+                orderId: null,
+                changedByUserId: technicianUserId,
+                historyNote: $"Cash payment of ₹{bill.TotalAmount:N2} confirmed by technician. Job completed.",
+                failureMessage: "Could not record the cash payment. Please try again.");
         }
 
-        // =============================================================
-        //  CREATE RAZORPAY ORDER
-        //  Server-side order creation — required before showing
-        //  Razorpay checkout JS to the customer.
-        // =============================================================
-        public async Task<Result<RazorpayOrderResult>> CreateRazorpayOrderAsync(
-            int billId,
-            string customerUserId)
+        // ── Razorpay checkout ─────────────────────────────────────────
+
+        public async Task<Result<RazorpayOrderResult>> CreateRazorpayOrderAsync(int billId, string customerUserId)
         {
-            // Load and validate the bill
             var bill = await _uow.Bills.GetWithItemsAndPaymentAsync(billId);
             if (bill == null)
-                return Result<RazorpayOrderResult>.Failure("Bill not found.");
+                return Result<RazorpayOrderResult>.Failure("Bill not found.", ErrorType.NotFound);
 
-            var request = await _uow.ServiceRequests
-                .GetByIdAsync(bill.ServiceRequestId);
+            var request = await _uow.ServiceRequests.GetByIdAsync(bill.ServiceRequestId);
             if (request == null)
-                return Result<RazorpayOrderResult>.Failure("Request not found.");
+                return Result<RazorpayOrderResult>.Failure("Request not found.", ErrorType.NotFound);
 
             if (request.CustomerId != customerUserId)
-                return Result<RazorpayOrderResult>.Failure(
-                    "You can only pay your own bills.");
-
-            if (request.Status != RequestStatus.Billed)
-                return Result<RazorpayOrderResult>.Failure(
-                    "This request is not ready for payment.");
+                return Result<RazorpayOrderResult>.Failure("You can only pay your own bills.", ErrorType.Forbidden);
 
             if (bill.PaymentStatus == PaymentStatus.Paid)
-                return Result<RazorpayOrderResult>.Failure(
-                    "This bill has already been paid.");
+                return Result<RazorpayOrderResult>.Failure("This bill has already been paid.", ErrorType.Conflict);
+
+            if (request.Status != RequestStatus.Billed)
+                return Result<RazorpayOrderResult>.Failure("This request is not ready for payment.", ErrorType.Conflict);
 
             try
             {
-                // Create order on Razorpay — get an order ID
-                var receiptId = $"bill_{billId}_{DateTime.UtcNow:yyyyMMdd}";
-
                 var order = await _razorpay.CreateOrderAsync(
                     amount: bill.TotalAmount,
                     currency: "INR",
-                    receiptId: receiptId);
+                    receiptId: $"bill_{billId}_{DateTime.UtcNow:yyyyMMdd}",
+                    billId: billId);
 
-                _logger.LogInformation(
-                    "Razorpay order {OrderId} created for bill #{BillId}",
-                    order.OrderId, billId);
-
+                _logger.LogInformation("Razorpay order {OrderId} created for bill #{BillId}", order.OrderId, billId);
                 return Result<RazorpayOrderResult>.Success(order);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,
-                    "Failed to create Razorpay order for bill #{BillId}", billId);
+                _logger.LogError(ex, "Failed to create Razorpay order for bill #{BillId}", billId);
                 return Result<RazorpayOrderResult>.Failure(
-                    "Could not initiate payment. Please try again.");
+                    "Could not initiate payment. Please try again.", ErrorType.Dependency);
             }
         }
 
-        // =============================================================
-        //  PROCESS RAZORPAY PAYMENT
-        //  Called after customer completes Razorpay checkout.
-        //  Razorpay JS sends: orderId, paymentId, signature.
-        //
-        //  FLOW:
-        //  1. Verify signature (reject if invalid)
-        //  2. Idempotency check (skip if already processed)
-        //  3. Run the same 5-step completion transaction as cash
-        // =============================================================
         public async Task<Result<Payment>> ProcessRazorpayPaymentAsync(
             int billId,
             string customerUserId,
@@ -347,85 +186,138 @@ namespace ServiceApp.Services.Implementations
             string razorpayPaymentId,
             string razorpaySignature)
         {
-            // ── Step 1: Verify signature ───────────────────────────────
-            // This is the CRITICAL security check.
-            // If signature is wrong → someone tampered with the payment.
-            var isValid = _razorpay.VerifyPaymentSignature(
-                razorpayOrderId,
-                razorpayPaymentId,
-                razorpaySignature);
-
-            if (!isValid)
+            if (!_razorpay.VerifyPaymentSignature(razorpayOrderId, razorpayPaymentId, razorpaySignature))
             {
                 _logger.LogWarning(
-                    "Invalid Razorpay signature for bill #{BillId}. " +
-                    "Possible fraud attempt. OrderId: {OrderId}",
+                    "Invalid Razorpay signature for bill #{BillId}. OrderId: {OrderId}",
                     billId, razorpayOrderId);
                 return Result<Payment>.Failure(
-                    "Payment verification failed. " +
-                    "Please contact support if money was deducted.");
+                    "Payment verification failed. Please contact support if money was deducted.",
+                    ErrorType.Validation);
             }
 
-            // ── Step 2: Idempotency check ──────────────────────────────
-            var existingPayment = await _uow.Payments
-                .GetByGatewayTransactionIdAsync(razorpayPaymentId);
+            var existingPayment = await _uow.Payments.GetByGatewayTransactionIdAsync(razorpayPaymentId);
             if (existingPayment != null)
             {
-                _logger.LogInformation(
-                    "Duplicate payment attempt for {PaymentId} — skipped",
-                    razorpayPaymentId);
+                _logger.LogInformation("Duplicate payment attempt for {PaymentId} — skipped", razorpayPaymentId);
                 return Result<Payment>.Success(existingPayment);
             }
 
-            // ── Step 3: Load bill and validate ────────────────────────
             var bill = await _uow.Bills.GetWithItemsAndPaymentAsync(billId);
             if (bill == null)
-                return Result<Payment>.Failure("Bill not found.");
+                return Result<Payment>.Failure("Bill not found.", ErrorType.NotFound);
 
-            var request = await _uow.ServiceRequests
-                .GetByIdAsync(bill.ServiceRequestId);
+            var request = await _uow.ServiceRequests.GetByIdAsync(bill.ServiceRequestId);
             if (request == null)
-                return Result<Payment>.Failure("Request not found.");
+                return Result<Payment>.Failure("Request not found.", ErrorType.NotFound);
 
             if (request.CustomerId != customerUserId)
-                return Result<Payment>.Failure(
-                    "You can only pay your own bills.");
+                return Result<Payment>.Failure("You can only pay your own bills.", ErrorType.Forbidden);
 
-            // ── Step 4: Run the completion transaction ─────────────────
+            if (bill.PaymentStatus == PaymentStatus.Paid)
+                return Result<Payment>.Failure("This bill has already been paid.", ErrorType.Conflict);
+
+            return await CompletePaymentAsync(
+                bill,
+                request,
+                method: "Razorpay",
+                transactionId: razorpayPaymentId,
+                orderId: razorpayOrderId,
+                changedByUserId: customerUserId,
+                historyNote: $"Payment of ₹{bill.TotalAmount:N2} received via Razorpay. Transaction: {razorpayPaymentId}.",
+                failureMessage: "Payment was received but processing failed. " +
+                                "Please contact support with transaction ID: " + razorpayPaymentId);
+        }
+
+        // ── Razorpay webhook ──────────────────────────────────────────
+
+        public async Task<Result<Payment>> ProcessRazorpayWebhookAsync(RazorpayWebhookEvent webhookEvent)
+        {
+            if (string.IsNullOrEmpty(webhookEvent.PaymentId))
+                return Result<Payment>.Failure("Webhook has no payment id.", ErrorType.Validation);
+
+            var existingPayment = await _uow.Payments.GetByGatewayTransactionIdAsync(webhookEvent.PaymentId);
+            if (existingPayment != null)
+                return Result<Payment>.Success(existingPayment);
+
+            if (webhookEvent.BillId is not int billId)
+                return Result<Payment>.Failure(
+                    "Webhook payment cannot be correlated to a bill.", ErrorType.BusinessRule);
+
+            var bill = await _uow.Bills.GetWithItemsAndPaymentAsync(billId);
+            if (bill == null)
+                return Result<Payment>.Failure("Bill not found.", ErrorType.NotFound);
+
+            if (bill.PaymentStatus == PaymentStatus.Paid)
+                return Result<Payment>.Failure("This bill has already been paid.", ErrorType.Conflict);
+
+            var expectedPaise = (long)decimal.Round(bill.TotalAmount * 100m, 0, MidpointRounding.AwayFromZero);
+            if (webhookEvent.AmountPaise != expectedPaise)
+            {
+                _logger.LogWarning(
+                    "Razorpay webhook amount mismatch for bill #{BillId}: expected {Expected} paise, got {Actual}",
+                    billId, expectedPaise, webhookEvent.AmountPaise);
+                return Result<Payment>.Failure("Paid amount does not match the bill.", ErrorType.BusinessRule);
+            }
+
+            var request = await _uow.ServiceRequests.GetByIdAsync(bill.ServiceRequestId);
+            if (request == null)
+                return Result<Payment>.Failure("Request not found.", ErrorType.NotFound);
+
+            return await CompletePaymentAsync(
+                bill,
+                request,
+                method: "Razorpay",
+                transactionId: webhookEvent.PaymentId,
+                orderId: webhookEvent.OrderId,
+                changedByUserId: request.CustomerId,
+                historyNote: $"Payment of ₹{bill.TotalAmount:N2} confirmed by Razorpay webhook. " +
+                             $"Transaction: {webhookEvent.PaymentId}.",
+                failureMessage: "Webhook payment could not be recorded.");
+        }
+
+        // ── Completion transaction ────────────────────────────────────
+
+        private async Task<Result<Payment>> CompletePaymentAsync(
+            Bill bill,
+            ServiceRequest request,
+            string method,
+            string transactionId,
+            string? orderId,
+            string changedByUserId,
+            string historyNote,
+            string failureMessage)
+        {
+            var now = DateTime.UtcNow;
+            var payment = new Payment
+            {
+                BillId = bill.Id,
+                Amount = bill.TotalAmount,
+                PaymentMethod = method,
+                GatewayTransactionId = transactionId,
+                GatewayOrderId = orderId,
+                PaidAt = now
+            };
+
+            TechnicianProfile? tech = null;
+
             await _uow.BeginTransactionAsync();
             try
             {
-                var now = DateTime.UtcNow;
-
-                // Insert Payment row
-                var payment = new Payment
-                {
-                    BillId = billId,
-                    Amount = bill.TotalAmount,
-                    PaymentMethod = "Razorpay",
-                    GatewayTransactionId = razorpayPaymentId,
-                    GatewayOrderId = razorpayOrderId,
-                    PaidAt = now
-                };
                 await _uow.Payments.AddAsync(payment);
-                await _uow.SaveChangesAsync();
 
-                // Bill → Paid
                 bill.PaymentStatus = PaymentStatus.Paid;
+                bill.IsPaid = true;
                 bill.PaidAt = now;
                 _uow.Bills.Update(bill);
 
-                // Request → Completed
                 request.Status = RequestStatus.Completed;
                 request.UpdatedAt = now;
                 _uow.ServiceRequests.Update(request);
 
-                // Technician → Available + increment job count
                 if (request.AssignedTechnicianProfileId.HasValue)
                 {
-                    var tech = await _uow.TechnicianProfiles
-                        .GetByIdAsync(
-                            request.AssignedTechnicianProfileId.Value);
+                    tech = await _uow.TechnicianProfiles.GetWithUserAsync(request.AssignedTechnicianProfileId.Value);
                     if (tech != null)
                     {
                         tech.Status = TechnicianStatus.Available;
@@ -434,35 +326,74 @@ namespace ServiceApp.Services.Implementations
                     }
                 }
 
-                // Log ServiceHistory
-                var history = new ServiceHistory
+                await _uow.ServiceHistories.AddAsync(new ServiceHistory
                 {
                     RequestId = bill.ServiceRequestId,
                     Status = RequestStatus.Completed,
-                    ChangedByUserId = customerUserId,
-                    Note = $"Payment of ₹{bill.TotalAmount:N2} " +
-                                      $"received via Razorpay. " +
-                                      $"Transaction: {razorpayPaymentId}.",
+                    ChangedByUserId = changedByUserId,
+                    Note = historyNote,
                     ChangedAt = now
-                };
-                await _uow.ServiceHistories.AddAsync(history);
+                });
 
                 await _uow.CommitTransactionAsync();
+            }
+            catch (Exception ex)
+            {
+                await _uow.RollbackTransactionAsync();
 
-                _ = _promotions.AwardPointsAsync(
-                    request.CustomerId,
-                    bill.ServiceRequestId,
-                    bill.TotalAmount);
+                // A concurrent checkout-verify / webhook may have recorded the same
+                // gateway transaction first (unique index) — treat as idempotent success.
+                var raced = await TryGetExistingAsync(transactionId);
+                if (raced != null)
+                    return Result<Payment>.Success(raced);
 
-                // Load customer and technician info for emails
-                var customerUser = await _uow.Users.GetByIdAsync(request.CustomerId);
+                _logger.LogError(ex, "Payment completion failed for bill #{BillId}", bill.Id);
+                return Result<Payment>.Failure(failureMessage, ErrorType.Unexpected);
+            }
 
-                // Email customer receipt
-                if (customerUser != null)
+            _logger.LogInformation(
+                "{Method} payment {TransactionId} processed. Bill #{BillId} paid. Request #{RequestId} completed.",
+                method, transactionId, bill.Id, bill.ServiceRequestId);
+
+            await RunPostPaymentSideEffectsAsync(bill, request, payment, tech);
+            return Result<Payment>.Success(payment);
+        }
+
+        private async Task<Payment?> TryGetExistingAsync(string transactionId)
+        {
+            try
+            {
+                return await _uow.Payments.GetByGatewayTransactionIdAsync(transactionId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Idempotency lookup failed for {TransactionId}", transactionId);
+                return null;
+            }
+        }
+
+        private async Task RunPostPaymentSideEffectsAsync(
+            Bill bill, ServiceRequest request, Payment payment, TechnicianProfile? tech)
+        {
+            // Awaited (not fire-and-forget): it shares this scope's DbContext.
+            try
+            {
+                await _promotions.AwardPointsAsync(request.CustomerId, bill.ServiceRequestId, bill.TotalAmount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Awarding loyalty points failed for request #{RequestId}", bill.ServiceRequestId);
+            }
+
+            try
+            {
+                var customer = await _uow.Users.GetByIdAsync(request.CustomerId);
+                if (customer?.Email != null)
                 {
+                    // E-mail sending does not touch the DbContext; safe to run in the background.
                     _ = _email.SendPaymentReceiptToCustomerAsync(
-                        customerUser.Email!,
-                        customerUser.FullName,
+                        customer.Email,
+                        customer.FullName,
                         bill.ServiceRequestId,
                         bill.Id,
                         bill.TotalAmount,
@@ -471,57 +402,24 @@ namespace ServiceApp.Services.Implementations
                         payment.PaidAt);
                 }
 
-                // Email technician
-                if (request.AssignedTechnicianProfileId.HasValue)
+                if (tech?.User?.Email != null)
                 {
-                    var tech = await _uow.TechnicianProfiles
-                        .GetWithUserAsync(
-                            request.AssignedTechnicianProfileId.Value);
-
-                    if (tech?.User != null)
-                    {
-                        _ = _email.SendPaymentReceiptToTechnicianAsync(
-                            tech.User.Email!,
-                            tech.User.FullName,
-                            bill.ServiceRequestId,
-                            bill.TotalAmount);
-                    }
+                    _ = _email.SendPaymentReceiptToTechnicianAsync(
+                        tech.User.Email,
+                        tech.User.FullName,
+                        bill.ServiceRequestId,
+                        bill.TotalAmount);
                 }
 
-                // Notify technician — job done, they're available again
-                if (request.AssignedTechnicianProfileId.HasValue)
-                {
-                    var tech = await _uow.TechnicianProfiles
-                        .GetByIdAsync(request.AssignedTechnicianProfileId.Value);
-                    if (tech != null)
-                    {
-                        await _notifications.NotifyTechnicianJobCompletedAsync(
-                            tech.UserId,
-                            bill.ServiceRequestId,
-                            bill.TotalAmount);
-                    }
-                }
+                if (tech != null)
+                    await _notifications.NotifyTechnicianJobCompletedAsync(
+                        tech.UserId, bill.ServiceRequestId, bill.TotalAmount);
 
-                await _notifications.NotifyAdminStatusChangedAsync(
-                    bill.ServiceRequestId, "Completed");
-
-                _logger.LogInformation(
-                    "Razorpay payment {PaymentId} processed. " +
-                    "Bill #{BillId} paid. Request #{RequestId} completed.",
-                    razorpayPaymentId, billId, bill.ServiceRequestId);
-
-                return Result<Payment>.Success(payment);
+                await _notifications.NotifyAdminStatusChangedAsync(bill.ServiceRequestId, "Completed");
             }
             catch (Exception ex)
             {
-                await _uow.RollbackTransactionAsync();
-                _logger.LogError(ex,
-                    "Failed to process Razorpay payment for bill #{BillId}",
-                    billId);
-                return Result<Payment>.Failure(
-                    "Payment was received but processing failed. " +
-                    "Please contact support with transaction ID: " +
-                    razorpayPaymentId);
+                _logger.LogError(ex, "Post-payment notifications failed for bill #{BillId}", bill.Id);
             }
         }
     }

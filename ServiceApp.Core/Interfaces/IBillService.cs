@@ -38,11 +38,7 @@ namespace ServiceApp.Core.Interfaces
         Task<Result<Bill>> GetBillByRequestIdAsync(int requestId);
 
         // Load bill by its own ID.
-        Task<Result<Bill>> GetBillByIdAsync(int billId);
-
-        Task<Result<bool>> PayBillAsync(
-        int billId,
-        string customerId);
+        Task<Result<Bill>> GetBillByIdAsync(int billId);
     }
 
 

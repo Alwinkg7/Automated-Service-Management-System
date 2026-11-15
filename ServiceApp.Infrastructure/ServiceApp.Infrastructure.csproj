@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Razorpay" Version="3.3.2" />
+    <PackageReference Include="QuestPDF" Version="2026.8.0" />
     <PackageReference Include="SendGrid" Version="9.29.3" />
   </ItemGroup>
 

@@ -1,31 +1,22 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Shared with ServiceApp.Api so both hosts read the same user-secrets. -->
+    <UserSecretsId>asms-shared-secrets</UserSecretsId>
+  </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ServiceApp.Core\ServiceApp.Core.csproj" />
-    <ProjectReference Include="..\ServiceApp.Data\ServiceApp.Data.csproj" />
-    <ProjectReference Include="..\ServiceApp.Services\ServiceApp.Services.csproj" />
-    <ProjectReference Include="..\ServiceApp.Infrastructure\ServiceApp.Infrastructure.csproj" />
+    <ProjectReference Include="..\ServiceApp.Hosting\ServiceApp.Hosting.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.25" />
-    <PackageReference Include="Hangfire.SqlServer" Version="1.8.25" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.34" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.34" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.34">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="QuestPDF" Version="2026.8.0" />
-    <PackageReference Include="Razorpay" Version="3.3.2" />
-    <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <UserSecretsId>asms-shared-secrets</UserSecretsId>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
 
 </Project>

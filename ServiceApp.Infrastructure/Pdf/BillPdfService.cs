@@ -1,41 +1,21 @@
-﻿// =================================================================
-//  BillPdfService.cs — ServiceApp.Web/Services
-//
-//  Generates a professional PDF invoice using QuestPDF.
-//
-//  QUESTPDF CONCEPTS:
-//  Document → Page → Column → Row → Text/Table
-//
-//  Everything is a "container" with fluent API:
-//  container.Row(row => {
-//      row.RelativeItem().Text("Hello");
-//      row.ConstantItem(100).Text("World");
-//  });
-//
-//  Sizes are in points (1 point = 1/72 inch).
-//  A4 = 595 × 842 points.
-//
-//  LICENCE:
-//  QuestPDF Community licence is free for open-source and
-//  revenue < $1M USD. Set it in Program.cs:
-//  QuestPDF.Settings.License = LicenseType.Community;
-// =================================================================
-
+using Microsoft.Extensions.Logging;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using ServiceApp.Core.Interfaces;
 
-namespace ServiceApp.Web.Services
+namespace ServiceApp.Infrastructure.Pdf
 {
+    /// <summary>
+    /// Renders a bill as an A4 PDF invoice with QuestPDF. The QuestPDF licence is
+    /// configured once at startup by the shared composition root.
+    /// </summary>
     public class BillPdfService : IBillPdfService
     {
         private readonly IUnitOfWork _uow;
         private readonly ILogger<BillPdfService> _logger;
 
-        public BillPdfService(
-            IUnitOfWork uow,
-            ILogger<BillPdfService> logger)
+        public BillPdfService(IUnitOfWork uow, ILogger<BillPdfService> logger)
         {
             _uow = uow;
             _logger = logger;
@@ -43,47 +23,16 @@ namespace ServiceApp.Web.Services
 
         public async Task<byte[]> GenerateBillPdfAsync(int billId)
         {
-            // Load bill with all related data needed for the PDF
-            var bill = await _uow.Bills
-                .GetWithItemsAndPaymentAsync(billId);
+            var bill = await _uow.Bills.GetWithItemsAndPaymentAsync(billId)
+                ?? throw new InvalidOperationException($"Bill #{billId} not found.");
 
-            if (bill == null)
-                throw new InvalidOperationException(
-                    $"Bill #{billId} not found.");
+            _logger.LogInformation("Generating PDF for bill #{BillId}", billId);
 
-            _logger.LogInformation(
-                "Generating PDF for bill #{BillId}", billId);
-
-            // Generate PDF and return as byte array
-            var document = new BillDocument(bill);
-            return document.GeneratePdf();
+            return new BillDocument(bill).GeneratePdf();
         }
     }
 
-    // =================================================================
-    //  BillDocument — the QuestPDF document definition
-    //
-    //  Implements IDocument — QuestPDF calls Compose() to build it.
-    //  All layout and styling lives here.
-    //
-    //  PAGE LAYOUT:
-    //  ┌─────────────────────────────────┐
-    //  │  Header: Logo | Invoice title   │
-    //  ├─────────────────────────────────┤
-    //  │  From (technician) | To (cust.) │
-    //  ├─────────────────────────────────┤
-    //  │  Bill details strip             │
-    //  ├─────────────────────────────────┤
-    //  │  Items table (description, qty, │
-    //  │  unit price, amount)            │
-    //  ├─────────────────────────────────┤
-    //  │  Total row                      │
-    //  ├─────────────────────────────────┤
-    //  │  Payment status                 │
-    //  ├─────────────────────────────────┤
-    //  │  Footer: thank you note         │
-    //  └─────────────────────────────────┘
-    // =================================================================
+    /// <summary>QuestPDF layout: header, parties, details, items, total, payment status, footer.</summary>
     internal class BillDocument : IDocument
     {
         private readonly ServiceApp.Core.Entities.Bill _bill;
