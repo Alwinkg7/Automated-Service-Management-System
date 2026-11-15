@@ -4,5 +4,4 @@
   <Project Path="ServiceApp.Infrastructure/ServiceApp.Infrastructure.csproj" />
   <Project Path="ServiceApp.Services/ServiceApp.Services.csproj" />
   <Project Path="ServiceApp.Web/ServiceApp.Web.csproj" />
-  <Project Path="WebApplication1/ServiceApp.csproj" />
 </Solution>

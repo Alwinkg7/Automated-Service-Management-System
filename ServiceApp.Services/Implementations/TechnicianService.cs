@@ -1,4 +1,4 @@
-﻿// ServiceApp.Services/Implementations/TechnicianService.cs
+
 using ServiceApp.Core.Common;
 using ServiceApp.Core.Entities;
 using ServiceApp.Core.Enums;
