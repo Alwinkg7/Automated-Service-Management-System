@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using ServiceApp.Api.Auth;
 using ServiceApp.Api.Infrastructure;
 using ServiceApp.Core.Entities;
@@ -237,18 +237,19 @@ public static class ApiServiceCollectionExtensions
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "ASMS API", Version = "v1" });
             c.CustomSchemaIds(t => t.FullName?.Replace('+', '.'));
 
-            var scheme = new OpenApiSecurityScheme
+            c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Name = "Authorization",
                 Type = SecuritySchemeType.Http,
                 Scheme = "bearer",
                 BearerFormat = "JWT",
                 In = ParameterLocation.Header,
-                Description = "Paste the access token from POST /api/auth/login.",
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-            };
-            c.AddSecurityDefinition("Bearer", scheme);
-            c.AddSecurityRequirement(new OpenApiSecurityRequirement { [scheme] = Array.Empty<string>() });
+                Description = "Paste the access token from POST /api/auth/login."
+            });
+            c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+            });
         });
         return services;
     }

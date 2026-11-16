@@ -33,7 +33,7 @@ ASMS is a home-services platform. Customers book jobs, and admins or a backgroun
                  └─────────┬──────────┘   │ QuestPDF bill PDFs       │
                            ▼              └────────────┬─────────────┘
                  ┌────────────────────┐                │
-                 │ ServiceApp.Data    │ EF Core 8,     │
+                 │ ServiceApp.Data    │ EF Core 10,    │
                  │ DbContext, repos,  │ UnitOfWork,    │
                  │ migrations         │ SQL Server     │
                  └─────────┬──────────┘                │
@@ -68,7 +68,7 @@ Each host maps the same `ServiceHub` at `/hubs/service`. Clients join groups fro
 
 ## Prerequisites
 
-- .NET SDK 8 or later, with the ASP.NET Core 8 runtime
+- .NET SDK 10 (pinned by `global.json`), with the ASP.NET Core 10 runtime
 - SQL Server: LocalDB, Developer or Express
 - `dotnet-ef` for migrations: `dotnet tool install -g dotnet-ef`
 - Node.js 20+ for the frontend
