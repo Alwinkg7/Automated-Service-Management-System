@@ -30,7 +30,31 @@ public static class DatabaseInitializer
                 logger.LogError(ex, "Applying database migrations failed; continuing startup.");
             }
         }
+        else
+        {
+            await WarnIfMigrationsPendingAsync(services);
+        }
 
         await services.SeedIdentityAsync();
+    }
+
+    private static async Task WarnIfMigrationsPendingAsync(IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(DatabaseInitializer));
+        try
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+            if (pending.Count > 0)
+                logger.LogWarning(
+                    "Database is missing {Count} migration(s): {Migrations}. Start ServiceApp.Api in Development " +
+                    "(it migrates on startup) or run: dotnet ef database update --project ServiceApp.Data --startup-project ServiceApp.Web",
+                    pending.Count, string.Join(", ", pending));
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not check for pending database migrations.");
+        }
     }
 }
