@@ -9,10 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:integration": "vitest run --config vitest.integration.config.mts"
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.6",
