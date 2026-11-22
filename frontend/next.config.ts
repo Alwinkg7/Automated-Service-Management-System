@@ -30,6 +30,8 @@ const nextConfig: NextConfig = {
   // Cache Components is off on purpose: authenticated pages read the session
   // cookie on every request, and the classic dynamic model keeps that simple.
   poweredByHeader: false,
+  // Self-contained server bundle (.next/standalone) for Azure App Service / Docker.
+  output: "standalone",
   turbopack: {
     rules: {
       "*.css": {
